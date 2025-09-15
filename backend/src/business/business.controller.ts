@@ -8,17 +8,34 @@ import {
   Param,
   NotFoundException,
   BadRequestException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiResponse,
+  ApiBody,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { BusinessService } from './business.service';
 import { JwtAuthGuard } from '../common/jwt-auth/jwt-auth.guard';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UsersService } from 'src/users/users.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import multerS3 from 'multer-s3';
+import { s3Client } from '../aws.module';
+import { ConfigService } from '@nestjs/config';
+import * as dotenv from 'dotenv';
+
+dotenv.config()
 
 @ApiTags('Business')
 @Controller()
 export class BusinessController {
   constructor(
+    private readonly configService: ConfigService,
     private readonly bizService: BusinessService,
     private readonly usersService: UsersService,
   ) {}
@@ -42,25 +59,55 @@ export class BusinessController {
 
   // Create business (authenticated user becomes owner and gets activated)
   // Create business — authenticated user
+  // Create business (authenticated user becomes owner and gets activated)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post('api/business')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('logoFile', {
+      storage: multerS3({
+        s3: s3Client, 
+        bucket: process.env.AWS_S3_BUCKET,
+        contentType: multerS3.AUTO_CONTENT_TYPE,
+        key: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `logos/${uniqueSuffix}-${file.originalname}`);
+        },
+      }),
+    }),
+  )
   @ApiBody({ type: CreateBusinessDto })
-  async createBusiness(@Req() req, @Body() body: CreateBusinessDto) {
+  async createBusiness(
+    @Req() req,
+    @UploadedFile() file: any,
+    @Body() body: CreateBusinessDto,
+  ) {
     try {
       const slug = (body.slug || body.name).toLowerCase().replace(/\s+/g, '-');
 
-      // Check if slug already exists
+      // Check slug
       const existing = await this.bizService.findBySlug(slug);
-      if (existing) {
+      if (existing)
         throw new BadRequestException('Slug already taken, choose another.');
+
+      // Get current user
+      const auth0Id = req.userEntity.id;
+      const user = await this.usersService.findById(auth0Id);
+      if (!user) throw new BadRequestException('User not found in system.');
+
+      // Handle logo (file OR URL)
+      let logoUrl = body.logoUrl;
+      if (file) {
+        logoUrl = file.location; // multer-s3 returns the public URL
       }
 
       // Create business
       const biz = await this.bizService.create({
         name: body.name,
         slug,
-        logoUrl: body.logoUrl,
+        logoUrl,
         brandColor: body.brandColor,
         website: body.website,
         contactEmail: body.contactEmail,
@@ -68,12 +115,11 @@ export class BusinessController {
       });
 
       // Attach owner & activate user
-      await this.bizService.addOwner(biz.id, req.user.id, true);
-      await req.userRepo.update(req.user.id, { isActive: true }); // activate user
+      await this.bizService.addOwner(biz.id, user.id, true);
+      await this.usersService.updateUserStatus(user.id, true);
 
       return { message: 'Business created successfully', business: biz };
     } catch (err) {
-      console.error('Business creation error:', err);
       if (err instanceof BadRequestException) throw err;
       throw new BadRequestException('Failed to create business');
     }

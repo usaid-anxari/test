@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUrl, MaxLength, MinLength, IsEmail } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUrl,
+  MaxLength,
+  MinLength,
+  IsEmail,
+} from 'class-validator';
 
 export class CreateBusinessDto {
   @ApiProperty({
@@ -8,7 +15,9 @@ export class CreateBusinessDto {
   })
   @IsString()
   @MinLength(2, { message: 'Business name must be at least 2 characters long' })
-  @MaxLength(100, { message: 'Business name must be at most 100 characters long' })
+  @MaxLength(100, {
+    message: 'Business name must be at most 100 characters long',
+  })
   name: string;
 
   @ApiProperty({
@@ -23,7 +32,17 @@ export class CreateBusinessDto {
   slug?: string;
 
   @ApiProperty({
-    description: 'URL to business logo',
+    description: 'Upload a logo file or provide a logo URL',
+    example: 'https://example.com/logo.png',
+    required: false,
+    type: 'string',
+    format: 'binary', // 👈 tells Swagger this is a file input
+  })
+  @IsOptional()
+  logoFile?: any;
+
+  @ApiProperty({
+    description: 'Logo URL if not uploading file',
     example: 'https://example.com/logo.png',
     required: false,
   })

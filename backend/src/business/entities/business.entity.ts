@@ -1,3 +1,5 @@
+import { MediaAsset } from 'src/review/entities/media-asset.entity';
+import { Review } from 'src/review/entities/review.entity';
 import {
   Entity,
   Column,
@@ -5,6 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   PrimaryGeneratedColumn,
+  OneToMany,
 } from 'typeorm';
 
 @Entity({ name: 'businesses' })
@@ -42,4 +45,10 @@ export class Business {
 
   @Column({ name: 'deleted_at', nullable: true, type: 'timestamp' })
   deletedAt?: Date;
+
+  @OneToMany(() => Review, (review) => review.business)
+  reviews: Review[];
+
+  @OneToMany(() => MediaAsset, (asset) => asset.businessId)
+  mediaAssets: MediaAsset[];
 }

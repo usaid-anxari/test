@@ -7,6 +7,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { HttpModule } from '@nestjs/axios';
+import { ReviewsModule } from './review/review.module';
+import { UploadsModule } from './uploads/uploads.module';
+import { TranscodeModule } from './transcode/transcode.module';
 
 
 @Module({
@@ -31,7 +34,10 @@ import { HttpModule } from '@nestjs/axios';
     }),
     UsersModule,
     BusinessModule,
-    AuthModule
+    AuthModule,
+    ReviewsModule,
+    UploadsModule,
+    TranscodeModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -8,12 +8,14 @@ import {
 } from "@heroicons/react/16/solid";
 import { ArrowLeftOnRectangleIcon } from "@heroicons/react/20/solid";
 import { AnimatePresence, motion } from "framer-motion";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
   const [isWidgetsDropdownOpen, setIsWidgetsDropdownOpen] = useState(false);
   const { user, logout } = useContext(AuthContext);
+  const { loginWithRedirect } = useAuth0();
   const navigate = useNavigate();
 
   const navLinks = user
@@ -21,8 +23,18 @@ const Navbar = () => {
         { name: "Dashboard", href: "/dashboard/moderation", isPrimary: true },
       ]
     : [
-        { name: "Log In", href: "/login", isPrimary: false },
-        { name: "Get Started", href: "/signup", isPrimary: true },
+        {
+          name: "Log In",
+          href: "#",
+          isPrimary: false,
+          action: () => loginWithRedirect({ screen_hint: "login" }),
+        },
+        {
+          name: "Get Started",
+          href: "#",
+          isPrimary: true,
+          action: () => loginWithRedirect({ screen_hint: "signup" }),
+        },
       ];
 
   const mainNavLinks = [
@@ -180,7 +192,7 @@ const Navbar = () => {
             {navLinks.map((link) => (
               <Link
                 key={link.name}
-                to={link.href}
+                onClick={link.action}
                 className={`hidden lg:block px-6 py-2 font-bold transition-colors ${
                   link.isPrimary
                     ? "text-white bg-orange-500 hover:bg-orange-600"
@@ -238,7 +250,7 @@ const Navbar = () => {
                 {mainNavLinks.map((link) => (
                   <Link
                     key={link.name}
-                    to={link.href}
+                    to={link.action}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block text-3xl font-bold text-gray-300 hover:text-orange-500 transition-colors"
                   >
@@ -292,8 +304,7 @@ const Navbar = () => {
                 {navLinks.map((link) => (
                   <Link
                     key={link.name}
-                    to={link.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={link.action}
                     className={`block text-3xl font-bold transition-colors ${
                       link.isPrimary
                         ? "text-orange-500 hover:text-white"

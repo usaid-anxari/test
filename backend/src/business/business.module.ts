@@ -7,6 +7,7 @@ import { BusinessController } from './business.controller';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { User } from '../users/entities/user.entity';
+import { UploadsModule } from 'src/uploads/uploads.module';
 
 @Module({
   imports: [

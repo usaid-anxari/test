@@ -12,7 +12,7 @@ export class AuthController {
   @ApiBearerAuth()
   @Get('profile')
   async profile(@Req() req) {
-    return {
+    return { 
       profile: req.userProfile,
       user: req.userEntity,
     };
