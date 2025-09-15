@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.bubble-container {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 120%; /* Adjust for aspect */
+  overflow: hidden;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.pre {
+  overflow-x: auto;
+}
+
+/* Styling for browsers that use WebKit (Chrome, Safari, Edge) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px; /* Sets the width of the scrollbar */
+  background-color: transparent; /* Makes the scrollbar area transparent */
+}
+
+/* Styles the track (the background) of the scrollbar */
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #374151; /* A dark gray that matches your theme */
+  border-radius: 10px; /* Adds rounded corners to the track */
+}
+
+/* Styles the thumb (the draggable part) of the scrollbar */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #6b7280; /* A lighter gray for the thumb */
+  border-radius: 10px; /* Adds rounded corners to the thumb */
+}
+
+/* Changes the color of the thumb when you hover over it */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af; /* A slightly lighter gray on hover */
+}
+
+/* Hide scrollbar for Firefox. */
+/* You can't style individual parts with pseudo-elements in Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin; /* 'auto' or 'thin' */
+  scrollbar-color: #6b7280 #374151; /* thumb color track color */
+}

@@ -1,0 +1,20 @@
+export const MOCK_REVIEWS = [
+  { id: 1, type: 'video', title: 'Great Customer Service', status: 'pending', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4' },
+  { id: 2, type: 'audio', title: 'Amazing Product!', status: 'approved', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+  { id: 3, type: 'text', title: 'So easy to use', status: 'reject', text: 'The user interface is intuitive and I love the design. I would recommend this to anyone!' },
+  { id: 4, type: 'video', title: 'Fast and reliable', status: 'pending', videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+  { id: 5, type: 'text', title: 'Life-changing!', status: 'pending', text: 'I never thought a product could be this good. It has completely changed my workflow for the better.' },
+  { id: 6, type: 'audio', title: 'Quick response', status: 'approved', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+  { id: 7, type: 'video', title: 'Great value for money', status: 'pending', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
+  { id: 8, type: 'audio', title: 'Outstanding quality', status: 'pending', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+  { id: 9, type: 'text', title: 'Exceeded expectations', status: 'pending', text: 'I was skeptical at first, but this product truly delivers on its promises. The performance is incredible and the support team is responsive.' },
+  { id: 10, type: 'video', title: 'Perfect for beginners', status: 'pending', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
+  { id: 11, type: 'audio', title: 'Highly recommended', status: 'approved', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+  { id: 12, type: 'text', title: 'Not what I expected', status: 'reject', text: 'The features advertised were not as described. I found the interface confusing and the learning curve too steep for my needs.' },
+  { id: 13, type: 'video', title: 'Impressive performance', status: 'approved', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' },
+  { id: 14, type: 'audio', title: 'Game changer', status: 'approved', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+  { id: 15, type: 'text', title: 'Worth every penny', status: 'approved', text: 'This investment has paid for itself multiple times over. The efficiency gains are remarkable and the customer service is top-notch.' },
+  { id: 16, type: 'video', title: 'Simple and effective', status: 'approved', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
+  { id: 17, type: 'audio', title: 'Love the features', status: 'pending', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+  { id: 18, type: 'text', title: 'Could be better', status: 'reject', text: 'While the core functionality works, there are several bugs and the user experience could use improvement. Updates seem slow.' }
+];
