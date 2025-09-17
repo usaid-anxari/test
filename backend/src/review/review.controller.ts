@@ -9,6 +9,9 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Query,
+  NotFoundException,
+  Get,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ReviewsService } from './review.service';
@@ -42,7 +45,12 @@ export class ReviewsController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file', multerOptionsMemory({ maxFileSize: 200 * 1024 * 1024 }))) // 200MB cap
+  @UseInterceptors(
+    FileInterceptor(
+      'file',
+      multerOptionsMemory({ maxFileSize: 200 * 1024 * 1024 }),
+    ),
+  ) // 200MB cap
   @HttpCode(HttpStatus.CREATED)
   async submitReview(
     @Param('slug') slug: string,
@@ -68,7 +76,7 @@ export class ReviewsController {
     const review = await this.reviewsService.createReviewForBusiness(biz, body);
 
     // 4) if file present -> upload & attach
-    let mediaAsset:MediaAsset | null = null ;
+    let mediaAsset: MediaAsset | null = null;
     if (file) {
       // file.buffer is available because multer memory storage is used
       const stream = Readable.from(file.buffer);
@@ -76,7 +84,11 @@ export class ReviewsController {
         biz,
         review,
         stream,
-        { originalname: file.originalname, mimetype: file.mimetype, size: file.size },
+        {
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+        },
       );
     }
 
@@ -88,7 +100,9 @@ export class ReviewsController {
         type: review.type,
         status: review.status,
       },
-      mediaAsset: mediaAsset ? { id: mediaAsset.id, s3Key: mediaAsset.s3Key } : null,
+      mediaAsset: mediaAsset
+        ? { id: mediaAsset.id, s3Key: mediaAsset.s3Key }
+        : null,
     };
   }
 }

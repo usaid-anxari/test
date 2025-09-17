@@ -8,53 +8,76 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly auth0Domain: string;
 
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-  ) {}
-
-  // Call Auth0 /userinfo with the access token to get profile
-  async getUserProfileFromToken(token: string): Promise<any> {
-    const domain = this.configService.get<string>('AUTH0_DOMAIN');
-    if (!domain) throw new Error('AUTH0_DOMAIN not set');
-
-    const url = domain.replace(/\/$/, '') + '/userinfo';
-
-    const resp = await axios.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    return resp.data;
+  ) {
+    this.auth0Domain = this.configService.get<string>('AUTH0_DOMAIN') || '';
+    if (!this.auth0Domain) {
+      throw new Error('AUTH0_DOMAIN is not configured');
+    }
   }
 
-  // Ensure user exists in DB and returns the User entity
+  async getUserProfileFromToken(token: string): Promise<any> {
+    const url = `${this.auth0Domain.replace(/\/$/, '')}/userinfo`;
+
+    try {
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 5000,
+      });
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to fetch user profile from Auth0', error);
+      throw new Error('Unable to fetch user profile');
+    }
+  }
+
   async validateOrCreateUser(profile: any): Promise<User> {
     const auth0Id = profile.sub;
-    if (!auth0Id) throw new Error('profile.sub missing');
+    if (!auth0Id) {
+      throw new Error('Invalid Auth0 profile: missing sub field');
+    }
 
     let user = await this.userRepo.findOne({ where: { auth0Id } });
+    
     if (!user) {
       user = this.userRepo.create({
         auth0Id,
-        email: profile.email,
-        name: profile.name || profile.nickname,
-        picture: profile.picture,
+        email: profile.email || null,
+        name: profile.name || profile.nickname || 'User',
+        picture: profile.picture || null,
         isActive: false,
       });
+      
       user = await this.userRepo.save(user);
-      this.logger.log(`Created new user id=${user.id} auth0Id=${auth0Id}`);
+      this.logger.log(`Created new user: ${user.id} (auth0: ${auth0Id})`);
     } else {
-      let changed = false;
-      if (profile.email && user.email !== profile.email) { user.email = profile.email; changed = true; }
-      if ((profile.name || profile.nickname) && user.name !== (profile.name || profile.nickname)) { user.name = profile.name || profile.nickname; changed = true; }
-      if (profile.picture && user.picture !== profile.picture) { user.picture = profile.picture; changed = true; }
-      if (changed) {
+      const updates: Partial<User> = {};
+      
+      if (profile.email && profile.email !== user.email) {
+        updates.email = profile.email;
+      }
+      
+      const newName = profile.name || profile.nickname;
+      if (newName && newName !== user.name) {
+        updates.name = newName;
+      }
+      
+      if (profile.picture && profile.picture !== user.picture) {
+        updates.picture = profile.picture;
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        Object.assign(user, updates);
         await this.userRepo.save(user);
-        this.logger.log(`Updated user id=${user.id}`);
+        this.logger.log(`Updated user profile: ${user.id}`);
       }
     }
+    
     return user;
   }
 }

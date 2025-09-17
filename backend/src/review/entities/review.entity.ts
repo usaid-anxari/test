@@ -7,8 +7,10 @@ import {
   Index,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Business } from '../../business/entities/business.entity';
+import { MediaAsset } from './media-asset.entity';
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'hidden';
 
@@ -21,9 +23,12 @@ export class Review {
   @Column({ name: 'business_id' })
   businessId: string;
 
-  @ManyToOne(() => Business)
+  @ManyToOne(() => Business, (biz) => biz.reviews)
   @JoinColumn({ name: 'business_id' })
   business: Business;
+
+  @OneToMany(() => MediaAsset, (asset) => asset.review, { cascade: true })
+  mediaAssets: MediaAsset[];
 
   @Column({ name: 'type' })
   type: 'text' | 'video' | 'audio' | 'import';
@@ -63,4 +68,7 @@ export class Review {
 
   @Column({ name: 'deleted_at', nullable: true, type: 'timestamp' })
   deletedAt?: Date;
+
+  @Column({ name: 'published_at', type: 'timestamp', nullable: true })
+  publishedAt?: Date | null;
 }

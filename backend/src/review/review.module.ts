@@ -8,10 +8,14 @@ import { TranscodeJob } from './entities/transcode-job.entity';
 import { Business } from '../business/entities/business.entity';
 import { S3Service } from '../common/s3/s3.service';
 import { ConfigModule } from '@nestjs/config';
+import { PublicReviewsController } from './public.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Review, MediaAsset, TranscodeJob, Business]), ConfigModule],
-  controllers: [ReviewsController],
+  imports: [
+    TypeOrmModule.forFeature([Review, MediaAsset, TranscodeJob, Business]),
+    ConfigModule,
+  ],
+  controllers: [ReviewsController, PublicReviewsController],
   providers: [ReviewsService, S3Service],
   exports: [ReviewsService],
 })

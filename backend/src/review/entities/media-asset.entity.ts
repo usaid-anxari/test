@@ -22,7 +22,7 @@ export class MediaAsset {
   @Column({ name: 'review_id' })
   reviewId: string;
 
-  @ManyToOne(() => Review)
+  @ManyToOne(() => Review, (review) => review.mediaAssets)
   @JoinColumn({ name: 'review_id' })
   review: Review;
 

@@ -7,28 +7,28 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(configService: ConfigService) {
-    console.log(configService.get('AUTH0_AUDIENCE'));
+    const domain = configService.get('AUTH0_DOMAIN');
+    const audience = configService.get('AUTH0_AUDIENCE');
+    
+    if (!domain || !audience) {
+      throw new Error('AUTH0_DOMAIN and AUTH0_AUDIENCE must be configured');
+    }
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      // audience should match the "Identifier" you set for your Auth0 API
-      audience: configService.get('AUTH0_AUDIENCE'),
-      issuer: `${configService.get('AUTH0_DOMAIN').replace(/\/$/, '')}/`,
+      audience: audience,
+      issuer: `${domain.replace(/\/$/, '')}/`,
       algorithms: ['RS256'],
       secretOrKeyProvider: jwksRsa.passportJwtSecret({
         cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
-        jwksUri: `${configService
-          .get('AUTH0_DOMAIN')
-          .replace(/\/$/, '')}/.well-known/jwks.json`,
+        jwksUri: `${domain.replace(/\/$/, '')}/.well-known/jwks.json`,
       }) as any,
     });
   }
 
-  // payload is the decoded JWT claims (sub, aud, iss, scope, etc.)
   async validate(payload: any) {
-    // return the raw claims to be available in req.user
     return payload;
   }
 }

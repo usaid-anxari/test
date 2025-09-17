@@ -127,4 +127,42 @@ export class ReviewsService {
 
     return savedAsset;
   }
+
+  async getApprovedReviewsWithMedia(slug: string, page: number, limit: number) {
+    const biz = await this.findBusinessBySlug(slug);
+    if (!biz) throw new NotFoundException('Business not found');
+
+    const qb = this.reviewsRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.mediaAssets', 'm')
+      .where('r.business_id = :bizId', { bizId: biz.id })
+      .andWhere('r.status = :status', { status: 'approved' })
+      .orderBy('r.published_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [rows, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      reviews: rows.map((r) => ({
+        id: r.id,
+        type: r.type,
+        title: r.title,
+        bodyText: r.bodyText,
+        rating: r.rating,
+        reviewerName: r.reviewerName,
+        publishedAt: r.publishedAt,
+        media:
+          r.mediaAssets
+            ?.filter((m) => m.assetType === 'video' || m.assetType === 'audio')
+            .map((m) => ({
+              type: m.assetType,
+              s3Key: m.s3Key,
+            })) || [],
+      })),
+    };
+  }
 }

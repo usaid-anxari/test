@@ -10,6 +10,7 @@ import {
   BadRequestException,
   UploadedFile,
   UseInterceptors,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -23,21 +24,21 @@ import { JwtAuthGuard } from '../common/jwt-auth/jwt-auth.guard';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UsersService } from 'src/users/users.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import multerS3 from 'multer-s3';
-import { s3Client } from '../aws.module';
+import { memoryStorage } from 'multer';
+import { S3Service } from '../common/s3/s3.service';
 import { ConfigService } from '@nestjs/config';
-import * as dotenv from 'dotenv';
-
-dotenv.config()
+import { Readable } from 'stream';
 
 @ApiTags('Business')
 @Controller()
 export class BusinessController {
+  private readonly logger = new Logger(BusinessController.name);
+  
   constructor(
     private readonly configService: ConfigService,
     private readonly bizService: BusinessService,
     private readonly usersService: UsersService,
+    private readonly s3Service: S3Service, // Add S3Service
   ) {}
 
   // Public page: truetestify.com/{business-slug}
@@ -45,6 +46,7 @@ export class BusinessController {
   async publicProfile(@Param('slug') slug: string) {
     const b = await this.bizService.findBySlug(slug);
     if (!b) throw new NotFoundException('Business not found');
+    
     return {
       id: b.id,
       name: b.name,
@@ -58,49 +60,72 @@ export class BusinessController {
   }
 
   // Create business (authenticated user becomes owner and gets activated)
-  // Create business — authenticated user
-  // Create business (authenticated user becomes owner and gets activated)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post('api/business')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('logoFile', {
-      storage: multerS3({
-        s3: s3Client, 
-        bucket: process.env.AWS_S3_BUCKET,
-        contentType: multerS3.AUTO_CONTENT_TYPE,
-        key: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, `logos/${uniqueSuffix}-${file.originalname}`);
-        },
-      }),
+      storage: memoryStorage(), // Use memory storage instead of multer-s3
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB max for logo
+      },
+      fileFilter: (req, file, cb) => {
+        // Only allow image files
+        if (!file.mimetype.startsWith('image/')) {
+          cb(new BadRequestException('Only image files are allowed'), false);
+        } else {
+          cb(null, true);
+        }
+      },
     }),
   )
   @ApiBody({ type: CreateBusinessDto })
   async createBusiness(
     @Req() req,
-    @UploadedFile() file: any,
+    @UploadedFile() file: Express.Multer.File,
     @Body() body: CreateBusinessDto,
   ) {
     try {
       const slug = (body.slug || body.name).toLowerCase().replace(/\s+/g, '-');
 
-      // Check slug
+      // Check slug uniqueness
       const existing = await this.bizService.findBySlug(slug);
-      if (existing)
+      if (existing) {
         throw new BadRequestException('Slug already taken, choose another.');
+      }
 
       // Get current user
-      const auth0Id = req.userEntity.id;
-      const user = await this.usersService.findById(auth0Id);
-      if (!user) throw new BadRequestException('User not found in system.');
+      const userId = req.userEntity.id;
+      const user = await this.usersService.findById(userId);
+      if (!user) {
+        throw new BadRequestException('User not found in system.');
+      }
 
-      // Handle logo (file OR URL)
+      // Handle logo upload (file OR URL)
       let logoUrl = body.logoUrl;
+      
       if (file) {
-        logoUrl = file.location; // multer-s3 returns the public URL
+        // Upload logo to S3 using the S3Service
+        const timestamp = Date.now();
+        const safeFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const s3Key = `businesses/logos/${timestamp}-${safeFilename}`;
+        
+        // Convert buffer to stream
+        const stream = Readable.from(file.buffer);
+        
+        // Upload to S3
+        const uploadResult = await this.s3Service.uploadStream(
+          s3Key,
+          stream,
+          file.size,
+          file.mimetype
+        );
+        
+        // Get signed URL for the logo
+        logoUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7); // 7 days expiry
+        
+        this.logger.log(`Logo uploaded to S3: ${s3Key}`);
       }
 
       // Create business
@@ -111,17 +136,35 @@ export class BusinessController {
         brandColor: body.brandColor,
         website: body.website,
         contactEmail: body.contactEmail,
-        settingsJson: body.settingsJson || {},
+        settingsJson: body.settingsJson || { textReviewsEnabled: true },
       });
 
       // Attach owner & activate user
       await this.bizService.addOwner(biz.id, user.id, true);
       await this.usersService.updateUserStatus(user.id, true);
 
-      return { message: 'Business created successfully', business: biz };
+      this.logger.log(`Business created: ${biz.id} by user: ${user.id}`);
+
+      return { 
+        message: 'Business created successfully', 
+        business: {
+          id: biz.id,
+          name: biz.name,
+          slug: biz.slug,
+          logoUrl: biz.logoUrl,
+          brandColor: biz.brandColor,
+          website: biz.website,
+          contactEmail: biz.contactEmail,
+        }
+      };
     } catch (err) {
-      if (err instanceof BadRequestException) throw err;
-      throw new BadRequestException('Failed to create business');
+      this.logger.error('Failed to create business', err);
+      
+      if (err instanceof BadRequestException) {
+        throw err;
+      }
+      
+      throw new BadRequestException('Failed to create business: ' + err.message);
     }
   }
 
@@ -130,9 +173,27 @@ export class BusinessController {
   @ApiBearerAuth()
   @Get('api/business/me')
   async myBusiness(@Req() req) {
-    const user = req.userEntity;
-    const b = await this.bizService.findDefaultForUser(user.id);
-    if (!b) return { message: 'No business for this user (create one).' };
-    return { business: b };
+    const userId = req.userEntity.id;
+    const b = await this.bizService.findDefaultForUser(userId);
+    
+    if (!b) {
+      return { 
+        message: 'No business found. Please create one.',
+        business: null 
+      };
+    }
+    
+    return { 
+      business: {
+        id: b.id,
+        name: b.name,
+        slug: b.slug,
+        logoUrl: b.logoUrl,
+        brandColor: b.brandColor,
+        website: b.website,
+        contactEmail: b.contactEmail,
+        settingsJson: b.settingsJson,
+      }
+    };
   }
 }

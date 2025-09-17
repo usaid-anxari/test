@@ -1,11 +1,10 @@
 import { Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/jwt-auth/jwt-auth.guard';
-import { AuthService } from './auth.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor() {}
 
   // returns the raw profile (from /userinfo) and DB user entity
   @UseGuards(JwtAuthGuard)

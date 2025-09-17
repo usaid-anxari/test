@@ -10,6 +10,8 @@ import { HttpModule } from '@nestjs/axios';
 import { ReviewsModule } from './review/review.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { TranscodeModule } from './transcode/transcode.module';
+import { AdminModule } from './admin/admin.module';
+import { StorageModule } from './storage/storage.module';
 
 
 @Module({
@@ -37,7 +39,9 @@ import { TranscodeModule } from './transcode/transcode.module';
     AuthModule,
     ReviewsModule,
     UploadsModule,
-    TranscodeModule
+    TranscodeModule,
+    AdminModule,
+    StorageModule
   ],
   controllers: [AppController],
   providers: [AppService],
