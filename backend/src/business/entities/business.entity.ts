@@ -1,5 +1,5 @@
-import { MediaAsset } from 'src/review/entities/media-asset.entity';
-import { Review } from 'src/review/entities/review.entity';
+import { MediaAsset } from '../../review/entities/media-asset.entity';
+import { Review } from '../../review/entities/review.entity';
 import {
   Entity,
   Column,

@@ -7,12 +7,15 @@ import { BusinessController } from './business.controller';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { User } from '../users/entities/user.entity';
+import { Review } from '../review/entities/review.entity';
+import { MediaAsset } from '../review/entities/media-asset.entity';
+import { GoogleReview } from '../google/entities/google-review.entity';
 import { S3Service } from '../common/s3/s3.service';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Business, BusinessUser, User]),
+    TypeOrmModule.forFeature([Business, BusinessUser, User, Review, MediaAsset, GoogleReview]),
     forwardRef(() => UsersModule),
     forwardRef(() => AuthModule),
     ConfigModule,

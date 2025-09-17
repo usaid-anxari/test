@@ -1,99 +1,85 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
+import * as dotenv from 'dotenv';
+import { seed } from './seed';
+
+// Import all entities
 import { User } from '../users/entities/user.entity';
 import { Business } from '../business/entities/business.entity';
 import { BusinessUser } from '../business/entities/business-user.entity';
-import * as dotenv from "dotenv"
+import { Review } from '../review/entities/review.entity';
+import { MediaAsset } from '../review/entities/media-asset.entity';
+import { TranscodeJob } from '../review/entities/transcode-job.entity';
+import { GoogleConnection } from '../google/entities/google-connection.entity';
+import { GoogleReview } from '../google/entities/google-review.entity';
+import { Widget } from '../widgets/entities/widget.entity';
+import { EmbedToken } from '../widgets/entities/embed-token.entity';
+import { BillingAccount } from '../billing/entities/billing-account.entity';
+import { BillingTransaction } from '../billing/entities/billing-transaction.entity';
+import { AnalyticsEvent } from '../analytics/entities/analytics-event.entity';
+import { EmailLog } from '../email/entities/email-log.entity';
+import { EmailPreference } from '../email/entities/email-preference.entity';
 
-dotenv.config()
+dotenv.config();
 
-const ds = new DataSource({
+const dataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT || 5432),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User, Business, BusinessUser],
+  entities: [
+    User,
+    Business,
+    BusinessUser,
+    Review,
+    MediaAsset,
+    TranscodeJob,
+    GoogleConnection,
+    GoogleReview,
+    Widget,
+    EmbedToken,
+    BillingAccount,
+    BillingTransaction,
+    AnalyticsEvent,
+    EmailLog,
+    EmailPreference,
+  ],
   synchronize: true,
+  logging: false,
 });
 
-async function run() {
-  console.log("Start Seeding......");
-  
-  await ds.initialize();
-  const userRepo = ds.getRepository(User);
-  const bizRepo = ds.getRepository(Business);
-  const buRepo = ds.getRepository(BusinessUser);
-
-  // demo users with Auth0 IDs placeholders (replace with real Auth0 IDs for testing)
-  const users = [
-    {
-      auth0Id: 'auth0|owner1',
-      email: 'owner1@glambeauty.com',
-      name: 'Owner GlamBeauty',
-    },
-    {
-      auth0Id: 'auth0|owner2',
-      email: 'owner2@citycuts.com',
-      name: 'Owner CityCuts',
-    },
-  ];
-  const savedUsers:User [] = [];
-  for (const u of users) {
-    let ex = await userRepo.findOne({ where: { auth0Id: u.auth0Id } });
-    if (!ex) {
-      ex = userRepo.create(u);
-      await userRepo.save(ex);
-    }
-    savedUsers.push(ex);
-    console.log("Saved User.......");
-  }
- 
-  const businesses = [
-    {
-      slug: 'glambeauty',
-      name: 'GlamBeauty',
-      brandColor: '#FF69B4',
-      contactEmail: 'contact@glambeauty.com',
-    },
-    {
-      slug: 'citycuts',
-      name: 'CityCuts',
-      brandColor: '#1E90FF',
-      contactEmail: 'contact@citycuts.com',
-    },
-  ];
-  const savedBiz:Business [] = [];
-  for (const b of businesses) {
-    let ex = await bizRepo.findOne({ where: { slug: b.slug } });
-    if (!ex) {
-      ex = bizRepo.create(b);
-      await bizRepo.save(ex);
-    }
-    savedBiz.push(ex);
-    console.log("Saving Business........");
+async function runSeed() {
+  try {
+    console.log('🚀 Initializing database connection...');
+    await dataSource.initialize();
     
+    console.log('🌱 Running comprehensive seed...');
+    await seed(dataSource);
+    
+    console.log('\n🎉 Seed completed successfully!');
+    console.log('\n🔗 Ready to test all endpoints:');
+    console.log('   Public: GET /business/truetestify');
+    console.log('   Public: GET /api/billing/pricing-plans');
+    console.log('   Public: POST /api/public/truetestify/reviews');
+    console.log('   Public: GET /embed/truetestify?style=grid');
+    console.log('   Public: POST /api/analytics/events');
+    console.log('   Auth: GET /auth/profile (with Auth0 token)');
+    console.log('   Auth: GET /api/business/me (with Auth0 token)');
+    console.log('   Auth: GET /api/reviews (with Auth0 token)');
+    console.log('   Auth: GET /api/analytics/dashboard (with Auth0 token)');
+    console.log('   Auth: GET /api/billing/account (with Auth0 token)');
+    
+    await dataSource.destroy();
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Seed failed:', error);
+    if (dataSource.isInitialized) {
+      await dataSource.destroy();
+    }
+    process.exit(1);
   }
-
-  // link owners
-  await buRepo.save({
-    userId: savedUsers[0].id,
-    businessId: savedBiz[0].id,
-    role: 'owner',
-    isDefault: true,
-  });
-  await buRepo.save({
-    userId: savedUsers[1].id,
-    businessId: savedBiz[1].id,
-    role: 'owner',
-    isDefault: true,
-  });
-
-  console.log('Seed done!');
-  process.exit(0);
 }
-run().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+
+runSeed();

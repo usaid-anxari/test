@@ -43,6 +43,7 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+
 # temp directory
 .temp
 .tmp
@@ -52,6 +53,7 @@ pids
 *.pid
 *.seed
 *.pid.lock
-
+*.js
+*.md
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

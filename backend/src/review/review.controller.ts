@@ -63,19 +63,26 @@ export class ReviewsController {
       throw new BadRequestException('Business not found');
     }
 
-    // 2) Validate type vs file presence
+    // 2) Milestone 5: Check if text reviews are enabled
+    if (body.type === 'text') {
+      const textEnabled = biz.settingsJson?.textReviewsEnabled ?? true; // default enabled
+      if (!textEnabled) {
+        throw new BadRequestException('Text reviews are not enabled for this business');
+      }
+    }
+
+    // 3) Validate type vs file presence
     if ((body.type === 'video' || body.type === 'audio') && !file) {
       throw new BadRequestException('File is required for video/audio reviews');
     }
     if (body.type === 'text' && file) {
-      // optional: ignore file or throw
       throw new BadRequestException('Do not upload files for text reviews');
     }
 
-    // 3) create review row
+    // 4) create review row
     const review = await this.reviewsService.createReviewForBusiness(biz, body);
 
-    // 4) if file present -> upload & attach
+    // 5) if file present -> upload & attach
     let mediaAsset: MediaAsset | null = null;
     if (file) {
       // file.buffer is available because multer memory storage is used

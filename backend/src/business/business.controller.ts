@@ -41,21 +41,34 @@ export class BusinessController {
     private readonly s3Service: S3Service, // Add S3Service
   ) {}
 
-  // Public page: truetestify.com/{business-slug}
+  // Public page: truetestify.com/{business-slug} - Milestone 4
   @Get('business/:slug')
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Business profile with prioritized approved reviews (video → audio → text) - S3 keys only' 
+  })
+  @ApiResponse({ status: 404, description: 'Business not found' })
   async publicProfile(@Param('slug') slug: string) {
-    const b = await this.bizService.findBySlug(slug);
-    if (!b) throw new NotFoundException('Business not found');
+    const result = await this.bizService.getPublicProfileWithReviews(slug);
+    if (!result) throw new NotFoundException('Business not found');
+    
+    return result;
+  }
+
+  // Public reviews endpoint - Milestone 4
+  @Get('business/:slug/reviews')
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Approved reviews only, prioritized by type with S3 keys' 
+  })
+  @ApiResponse({ status: 404, description: 'Business not found' })
+  async getPublicReviews(@Param('slug') slug: string) {
+    const result = await this.bizService.getPublicProfileWithReviews(slug);
+    if (!result) throw new NotFoundException('Business not found');
     
     return {
-      id: b.id,
-      name: b.name,
-      slug: b.slug,
-      logoUrl: b.logoUrl,
-      brandColor: b.brandColor,
-      website: b.website,
-      contactEmail: b.contactEmail,
-      emptyState: 'No reviews yet.',
+      reviews: result.reviews,
+      stats: result.stats,
     };
   }
 
@@ -194,6 +207,38 @@ export class BusinessController {
         contactEmail: b.contactEmail,
         settingsJson: b.settingsJson,
       }
+    };
+  }
+
+  // Milestone 5: Toggle text reviews setting
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('api/business/settings/text-reviews')
+  @ApiBody({ 
+    schema: { 
+      type: 'object', 
+      properties: { 
+        enabled: { type: 'boolean' } 
+      } 
+    } 
+  })
+  async toggleTextReviews(@Req() req, @Body() body: { enabled: boolean }) {
+    const userId = req.userEntity.id;
+    const business = await this.bizService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    
+    const updatedBusiness = await this.bizService.updateBusinessSettings(
+      business.id,
+      userId,
+      { textReviewsEnabled: body.enabled }
+    );
+    
+    return {
+      message: `Text reviews ${body.enabled ? 'enabled' : 'disabled'}`,
+      textReviewsEnabled: body.enabled
     };
   }
 }

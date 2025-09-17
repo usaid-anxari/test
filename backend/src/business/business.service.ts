@@ -11,6 +11,10 @@ import { IsNull, Repository } from 'typeorm';
 import { Business } from './entities/business.entity';
 import { BusinessUser } from './entities/business-user.entity';
 import { User } from '../users/entities/user.entity';
+import { Review } from '../review/entities/review.entity';
+import { MediaAsset } from '../review/entities/media-asset.entity';
+import { GoogleReview } from '../google/entities/google-review.entity';
+import { S3Service } from '../common/s3/s3.service';
 
 @Injectable()
 export class BusinessService {
@@ -20,6 +24,10 @@ export class BusinessService {
     @InjectRepository(Business) private businessRepo: Repository<Business>,
     @InjectRepository(BusinessUser) private businessUserRepo: Repository<BusinessUser>,
     @InjectRepository(User) private userRepo: Repository<User>,
+    @InjectRepository(Review) private reviewRepo: Repository<Review>,
+    @InjectRepository(MediaAsset) private mediaRepo: Repository<MediaAsset>,
+    @InjectRepository(GoogleReview) private googleReviewRepo: Repository<GoogleReview>,
+    private s3Service: S3Service,
   ) {}
 
   async create(dto: Partial<Business>): Promise<Business> {
@@ -129,6 +137,96 @@ export class BusinessService {
     };
 
     return this.businessRepo.save(business);
+  }
+
+  // Milestone 4: Public profile with prioritized approved reviews
+  async getPublicProfileWithReviews(slug: string) {
+    const business = await this.findBySlug(slug);
+    if (!business) return null;
+
+    // Get approved reviews with media assets, prioritized: video → audio → text
+    const queryBuilder = this.reviewRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.mediaAssets', 'm')
+      .where('r.businessId = :businessId', { businessId: business.id })
+      .andWhere('r.status = :status', { status: 'approved' });
+    
+    // Milestone 5: Filter text reviews if disabled
+    const textEnabled = business.settingsJson?.textReviewsEnabled ?? true;
+    if (!textEnabled) {
+      queryBuilder.andWhere('r.type != :textType', { textType: 'text' });
+    }
+    
+    const reviews = await queryBuilder
+      .orderBy(
+        `CASE 
+          WHEN r.type = 'video' THEN 1 
+          WHEN r.type = 'audio' THEN 2 
+          WHEN r.type = 'text' THEN 3 
+          ELSE 4 
+        END`
+      )
+      .addOrderBy('r.publishedAt', 'DESC')
+      .getMany();
+
+    // Return S3 keys only (frontend will handle URL generation)
+    const reviewsWithMedia = reviews.map((review) => {
+      const media = (review.mediaAssets || []).map((asset) => ({
+        id: asset.id,
+        type: asset.assetType,
+        s3Key: asset.s3Key,
+        durationSec: asset.durationSec,
+      }));
+
+      return {
+        id: review.id,
+        type: review.type,
+        title: review.title,
+        bodyText: review.bodyText,
+        rating: review.rating,
+        reviewerName: review.reviewerName,
+        publishedAt: review.publishedAt,
+        media,
+      };
+    });
+
+    // Milestone 6: Get Google reviews
+    const googleReviews = await this.googleReviewRepo.find({
+      where: { businessId: business.id },
+      order: { reviewedAt: 'DESC' },
+    });
+
+    const googleReviewsFormatted = googleReviews.map(review => ({
+      id: review.id,
+      type: 'google',
+      title: `${review.rating} star review`,
+      bodyText: review.text,
+      rating: review.rating,
+      reviewerName: review.reviewerName,
+      publishedAt: review.reviewedAt,
+      media: [],
+    }));
+
+    return {
+      business: {
+        id: business.id,
+        name: business.name,
+        slug: business.slug,
+        logoUrl: business.logoUrl,
+        brandColor: business.brandColor,
+        website: business.website,
+        contactEmail: business.contactEmail,
+        textReviewsEnabled: business.settingsJson?.textReviewsEnabled ?? true,
+      },
+      reviews: [...reviewsWithMedia, ...googleReviewsFormatted],
+      stats: {
+        totalReviews: reviewsWithMedia.length + googleReviewsFormatted.length,
+        videoReviews: reviewsWithMedia.filter(r => r.type === 'video').length,
+        audioReviews: reviewsWithMedia.filter(r => r.type === 'audio').length,
+        textReviews: reviewsWithMedia.filter(r => r.type === 'text').length,
+        googleReviews: googleReviewsFormatted.length,
+      },
+    };
   }
 
   private generateSlug(name: string): string {

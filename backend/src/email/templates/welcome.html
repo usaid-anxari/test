@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Welcome to TrueTestify</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1e3a8a; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .button { background: #ef7c00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to TrueTestify!</h1>
+        </div>
+        <div class="content">
+            <h2>Hi {{recipientName}},</h2>
+            <p>Welcome to TrueTestify! We're excited to help you build trust through authentic video testimonials.</p>
+            
+            <p>Your business <strong>{{businessName}}</strong> is now set up with:</p>
+            <ul>
+                <li>✅ 14-day free trial</li>
+                <li>✅ 1GB storage to get started</li>
+                <li>✅ All widget styles available</li>
+                <li>✅ Analytics dashboard</li>
+            </ul>
+
+            <p>Ready to collect your first video testimonial?</p>
+            <a href="{{dashboardUrl}}" class="button">Go to Dashboard</a>
+
+            <p>Need help getting started? Check out our <a href="{{helpUrl}}">quick start guide</a>.</p>
+        </div>
+        <div class="footer">
+            <p>TrueTestify - Building trust through authentic video testimonials</p>
+            <p><a href="{{unsubscribeUrl}}">Unsubscribe</a></p>
+        </div>
+    </div>
+</body>
+</html>

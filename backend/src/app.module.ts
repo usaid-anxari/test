@@ -12,6 +12,12 @@ import { UploadsModule } from './uploads/uploads.module';
 import { TranscodeModule } from './transcode/transcode.module';
 import { AdminModule } from './admin/admin.module';
 import { StorageModule } from './storage/storage.module';
+import { GoogleModule } from './google/google.module';
+import { WidgetsModule } from './widgets/widgets.module';
+import { EmbedController } from './embed/embed.controller';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { BillingModule } from './billing/billing.module';
+import { EmailModule } from './email/email.module';
 
 
 @Module({
@@ -41,9 +47,14 @@ import { StorageModule } from './storage/storage.module';
     UploadsModule,
     TranscodeModule,
     AdminModule,
-    StorageModule
+    StorageModule,
+    GoogleModule,
+    WidgetsModule,
+    AnalyticsModule,
+    BillingModule,
+    EmailModule
   ],
-  controllers: [AppController],
+  controllers: [AppController, EmbedController],
   providers: [AppService],
 })
 export class AppModule {}

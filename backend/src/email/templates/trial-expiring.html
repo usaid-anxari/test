@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Your Trial is Expiring Soon</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #ef7c00; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .warning { background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .button { background: #1e3a8a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⏰ Your Trial Expires in {{daysLeft}} Days</h1>
+        </div>
+        <div class="content">
+            <h2>Hi {{recipientName}},</h2>
+            
+            <div class="warning">
+                <strong>Action Required:</strong> Your TrueTestify trial expires on {{trialEndDate}}.
+            </div>
+
+            <p>You've been making great progress with <strong>{{businessName}}</strong>:</p>
+            <ul>
+                <li>📹 {{reviewCount}} reviews collected</li>
+                <li>📊 {{viewCount}} widget views</li>
+                <li>💾 {{storageUsed}}GB storage used</li>
+            </ul>
+
+            <p>Don't lose access to your reviews and analytics! Choose a plan that fits your needs:</p>
+            
+            <h3>🌟 Recommended: Starter Plan</h3>
+            <p><strong>$19/month</strong> - 10GB storage, all features, priority support</p>
+            <a href="{{upgradeUrl}}" class="button">Upgrade to Starter</a>
+
+            <p>Or <a href="{{pricingUrl}}">view all pricing plans</a> to find the perfect fit.</p>
+
+            <p><strong>What happens if I don't upgrade?</strong><br>
+            Your account will be downgraded to the free plan (1GB storage) and some features will be limited.</p>
+        </div>
+        <div class="footer">
+            <p>TrueTestify - Building trust through authentic video testimonials</p>
+            <p><a href="{{unsubscribeUrl}}">Unsubscribe</a></p>
+        </div>
+    </div>
+</body>
+</html>

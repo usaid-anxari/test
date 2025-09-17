@@ -137,7 +137,7 @@ export class ReviewsService {
       .leftJoinAndSelect('r.mediaAssets', 'm')
       .where('r.business_id = :bizId', { bizId: biz.id })
       .andWhere('r.status = :status', { status: 'approved' })
-      .orderBy('r.published_at', 'DESC')
+      .orderBy('r.publishedAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
