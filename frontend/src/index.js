@@ -15,10 +15,12 @@ root.render(
   
   <BrowserRouter>
  <Auth0Provider
-    domain="dev-mfoxs3rbf7swowt7.us.auth0.com"
-    clientId="rqsKYczySQrkC2LiKGoIoAo5VAROf64c"
+    domain={process.env.REACT_APP_AUTH0_DOMAIN}
+    clientId={process.env.REACT_APP_AUTH0_CLIENT_ID}
     authorizationParams={{
-      redirect_uri: window.location.origin
+      redirect_uri: window.location.origin,
+      audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+      scope: "openid profile email"
     }}
   >
 

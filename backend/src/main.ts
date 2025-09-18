@@ -7,6 +7,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
+  // Enable CORS
+  app.enableCors({
+    origin: ['http://localhost:3000', 'http://localhost:5173'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Truetestify API')
     .setDescription('MVP APIs for Truetestify')

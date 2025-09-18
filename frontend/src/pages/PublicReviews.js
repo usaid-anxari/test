@@ -28,11 +28,17 @@ const PublicReviews = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const response = await axiosInstance.get(
+        // Get business info from public profile endpoint
+        const businessResponse = await axiosInstance.get(
           API_PATHS.BUSINESSES.GET_PUBLIC_PROFILE(businessName)
         );
-        setBusiness(response.data.business);
-        setReviews(response.data.reviews || []);
+        setBusiness(businessResponse.data);
+        
+        // Get approved reviews only from public reviews endpoint
+        const reviewsResponse = await axiosInstance.get(
+          API_PATHS.REVIEWS.GET_PUBLIC_REVIEWS(businessName)
+        );
+        setReviews(reviewsResponse.data.reviews || reviewsResponse.data || []);
       } catch (error) {
         console.error("Failed to load profile:", error);
         toast.error("Could not load business profile.");
@@ -110,9 +116,64 @@ const PublicReviews = () => {
 
     if (reviews.length === 0) {
       return (
-        <p className={themeMode === "dark" ? "text-gray-400" : "text-gray-500"} style={{ fontSize: "1.1rem" }}>
-          No reviews available yet. Be the first to share your experience!
-        </p>
+        <div className="text-center py-20">
+          <div className="relative inline-block mb-8">
+            <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto shadow-lg">
+              <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+            </div>
+            <div className="absolute -top-2 -right-2 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-slow">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+          </div>
+          <h3 className="heading-2 text-gray-800 mb-4">Be the First to Review!</h3>
+          <p className="text-lead text-gray-600 mb-10 max-w-lg mx-auto">
+            Help others discover {business?.name} by sharing your authentic experience. Your review matters!
+          </p>
+          <Link
+            to={`/record/${businessName}`}
+            className="btn-primary text-xl px-12 py-5"
+          >
+            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Leave the First Review
+          </Link>
+          
+          {/* Benefits */}
+          <div className="grid-3 max-w-2xl mx-auto mt-16">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-700">Quick & Easy</p>
+              <p className="text-xs text-gray-500">Takes 2 minutes</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-700">Secure & Private</p>
+              <p className="text-xs text-gray-500">Your data is safe</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-gray-700">Help Others</p>
+              <p className="text-xs text-gray-500">Share your story</p>
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -247,14 +308,14 @@ const PublicReviews = () => {
   case "GRID":
     default:
       return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {reviews?.map((review) => (
+        <div className="grid-responsive">
+          {reviews?.map((review, index) => (
             <motion.div
               key={review.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="relative"
+              transition={{ duration: 0.4, delay: index * 0.1 }}
+              className="fade-in"
             >
               <ReviewCard
                 review={review}

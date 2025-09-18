@@ -44,6 +44,8 @@ import BusinessDashboard from "./pages/Dashboard/BusinessDashboard";
 import { Toaster } from "react-hot-toast";
 import Auth0Signup from "./pages/Auth0Signup";
 import Auth0Login from "./pages/Auth0Login";
+import Auth0ProtectedRoute from "./components/Auth0ProtectedRoute";
+import CreateBusiness from "./pages/CreateBusiness";
 
 
 // const Root = ()=>{
@@ -75,7 +77,6 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/pricing" element={<Pricing />} />
-            <Route path="/billing" element={<Billing />} />
             <Route path="/about" element={<About />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/terms" element={<TermsOfService />} />
@@ -109,14 +110,15 @@ function App() {
             <Route path=":businessName" element={<PublicReviews />} />
             <Route path="/auth0-signup" element={<Auth0Signup />} />
             <Route path="/auth0-login" element={<Auth0Login />} />
+            <Route path="/create-business" element={<CreateBusiness />} />
 
             {/* Dashboard routes for admins */}
             <Route
               path="/dashboard"
               element={
-                <AdminProtectedRoute>
+                <Auth0ProtectedRoute>
                   <DashboardLayout />
-                </AdminProtectedRoute>
+                </Auth0ProtectedRoute>
               }
             >
               <Route

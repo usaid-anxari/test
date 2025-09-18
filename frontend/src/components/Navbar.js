@@ -15,12 +15,14 @@ const Navbar = () => {
   const [isServicesDropdownOpen, setIsServicesDropdownOpen] = useState(false);
   const [isWidgetsDropdownOpen, setIsWidgetsDropdownOpen] = useState(false);
   const { user, logout } = useContext(AuthContext);
-  const { loginWithRedirect } = useAuth0();
+  const { loginWithRedirect, logout: auth0Logout } = useAuth0();
   const navigate = useNavigate();
 
-  const navLinks = user
-    ? user && [
-        { name: "Dashboard", href: "/dashboard/moderation", isPrimary: true },
+  const { isAuthenticated } = useAuth0();
+
+  const navLinks = isAuthenticated
+    ? [
+        { name: "Dashboard", href: "/dashboard", isPrimary: true },
       ]
     : [
         {
@@ -91,28 +93,55 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
-    navigate("/");
+    auth0Logout({ returnTo: window.location.origin });
   };
 
   return (
     <>
-      <nav className="w-full bg-gray-900 text-white py-4 md:py-5 border-t border-gray-800 z-30">
-        <div className="flex justify-between items-center max-w-7xl mx-auto px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-3xl font-extrabold text-gray-200 tracking-tight">
-              TrueTestify
-            </span>
-            <span className="hidden sm:inline-block text-[10px] uppercase bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded">
-              Beta
-            </span>
+      <nav className="w-full text-white py-2 md:py-3 z-30 relative overflow-hidden" style={{
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #ef7c00 100%)'
+      }}>
+        {/* Animated background overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="flex justify-between items-center max-w-7xl mx-auto px-4 relative z-10">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105" style={{
+                  background: 'linear-gradient(135deg, #ef7c00 0%, #f97316 100%)'
+                }}>
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-white tracking-tight drop-shadow-lg">
+                  TrueTestify
+                </span>
+                <span className="text-xs text-orange-200 font-semibold -mt-1 tracking-wide">
+                  Authentic Video Reviews
+                </span>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-[10px] uppercase bg-gradient-to-r from-orange-500/40 to-orange-600/40 text-orange-100 px-3 py-1.5 rounded-full font-bold border border-orange-400/40 backdrop-blur-sm shadow-lg">
+                ✨ Beta
+              </span>
+              <span className="text-[10px] uppercase bg-gradient-to-r from-green-500/40 to-green-600/40 text-green-100 px-3 py-1.5 rounded-full font-bold border border-green-400/40 backdrop-blur-sm shadow-lg">
+                🚀 Live
+              </span>
+            </div>
           </Link>
-          <div className="flex items-center space-x-4 md:space-x-6">
+          <div className="flex items-center space-x-2 md:space-x-3">
             {/* Desktop links */}
             {mainNavLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.href}
-                className="hidden lg:block text-gray-100 font-medium hover:text-orange-500 transition-colors"
+                className="hidden lg:block text-white/90 font-medium hover:text-orange-200 transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-white/10"
               >
                 {link.name}
               </Link>
@@ -121,7 +150,7 @@ const Navbar = () => {
               <button
                 onMouseEnter={() => setIsServicesDropdownOpen(true)}
                 onMouseLeave={() => setIsServicesDropdownOpen(false)}
-                className="flex items-center text-gray-100 font-medium hover:text-orange-500 transition-colors"
+                className="flex items-center text-white/90 font-medium hover:text-orange-200 transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-white/10"
               >
                 Services
                 <ChevronDownIcon className="h-4 w-4 ml-1" />
@@ -151,7 +180,7 @@ const Navbar = () => {
               <button
                 onMouseEnter={() => setIsWidgetsDropdownOpen(true)}
                 onMouseLeave={() => setIsWidgetsDropdownOpen(false)}
-                className="flex items-center text-gray-100 font-medium hover:text-orange-500 transition-colors"
+                className="flex items-center text-white/90 font-medium hover:text-orange-200 transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-white/10"
               >
                 Widgets
                 <ChevronDownIcon className="h-4 w-4 ml-1" />
@@ -179,40 +208,55 @@ const Navbar = () => {
             </div>
             <Link
               to="/about"
-              className="hidden lg:block text-gray-100 font-medium hover:text-orange-500 transition-colors"
+              className="hidden lg:block text-white/90 font-medium hover:text-orange-200 transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-white/10"
             >
               About
             </Link>
             <Link
               to="/docs"
-              className="hidden lg:block text-gray-100 font-medium hover:text-orange-500 transition-colors"
+              className="hidden lg:block text-white/90 font-medium hover:text-orange-200 transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-white/10"
             >
               Docs
             </Link>
             {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                onClick={link.action}
-                className={`hidden lg:block px-6 py-2 font-bold transition-colors ${
-                  link.isPrimary
-                    ? "text-white bg-orange-500 hover:bg-orange-600"
-                    : "text-gray-100 border border-gray-300 hover:bg-gray-600"
-                }`}
-              >
-                {link.name}
-              </Link>
+              link.action ? (
+                <button
+                  key={link.name}
+                  onClick={link.action}
+                  className={`hidden lg:block px-4 py-2 font-semibold transition-all duration-300 rounded-lg text-sm ${
+                    link.isPrimary
+                      ? "text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                      : "text-white/90 border border-white/30 hover:bg-white/10"
+                  }`}
+                >
+                  {link.name}
+                </button>
+              ) : (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className={`hidden lg:block px-4 py-2 font-semibold transition-all duration-300 rounded-lg text-sm ${
+                    link.isPrimary
+                      ? "text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                      : "text-white/90 border border-white/30 hover:bg-white/10"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              )
             ))}
-            {user && (
+            {isAuthenticated && (
               <button
                 onClick={handleLogout}
-                className="hidden lg:block text-red-500 hover:text-red-700 transition-colors"
+                className="hidden lg:block text-red-300 hover:text-red-100 transition-all duration-300 p-1.5 rounded-lg hover:bg-red-500/20"
+                title="Sign Out"
               >
                 <ArrowLeftOnRectangleIcon className="h-6 w-6" />
               </button>
             )}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden text-gray-300 hover:text-white"
+              className="lg:hidden text-white hover:text-orange-200 transition-all duration-300 p-2 rounded-lg hover:bg-white/10"
             >
               <Bars3Icon className="h-7 w-7" />
             </button>
@@ -230,18 +274,29 @@ const Navbar = () => {
             transition={{ type: "tween", duration: 0.3 }}
             className="fixed inset-0 w-full h-full bg-opacity-70 z-50 flex justify-end"
           >
-            <div className="w-[85%] sm:w-[50%] h-full bg-gray-900 text-white p-6 flex flex-col overflow-hidden">
+            <div className="w-[85%] sm:w-[50%] h-full text-white p-6 flex flex-col overflow-hidden relative" style={{
+              background: 'linear-gradient(180deg, #1e3a8a 0%, #1e40af 50%, #ef7c00 100%)'
+            }}>
+              <div className="absolute inset-0 bg-black/20"></div>
+              <div className="relative z-10 flex flex-col h-full">
               <div className="flex justify-between items-center pb-6 border-b border-gray-700">
                 <Link
                   to="/"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-3xl font-extrabold"
+                  className="flex items-center gap-3"
                 >
-                  TrueTestify
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{
+                    background: 'linear-gradient(135deg, #ef7c00 0%, #f97316 100%)'
+                  }}>
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-2xl font-black text-white drop-shadow-lg">TrueTestify</span>
                 </Link>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-white/70 hover:text-white transition-all duration-300 p-2 rounded-xl hover:bg-white/10"
                 >
                   <XMarkIcon className="h-8 w-8" />
                 </button>
@@ -250,15 +305,15 @@ const Navbar = () => {
                 {mainNavLinks.map((link) => (
                   <Link
                     key={link.name}
-                    to={link.action}
+                    to={link.href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="block text-3xl font-bold text-gray-300 hover:text-orange-500 transition-colors"
+                    className="block text-2xl font-bold text-white/90 hover:text-orange-200 transition-all duration-300 py-2 px-4 rounded-xl hover:bg-white/10"
                   >
                     {link.name}
                   </Link>
                 ))}
-                <div className="border-t border-gray-700 pt-6">
-                  <div className="text-2xl font-bold text-gray-400 mb-4">
+                <div className="border-t border-white/20 pt-6">
+                  <div className="text-xl font-bold text-orange-200 mb-4 px-4">
                     Services
                   </div>
                   {servicesLinks.map((service) => (
@@ -266,14 +321,14 @@ const Navbar = () => {
                       key={service.name}
                       to={service.href}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="block text-xl text-gray-300 hover:text-orange-500 transition-colors mb-3"
+                      className="block text-lg text-white/80 hover:text-orange-200 transition-all duration-300 py-2 px-4 rounded-xl hover:bg-white/10 mb-2"
                     >
                       {service.name}
                     </Link>
                   ))}
                 </div>
-                <div className="border-t border-gray-700 pt-6">
-                  <div className="text-2xl font-bold text-gray-400 mb-4">
+                <div className="border-t border-white/20 pt-6">
+                  <div className="text-xl font-bold text-orange-200 mb-4 px-4">
                     Widgets
                   </div>
                   {widgetsLinks.map((widget) => (
@@ -281,7 +336,7 @@ const Navbar = () => {
                       key={widget.name}
                       to={widget.href}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="block text-xl text-gray-300 hover:text-orange-500 transition-colors mb-3"
+                      className="block text-lg text-white/80 hover:text-orange-200 transition-all duration-300 py-2 px-4 rounded-xl hover:bg-white/10 mb-2"
                     >
                       {widget.name}
                     </Link>
@@ -290,42 +345,58 @@ const Navbar = () => {
                 <Link
                   to="/about"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-3xl font-bold text-gray-300 hover:text-orange-500 transition-colors"
+                  className="block text-2xl font-bold text-white/90 hover:text-orange-200 transition-all duration-300 py-2 px-4 rounded-xl hover:bg-white/10"
                 >
                   About
                 </Link>
                 <Link
                   to="/docs"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-3xl font-bold text-gray-300 hover:text-orange-500 transition-colors"
+                  className="block text-2xl font-bold text-white/90 hover:text-orange-200 transition-all duration-300 py-2 px-4 rounded-xl hover:bg-white/10"
                 >
                   Docs
                 </Link>
                 {navLinks.map((link) => (
-                  <Link
-                    key={link.name}
-                    onClick={link.action}
-                    className={`block text-3xl font-bold transition-colors ${
-                      link.isPrimary
-                        ? "text-orange-500 hover:text-white"
-                        : "text-gray-300 hover:text-white"
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
+                  link.action ? (
+                    <button
+                      key={link.name}
+                      onClick={link.action}
+                      className={`block text-xl font-bold transition-all duration-300 py-3 px-4 rounded-xl ${
+                        link.isPrimary
+                          ? "text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
+                          : "text-white/90 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {link.name}
+                    </button>
+                  ) : (
+                    <Link
+                      key={link.name}
+                      to={link.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`block text-xl font-bold transition-all duration-300 py-3 px-4 rounded-xl ${
+                        link.isPrimary
+                          ? "text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
+                          : "text-white/90 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
+                  )
                 ))}
-                {user && (
+                {isAuthenticated && (
                   <button
                     onClick={() => {
                       handleLogout();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="block text-3xl font-bold text-red-500 hover:text-red-300 transition-colors"
+                    className="block text-xl font-bold text-red-300 hover:text-red-100 transition-all duration-300 py-3 px-4 rounded-xl hover:bg-red-500/20"
                   >
                     Logout
                   </button>
                 )}
               </nav>
+              </div>
             </div>
           </motion.div>
         )}

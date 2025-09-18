@@ -1,10 +1,23 @@
-import { useContext, useMemo, useState } from 'react';
-import { AuthContext } from '../context/AuthContext';
-import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useContext, useMemo, useState, useEffect } from "react";
+import { AuthContext } from "../context/AuthContext";
+import axiosInstance from "../service/axiosInstanse";
+import { API_PATHS } from "../service/apiPaths";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  CreditCardIcon,
+  DocumentTextIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  ArrowDownTrayIcon,
+  CurrencyDollarIcon,
+  CalendarDaysIcon,
+  ShieldCheckIcon,
+} from "@heroicons/react/24/outline";
 
 const InvoiceList = () => {
-  const invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
+  const invoices = JSON.parse(localStorage.getItem("invoices") || "[]");
 
   const downloadInvoice = (invoice) => {
     const content = `
@@ -20,266 +33,593 @@ Thank you for your business!
 TrueTestify
     `.trim();
 
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `invoice-${invoice.id}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    toast.success("Invoice downloaded successfully!");
   };
 
   if (invoices.length === 0) {
-    return <p className="text-gray-500">No invoices found.</p>;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-12"
+      >
+        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <DocumentTextIcon className="w-8 h-8 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-600 mb-2">
+          No Invoices Yet
+        </h3>
+        <p className="text-gray-500">
+          Your billing history will appear here once you make payments
+        </p>
+      </motion.div>
+    );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice ID</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {invoices.map((invoice) => (
-            <tr key={invoice.id}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{invoice.id}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(invoice.date).toLocaleDateString()}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{invoice.plan}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${invoice.amount} {invoice.currency}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <button
-                  onClick={() => downloadInvoice(invoice)}
-                  className="text-orange-600 hover:text-orange-900 font-medium"
-                >
-                  Download
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      {invoices.map((invoice, index) => (
+        <motion.div
+          key={invoice.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: index * 0.1 }}
+          className="bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-all duration-200"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-orange-500 rounded-xl flex items-center justify-center">
+                <DocumentTextIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800">{invoice.id}</h4>
+                <p className="text-sm text-gray-500">
+                  {new Date(invoice.date).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 flex-1 lg:mx-8">
+              <div className="text-center lg:text-left">
+                <div className="text-sm text-gray-500">Plan</div>
+                <div className="font-semibold text-gray-800">
+                  {invoice.plan}
+                </div>
+              </div>
+              <div className="text-center lg:text-left">
+                <div className="text-sm text-gray-500">Amount</div>
+                <div className="font-semibold text-gray-800">
+                  ${invoice.amount} {invoice.currency}
+                </div>
+              </div>
+              <div className="text-center lg:text-left col-span-2 lg:col-span-1">
+                <div className="text-sm text-gray-500">Status</div>
+                <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                  <CheckCircleIcon className="w-4 h-4 mr-1" />
+                  Paid
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => downloadInvoice(invoice)}
+              className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-semibold"
+            >
+              <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+              Download
+            </button>
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
 };
 
 const Billing = () => {
-  const navigate = useNavigate()
-  const { subscription, billingInfo, saveBilling } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const [billingAccount, setBillingAccount] = useState(null);
+  const [pricingPlans, setPricingPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
-    name: billingInfo?.name || '',
-    email: billingInfo?.email || '',
-    cardNumber: '',
-    expMonth: '',
-    expYear: '',
-    cvc: '',
-    address: billingInfo?.address || '',
-    city: billingInfo?.city || '',
-    country: billingInfo?.country || '',
+    name: "",
+    email: "",
+    cardNumber: "",
+    expMonth: "",
+    expYear: "",
+    cvc: "",
+    address: "",
+    city: "",
+    country: "",
   });
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Fetch billing data
+  useEffect(() => {
+    const fetchBillingData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch billing account
+        try {
+          const billingResponse = await axiosInstance.get(
+            API_PATHS.BILLING.GET_BILLING_ACCOUNT
+          );
+          setBillingAccount(billingResponse.data);
+        } catch (billingError) {
+          console.log("No billing account found:", billingError);
+          setBillingAccount(null);
+        }
+
+        // Fetch pricing plans
+        try {
+          const plansResponse = await axiosInstance.get(
+            API_PATHS.BILLING.GET_PRICING_PLANS
+          );
+          setPricingPlans(plansResponse.data);
+        } catch (plansError) {
+          console.log("Pricing plans not available:", plansError);
+          // Set default plans
+          setPricingPlans([
+            { id: "free", name: "Free", price: 0, storageLimit: 1 },
+            { id: "pro", name: "Pro", price: 49, storageLimit: 10 },
+          ]);
+        }
+      } catch (error) {
+        console.error("Error fetching billing data:", error);
+        toast.error("Failed to load billing information");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchBillingData();
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // const isCardValid = useMemo(() => {
-  //   const num = form.cardNumber.replace(/\s+/g, '');
-  //   const mm = Number(form.expMonth);
-  //   const yy = Number(form.expYear);
-  //   const cvc = form.cvc.trim();
-  //   return num.length >= 12 && num.length <= 19 && mm >= 1 && mm <= 12 && yy >= 24 && yy <= 50 && cvc.length >= 3 && cvc.length <= 4;
-  // }, [form.cardNumber, form.expMonth, form.expYear, form.cvc]);
- const isCardValid = true;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading billing information...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const isCardValid = true;
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isCardValid) {
-      toast.error('Please fill in all required fields correctly');
+      toast.error("Please fill in all required fields correctly");
       return;
     }
 
     setIsProcessing(true);
-    
+
     // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     try {
-      // In real app, tokenize card with Stripe/PCI-compliant provider
-      const { cardNumber, expMonth, expYear, cvc, ...safe } = form;
-      saveBilling({ ...safe, last4: cardNumber?.slice(-4) || '0000' });
-      
-      // Save a mock invoice to localStorage
-      const invoices = JSON.parse(localStorage.getItem('invoices') || '[]');
+      // Create checkout session with Stripe
+      const checkoutResponse = await axiosInstance.post(
+        API_PATHS.BILLING.CREATE_CHECKOUT_SESSION,
+        {
+          priceId: "pro-plan",
+          successUrl: window.location.origin + "/dashboard",
+          cancelUrl: window.location.origin + "/billing",
+        }
+      );
+
+      // Redirect to Stripe checkout
+      if (checkoutResponse.data.url) {
+        window.location.href = checkoutResponse.data.url;
+        return;
+      }
+
+      // Save a mock invoice to localStorage for demo
+      const invoices = JSON.parse(localStorage.getItem("invoices") || "[]");
       const newInvoice = {
         id: `INV-${Date.now()}`,
         date: new Date().toISOString(),
-        plan: subscription?.plan || 'Pro',
-        amount: (subscription?.plan || 'Pro') === 'Pro' ? 49 : 0,
-        currency: 'USD',
-        email: safe.email,
-        name: safe.name,
+        plan: billingAccount?.planName || "Pro",
+        amount: billingAccount?.planPrice || 49,
+        currency: "USD",
+        email: form.email,
+        name: form.name,
       };
-      localStorage.setItem('invoices', JSON.stringify([newInvoice, ...invoices]));
-      
-      toast.success('Payment successful! Your subscription has been activated.');
-      navigate('/dashboard')
+      localStorage.setItem(
+        "invoices",
+        JSON.stringify([newInvoice, ...invoices])
+      );
+
+      toast.success(
+        "Payment successful! Your subscription has been activated."
+      );
+      navigate("/dashboard");
       // Reset form
-      setForm(prev => ({
+      setForm((prev) => ({
         ...prev,
-        cardNumber: '',
-        expMonth: '',
-        expYear: '',
-        cvc: '',
+        cardNumber: "",
+        expMonth: "",
+        expYear: "",
+        cvc: "",
       }));
     } catch (error) {
-      toast.error('Payment failed. Please try again.');
+      toast.error("Payment failed. Please try again.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-3xl font-bold text-blue-600 mt-2">Billing</h2>
-
-      <div className="bg-gray-100 p-6 rounded-lg shadow-sm mb-6">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Your Subscription</h3>
-        <div className="space-y-2">
-          <div className="flex justify-between"><span className="text-gray-600">Plan</span><span className="font-medium">{subscription?.plan || 'Pro'}</span></div>
-          <div className="flex justify-between"><span className="text-gray-600">Status</span><span className="font-medium capitalize">{subscription?.status || 'Inactive'}</span></div>
-          <div className="flex justify-between"><span className="text-gray-600">Amount</span><span className="font-medium">${(subscription?.plan || 'Pro') === 'Pro' ? '49' : '0'}/month</span></div>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Billing Information</h3>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input 
-            className="border p-2 rounded" 
-            name="name" 
-            placeholder="Full Name" 
-            value={form.name} 
-            onChange={handleChange} 
-            required 
-          />
-          <input 
-            className="border p-2 rounded" 
-            name="email" 
-            type="email" 
-            placeholder="Email" 
-            value={form.email} 
-            onChange={handleChange} 
-            required 
-          />
-          <input 
-            className="border p-2 rounded sm:col-span-2" 
-            name="cardNumber" 
-            placeholder="Card Number (e.g., 4242424242424242)" 
-            value={form.cardNumber} 
-            onChange={handleChange} 
-            required 
-          />
-          <input 
-            className="border p-2 rounded" 
-            name="expMonth" 
-            placeholder="MM (e.g., 12)" 
-            value={form.expMonth} 
-            onChange={handleChange} 
-            required 
-          />
-          <input 
-            className="border p-2 rounded" 
-            name="expYear" 
-            placeholder="YY (e.g., 25)" 
-            value={form.expYear} 
-            onChange={handleChange} 
-            required 
-          />
-          <input 
-            className="border p-2 rounded" 
-            name="cvc" 
-            placeholder="CVC (e.g., 123)" 
-            value={form.cvc} 
-            onChange={handleChange} 
-            required 
-          />
-          <input 
-            className="border p-2 rounded sm:col-span-2" 
-            name="address" 
-            placeholder="Billing Address" 
-            value={form.address} 
-            onChange={handleChange} 
-          />
-          <input 
-            className="border p-2 rounded" 
-            name="city" 
-            placeholder="City" 
-            value={form.city} 
-            onChange={handleChange} 
-          />
-          <input 
-            className="border p-2 rounded" 
-            name="country" 
-            placeholder="Country" 
-            value={form.country} 
-            onChange={handleChange} 
-          />
-          <button 
-            type="submit" 
-            disabled={!isCardValid || isProcessing} 
-            className={`sm:col-span-2 mt-2 px-6 py-3 font-bold rounded transition-colors ${
-              isCardValid && !isProcessing 
-                ? 'bg-orange-500 text-white hover:bg-orange-600' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {isProcessing ? 'Processing Payment...' : 'Pay & Activate'}
-          </button>
-        </form>
-        
-        {/* Validation Status */}
-        <div className="mt-4 p-3 rounded text-sm">
-          {!isCardValid && (
-            <div className="text-red-600">
-              <p>Please fill in all required fields:</p>
-              <ul className="list-disc list-inside mt-1">
-                {!form.name && <li>Full Name is required</li>}
-                {!form.email && <li>Email is required</li>}
-                {form.cardNumber.replace(/\s+/g, '').length < 12 && <li>Card number must be at least 12 digits</li>}
-                {(!form.expMonth || Number(form.expMonth) < 1 || Number(form.expMonth) > 12) && <li>Valid expiry month (01-12)</li>}
-                {(!form.expYear || Number(form.expYear) < 24 || Number(form.expYear) > 50) && <li>Valid expiry year (24-50)</li>}
-                {form.cvc.trim().length < 3 && <li>CVC must be 3-4 digits</li>}
-              </ul>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
+      {/* Premium Header */}
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+                Billing & Payments
+              </h1>
+              <p className="text-blue-100 text-lg font-medium">
+                Manage your subscription, payment methods, and billing history
+              </p>
             </div>
-          )}
-          {isCardValid && (
-            <div className="text-green-600">
-              ✓ All fields are valid! You can proceed with payment.
+            <div className="mt-6 lg:mt-0 grid grid-cols-2 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
+                <div className="text-2xl font-bold">
+                  ${billingAccount?.planPrice || "49"}
+                </div>
+                <div className="text-sm text-blue-100">Monthly</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
+                <div className="text-2xl font-bold text-green-300">
+                  {billingAccount?.status === "active" ? "Active" : "Inactive"}
+                </div>
+                <div className="text-sm text-blue-100">Status</div>
+              </div>
             </div>
-          )}
-        </div>
-
-        {billingInfo && (
-          <div className="mt-6 text-sm text-gray-600">
-            <p>Last card: •••• •••• •••• {billingInfo.last4}</p>
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mt-6">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Invoices</h3>
-        <InvoiceList />
+      <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+        {/* Subscription Overview */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
+        >
+          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+              <CurrencyDollarIcon className="w-8 h-8 mr-3 text-blue-600" />
+              Current Subscription
+            </h2>
+            <p className="text-gray-600">
+              Your active plan and billing details
+            </p>
+          </div>
+
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 text-center">
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <ShieldCheckIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600 mb-2">
+                  {billingAccount?.planName || "Pro"}
+                </div>
+                <div className="text-sm text-blue-500 font-medium">
+                  Current Plan
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 text-center">
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <CheckCircleIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-green-600 mb-2 capitalize">
+                  {billingAccount?.status || "Active"}
+                </div>
+                <div className="text-sm text-green-500 font-medium">Status</div>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-6 text-center">
+                <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <CurrencyDollarIcon className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-orange-600 mb-2">
+                  ${billingAccount?.planPrice || "49"}
+                </div>
+                <div className="text-sm text-orange-500 font-medium">
+                  Per Month
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <CalendarDaysIcon className="w-5 h-5 text-gray-600" />
+                  <span className="text-gray-700 font-medium">
+                    Next billing date
+                  </span>
+                </div>
+                <span className="text-gray-800 font-semibold">
+                  {new Date(
+                    Date.now() + 30 * 24 * 60 * 60 * 1000
+                  ).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Payment Method */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
+        >
+          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+              <CreditCardIcon className="w-8 h-8 mr-3 text-blue-600" />
+              Payment Method
+            </h2>
+            <p className="text-gray-600">
+              Update your billing information and payment details
+            </p>
+          </div>
+
+          <div className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Full Name *
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    name="name"
+                    placeholder="Enter your full name"
+                    value={form.name}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Card Number *
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                  name="cardNumber"
+                  placeholder="4242 4242 4242 4242"
+                  value={form.cardNumber}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Month *
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    name="expMonth"
+                    placeholder="MM"
+                    value={form.expMonth}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Year *
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    name="expYear"
+                    placeholder="YY"
+                    value={form.expYear}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    CVC *
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    name="cvc"
+                    placeholder="123"
+                    value={form.cvc}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Billing Address
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                  name="address"
+                  placeholder="Enter your billing address"
+                  value={form.address}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    City
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    name="city"
+                    placeholder="Enter your city"
+                    value={form.city}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Country
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                    name="country"
+                    placeholder="Enter your country"
+                    value={form.country}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end pt-6 border-t border-gray-200">
+                <button
+                  type="submit"
+                  disabled={!isCardValid || isProcessing}
+                  className={`inline-flex items-center px-8 py-3 font-bold rounded-xl transition-all duration-200 ${
+                    isCardValid && !isProcessing
+                      ? "bg-gradient-to-r from-blue-600 to-orange-500 text-white hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Processing Payment...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCardIcon className="w-5 h-5 mr-2" />
+                      Pay & Activate Subscription
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Validation Status */}
+            <div className="mt-6">
+              {!isCardValid ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <div className="flex items-center mb-3">
+                    <ExclamationTriangleIcon className="w-5 h-5 text-red-600 mr-2" />
+                    <span className="font-semibold text-red-800">
+                      Please complete all required fields
+                    </span>
+                  </div>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    {!form.name && <li>• Full Name is required</li>}
+                    {!form.email && <li>• Email is required</li>}
+                    {form.cardNumber.replace(/\s+/g, "").length < 12 && (
+                      <li>• Card number must be at least 12 digits</li>
+                    )}
+                    {(!form.expMonth ||
+                      Number(form.expMonth) < 1 ||
+                      Number(form.expMonth) > 12) && (
+                      <li>• Valid expiry month (01-12)</li>
+                    )}
+                    {(!form.expYear ||
+                      Number(form.expYear) < 24 ||
+                      Number(form.expYear) > 50) && (
+                      <li>• Valid expiry year (24-50)</li>
+                    )}
+                    {form.cvc.trim().length < 3 && (
+                      <li>• CVC must be 3-4 digits</li>
+                    )}
+                  </ul>
+                </div>
+              ) : (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="flex items-center">
+                    <CheckCircleIcon className="w-5 h-5 text-green-600 mr-2" />
+                    <span className="font-semibold text-green-800">
+                      All fields are valid! Ready to process payment.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {billingAccount?.paymentMethod && (
+              <div className="mt-6 bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center space-x-3">
+                  <CreditCardIcon className="w-5 h-5 text-gray-600" />
+                  <span className="text-gray-700">
+                    Current card: •••• •••• ••••{" "}
+                    {billingAccount.paymentMethod.last4}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Invoice History */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+        >
+          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+              <DocumentTextIcon className="w-8 h-8 mr-3 text-blue-600" />
+              Invoice History
+            </h2>
+            <p className="text-gray-600">
+              Download and manage your billing history
+            </p>
+          </div>
+
+          <div className="p-6">
+            <InvoiceList />
+          </div>
+        </motion.div>
       </div>
     </div>
   );
 };
 
-export default Billing
+export default Billing;

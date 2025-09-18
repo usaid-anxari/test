@@ -2,6 +2,7 @@ import { createContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import axiosInstance from "../service/axiosInstanse";
 import { API_PATHS } from "../service/apiPaths";
+import { useAuth0 } from "@auth0/auth0-react";
 
 export const AuthContext = createContext();
 
@@ -19,6 +20,7 @@ const getInitialData = (key, initialValue) => {
 };
 
 const AuthProvider = ({ children }) => {
+  const { isAuthenticated, user: auth0User, getAccessTokenSilently, isLoading } = useAuth0();
   const [tenant, setTenant] = useState("");
   const [user, setUser] = useState("");
   const [loading, setLoading] = useState(true);
@@ -37,15 +39,15 @@ const AuthProvider = ({ children }) => {
   const [selectedWidget, setSelectedWidget] = useState(null);
 
   // New function to fetch widgets and set state
-  const fetchWidgets = async (tenantId) => {
-    if (!tenantId) return;
+  const fetchWidgets = async () => {
     try {
       const response = await axiosInstance.get(
-        API_PATHS.WIDGETS.LIST_WIDGETS(tenantId)
+        API_PATHS.WIDGETS.GET_WIDGETS
       );
-      setWidgets(response.data);
-      if (response.data.length > 0) {
-        setSelectedWidget(response.data); // Select the first widget by default
+      const widgetData = response.data.widgets || [];
+      setWidgets(widgetData);
+      if (widgetData.length > 0) {
+        setSelectedWidget(widgetData[0]); // Select the first widget by default
       }
     } catch (error) {
       toast.error("Failed to fetch widgets.");
@@ -53,40 +55,56 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // Check for existing user and token on app load
+  // Check for Auth0 authentication and fetch business info
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem("token");
-      const savedUser = getInitialData("user", null);
-      if (token && savedUser) {
+      if (isLoading) return;
+      
+      if (isAuthenticated && auth0User) {
         try {
-          // Verify token is still valid by fetching user info
-          const response = await axiosInstance.get(
-            API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE
-          );
-          setUser(response.data);
+          // Get Auth0 token
+          const token = await getAccessTokenSilently({
+            authorizationParams: {
+              audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+            },
+          });
+
+          // Set token in axios
+          axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
+
+          // Set user from Auth0
+          setUser(auth0User);
+
+          // Try to fetch business info
+          const businessInfo = await fetchBusinessInfo();
+          if (businessInfo) {
+            setTenant(businessInfo);
+            await fetchWidgets();
+          }
         } catch (error) {
-          console.error("Token validation failed:", error);
-          // Clear invalid token and user data
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          setUser(null);
+          console.error('Auth check failed:', error);
         }
+      } else {
+        setUser(null);
+        setTenant("");
+        setWidgets([]);
+        setSelectedWidget(null);
       }
       setLoading(false);
     };
+    
     checkAuth();
-  }, []);
+  }, [isAuthenticated, auth0User, isLoading, getAccessTokenSilently]);
 
-  const fetchTenantInfo = async (tenantId) => {
+  const fetchBusinessInfo = async () => {
     try {
-      // Correcting the API path
       const response = await axiosInstance.get(
-        API_PATHS.TENANTS.GET_TENANTS(tenantId)
+        API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE
       );
-      return response.data;
+      return response.data.business;
     } catch (error) {
-      console.error("Failed to fetch tenant info:", error);
+      console.error("Failed to fetch business info:", error);
+      return null;
     }
   };
 
@@ -96,35 +114,11 @@ const AuthProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(user));
   };
 
-  const login = async (email, password) => {
-    try {
-      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
-        email,
-        password,
-      });
-      console.log(response);
-
-      const { token, payload: payloadData } = response.data;
-
-      if (token) {
-        localStorage.setItem("token", token);
-        updateUser(payloadData);
-
-        // Set tenant if available
-        if (payloadData) {
-          setTenant(payloadData);
-          await fetchWidgets(payloadData.businessId);
-        }
-
-        toast.success("Login successful!");
-        return { success: true, payload: payloadData };
-      }
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "Login failed. Please try again.";
-      toast.error(errorMessage);
-      throw error;
-    }
+  // Auth0 handles login, so this is simplified
+  const login = async () => {
+    // Auth0 login is handled by loginWithRedirect in components
+    toast.success("Login successful!");
+    return { success: true };
   };
 
   const loginPlatform = async (platform) => {
@@ -141,50 +135,19 @@ const AuthProvider = ({ children }) => {
     return mockUser;
   };
 
-  const signup = async (userData) => {
-    try {
-      const response = await axiosInstance.post(
-        API_PATHS.AUTH.REGISTER,
-        userData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data", // Explicitly set Content-Type
-          },
-        }
-      );
-
-      const { token, payload: payloadData } = response.data;
-
-      if (token) {
-        localStorage.setItem("token", token);
-        updateUser(payloadData);
-
-        if (payloadData) {
-          setTenant(payloadData);
-          await fetchWidgets(payloadData.id);
-        }
-
-        toast.success("Account created successfully!");
-        return { success: true, payload: payloadData };
-      }
-    } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "Signup failed. Please try again.";
-      toast.error(errorMessage);
-      throw error;
-    }
+  // Auth0 handles signup, so this is simplified
+  const signup = async () => {
+    // Auth0 signup is handled by loginWithRedirect in components
+    toast.success("Account created successfully!");
+    return { success: true };
   };
 
   const logout = () => {
-    try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-    } catch (_) {}
     setUser(null);
     setTenant("");
     setWidgets([]);
     setSelectedWidget(null);
-    toast.success("Logged out successfully.");
+    // Auth0 logout is handled in components
   };
 
   const selectPlan = (planName) => {

@@ -1,6 +1,6 @@
-export const BASE_URL = process.env.VITE_BASE_URL;
+export const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:4000';
 
-// API Paths for TrueTestify MVP
+// API Paths for TrueTestify MVP - Aligned with Backend
 export const API_PATHS = {
   AUTH: {
     LOGIN: "/api/auth/login",
@@ -9,69 +9,38 @@ export const API_PATHS = {
   BUSINESSES: {
     GET_PRIVATE_PROFILE: "/api/business/me",
     GET_PUBLIC_PROFILE: (slug) => `/business/${slug}`,
-    CREATE_TENANTS: "/api/v1/tenants",
-    GET_TENANT_BY_SLUG: (slug) => `/api/v1/tenants/slug/${slug}`,
+    CREATE_BUSINESS: "/api/business",
+    TOGGLE_TEXT_REVIEWS: "/api/business/settings/text-reviews",
   },
   REVIEWS: {
+    GET_PUBLIC_REVIEWS: (slug) => `/public/${slug}/reviews`,
     CREATE_REVIEW: (slug) => `/api/public/${slug}/reviews`,
-    GET_REVIEWS: (tenantId) => `/api/v1/reviews/${tenantId}/list`,
-    GET_REVIEW: (id) => `/api/v1/reviews/${id}`,
-    UPDATE_REVIEW: (id) => `/api/v1/reviews/${id}`,
-    DELETE_REVIEW: (id) => `/api/v1/reviews/${id}`,
-    APPROVE_REVIEW: (id) => `/api/v1/reviews/${id}/approve`,
-    REJECT_REVIEW: (id) => `/api/v1/reviews/${id}/reject`,
-    HIDE_REVIEW: (id) => `/api/v1/reviews/${id}/hide`,
-    UPLOAD_VIDEO: "/api/v1/reviews/upload-video",
-    UPLOAD_AUDIO: "/api/v1/reviews/upload-audio",
+    GET_REVIEWS: (slug) => `/api/admin/${slug}/reviews`,
+    GET_REVIEW: (slug, id) => `/api/admin/${slug}/reviews/${id}`,
+    UPDATE_REVIEW_STATUS: (slug, id) => `/api/admin/${slug}/reviews/${id}/status`,
   },
   WIDGETS: {
-    CREATE_WIDGET: (tenantId) => `/widgets/${tenantId}`,
-    UPDATE_WIDGET: (widgetId) => `/widgets/${widgetId}`,
-    LIST_WIDGETS: (tenantId) => `/widgets/tenant/${tenantId}`,
-    FEED: (widgetId) => `/widgets/feed/${widgetId}`,
-    TOGGLE_WIDGET: (widgetId) => `/widgets/${widgetId}/toggle`,
+    CREATE_WIDGET: "/api/widgets",
+    UPDATE_WIDGET: (id) => `/api/widgets/${id}`,
+    GET_WIDGETS: "/api/widgets",
+    DELETE_WIDGET: (id) => `/api/widgets/${id}`,
+    GET_EMBED_CODE: (id) => `/api/widgets/${id}/embed-code`,
   },
   ANALYTICS: {
-    GET_USAGE: (tenantId) => `/usage/${tenantId}/snapshot`,
-    VIEWS: (reviewId) => `/usage/reviews/${reviewId}/view`,
+    GET_EVENTS: (businessId) => `/api/analytics/business/${businessId}/events`,
+    GET_SUMMARY: (businessId) => `/api/analytics/business/${businessId}/summary`,
   },
   BILLING: {
-    GET_BILLING_ACCOUNT: (tenantId) => `/api/v1/billing/tenant/${tenantId}`,
-    CREATE_SUBSCRIPTION: "/api/v1/billing/subscriptions",
-    GET_SUBSCRIPTIONS: (tenantId) =>
-      `/api/v1/billing/tenant/${tenantId}/subscriptions`,
-    GET_INVOICES: (tenantId) => `/api/v1/billing/tenant/${tenantId}/invoices`,
-    GET_USAGE: (tenantId) => `/api/v1/billing/tenant/${tenantId}/usage`,
-    CREATE_CHECKOUT_SESSION: "/api/v1/billing/checkout",
-    CREATE_PORTAL_SESSION: "/api/v1/billing/portal",
-    STRIPE_WEBHOOK: "/api/v1/billing/webhook",
+    GET_PRICING_PLANS: "/api/billing/pricing-plans",
+    GET_BILLING_ACCOUNT: "/api/billing/account",
+    CREATE_CHECKOUT_SESSION: "/api/billing/checkout",
+    CREATE_PORTAL_SESSION: "/api/billing/portal",
+    GET_STORAGE_STATUS: "/api/billing/storage/status",
+    CHECK_FEATURE_ACCESS: (feature) => `/api/billing/features/${feature}/access`,
   },
-  STORAGE: {
-    GET_UPLOAD_URL: "/api/v1/storage/upload-url",
-    GET_DOWNLOAD_URL: (key) => `/api/v1/storage/download-url/${key}`,
-    DELETE_FILE: (key) => `/api/v1/storage/delete/${key}`,
-  },
-  API_KEYS: {
-    CREATE_API_KEY: "/api/v1/api-keys",
-    GET_API_KEYS: (tenantId) => `/api/v1/api-keys/tenant/${tenantId}`,
-    DELETE_API_KEY: (id) => `/api/v1/api-keys/${id}`,
-  },
-  INTEGRATIONS: {
-    SHOPIFY: {
-      CONNECT: "/api/v1/integrations/shopify/connect",
-      DISCONNECT: "/api/v1/integrations/shopify/disconnect",
-      GET_STATUS: (tenantId) =>
-        `/api/v1/integrations/shopify/tenant/${tenantId}`,
-    },
-    WORDPRESS: {
-      CONNECT: "/api/v1/integrations/wordpress/connect",
-      DISCONNECT: "/api/v1/integrations/wordpress/disconnect",
-      GET_STATUS: (tenantId) =>
-        `/api/v1/integrations/wordpress/tenant/${tenantId}`,
-    },
-  },
-  EMBEDS: {
-    GET_PUBLIC_REVIEWS: (slug) => `/api/v1/embeds/reviews/${slug}`,
-    GET_WIDGET_DATA: (widgetId) => `/api/v1/embeds/widget/${widgetId}`,
+  EMAIL: {
+    GET_PREFERENCES: "/api/email/preferences",
+    UPDATE_PREFERENCES: "/api/email/preferences",
+    UNSUBSCRIBE: (token) => `/api/email/unsubscribe/${token}`,
   },
 };

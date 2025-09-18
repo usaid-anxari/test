@@ -49,7 +49,7 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
   const isText = type === "text" && bodyText;
 
   // Final media URL
-  const s3BaseUrl = process.env.VITE_S3_BASE_URL;
+  const s3BaseUrl = process.env.REACT_APP_S3_BASE_URL;
   const finalMediaUrl = reviewUrl ? `${s3BaseUrl}${reviewUrl}` : null;
 
   // Theme classes
@@ -135,14 +135,21 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
     }
   };
 
-  // Render video layout
+  // Render video layout - Professional design with proper height
   const renderVideoLayout = () => (
-    <div className={`rounded-xl shadow-lg overflow-hidden ${cardBg} ${cardBorder} border transition-shadow duration-300 hover:shadow-xl`}>
-      <div className="relative">
+    <div className={`card-professional review-card-height review-type-video overflow-hidden`}>
+      {/* Date in top-right corner */}
+      <div className="absolute top-4 right-4 z-10">
+        <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm">
+          {formattedDate}
+        </span>
+      </div>
+      
+      <div className="relative h-2/3">
         {isVideo ? (
           <>
             <video
-              className="w-full h-64 md:h-80 object-cover"
+              className="w-full h-full object-cover"
               muted
               loop
               playsInline
@@ -154,92 +161,136 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
               <source src={finalMediaUrl} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <PlayIcon className="h-12 w-12 text-white bg-black bg-opacity-50 p-3 rounded-full" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="w-16 h-16 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                <PlayIcon className="h-8 w-8 text-orange-600 ml-1" />
+              </div>
             </div>
           </>
         ) : (
-          <div className="w-full h-64 md:h-80 bg-gray-100 flex items-center justify-center">
-            <DocumentTextIcon className={`h-10 w-10 ${mutedColor}`} />
-            <p className={`ml-2 text-sm font-medium ${mutedColor}`}>Video unavailable</p>
+          <div className="w-full h-full bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
+            <div className="text-center">
+              <DocumentTextIcon className="h-12 w-12 text-orange-400 mx-auto mb-2" />
+              <p className="text-sm font-medium text-orange-600">Video unavailable</p>
+            </div>
           </div>
         )}
       </div>
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-3">
-          {renderStars(rating)}
-          <span className={`text-sm ${textColor}`}>{rating}.0</span>
+      
+      <div className="p-6 h-1/3 flex flex-col justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            {renderStars(rating)}
+            <span className="text-sm font-semibold text-gray-600">{rating}.0</span>
+          </div>
+          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{title}</h3>
         </div>
-        <span className={`text-sm font-medium ${mutedColor}`}>{formattedDate}</span>
-        <h3 className={`font-bold ${titleColor} mb-2`}>{title}</h3>
-        <div className="flex items-center gap-2 text-sm">
-          <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-semibold">
+        
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
             {renderInitials(reviewerName)}
           </div>
-          <span className={mutedColor}>{reviewerName}</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 truncate">{reviewerName}</p>
+            <p className="text-xs text-gray-500">Video Review</p>
+          </div>
         </div>
       </div>
     </div>
   );
 
-  // Render audio layout
+  // Render audio layout - Professional design with proper height
   const renderAudioLayout = () => (
-    <div className={`rounded-xl shadow-lg p-6 ${cardBg} ${cardBorder} border transition-shadow duration-300 hover:shadow-xl`}>
-      <div className="flex items-center justify-center mb-4">
-        <div className="bg-purple-100 p-4 rounded-full">
-          <MicrophoneIcon className="h-8 w-8 text-purple-600" />
-        </div>
+    <div className={`card-professional review-card-height review-type-audio p-6`}>
+      {/* Date in top-right corner */}
+      <div className="absolute top-4 right-4">
+        <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm">
+          {formattedDate}
+        </span>
       </div>
-      <div className="flex items-end justify-center gap-1 h-16 mb-4">
-        {isAudio ? (
-          Array.from({ length: 20 }, () => Math.random() * 100).map((height, index) => (
-            <div
-              key={index}
-              className="bg-purple-400 rounded-full"
-              style={{ width: "2px", height: `${height}%`, opacity: 0.6 }}
-            />
-          ))
-        ) : (
-          <p className={`text-sm ${mutedColor}`}>Audio unavailable</p>
-        )}
-      </div>
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          {renderStars(rating)}
-          <span className={`text-sm ${textColor}`}>{rating}.0</span>
-        </div>
-        <span className={`text-sm font-medium ${mutedColor}`}>{formattedDate}</span>
-        <h3 className={`font-bold ${titleColor} mb-2`}>{title}</h3>
-        {/* <p className={`text-sm ${textColor} mb-3 line-clamp-2`}>"{bodyText || "No description provided."}"</p> */}
-        <div className="flex items-center justify-center gap-2 text-sm">
-          <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-semibold">
-            {renderInitials(reviewerName)}
+      
+      <div className="flex flex-col h-full">
+        <div className="flex items-center justify-center mb-6 mt-4">
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-2xl shadow-lg">
+            <MicrophoneIcon className="h-12 w-12 text-white" />
           </div>
-          <span className={mutedColor}>{reviewerName}</span>
+        </div>
+        
+        <div className="flex items-end justify-center gap-1 h-20 mb-6">
+          {isAudio ? (
+            Array.from({ length: 24 }, () => Math.random() * 100).map((height, index) => (
+              <div
+                key={index}
+                className="bg-gradient-to-t from-purple-500 to-purple-400 rounded-full transition-all duration-300"
+                style={{ 
+                  width: "3px", 
+                  height: `${Math.max(20, height)}%`, 
+                  opacity: 0.8,
+                  animationDelay: `${index * 0.1}s`
+                }}
+              />
+            ))
+          ) : (
+            <div className="text-center">
+              <p className="text-sm font-medium text-purple-600">Audio unavailable</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="text-center flex-1 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              {renderStars(rating)}
+              <span className="text-sm font-semibold text-gray-600">{rating}.0</span>
+            </div>
+            <h3 className="font-bold text-gray-900 mb-4 line-clamp-2">{title}</h3>
+          </div>
+          
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+              {renderInitials(reviewerName)}
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-gray-900">{reviewerName}</p>
+              <p className="text-xs text-gray-500">Audio Review</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
-  // Render text layout
+  // Render text layout - Professional design with proper height
   const renderTextLayout = () => (
-    <div className={`rounded-xl shadow-lg p-6 ${cardBg} ${cardBorder} border transition-shadow duration-300 hover:shadow-xl`}>
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          {renderStars(rating)}
-          <span className={`text-sm ${textColor}`}>{rating}.0</span>
-        </div>
-        <span className={`text-sm ${mutedColor}`}>{formattedDate}</span>
+    <div className={`card-professional review-card-height review-type-text p-6`}>
+      {/* Date in top-right corner */}
+      <div className="absolute top-4 right-4">
+        <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm">
+          {formattedDate}
+        </span>
       </div>
-      <h3 className={`text-lg font-bold ${titleColor} mb-3`}>{title}</h3>
-      <p className={`leading-relaxed ${textColor} mb-4 line-clamp-3`}>{bodyText}</p>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-semibold">
+      
+      <div className="flex flex-col h-full pt-8">
+        <div className="flex items-center gap-3 mb-4">
+          {renderStars(rating)}
+          <span className="text-sm font-semibold text-gray-600">{rating}.0</span>
+        </div>
+        
+        <h3 className="text-lg font-bold text-gray-900 mb-4 line-clamp-2">{title}</h3>
+        
+        <div className="flex-1 mb-6">
+          <p className="leading-relaxed text-gray-700 line-clamp-6 text-sm">
+            "{bodyText || "No review text provided."}"
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3 mt-auto">
+          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
             {renderInitials(reviewerName)}
           </div>
-          <div>
-            <div className={`font-semibold ${titleColor}`}>{reviewerName}</div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 truncate">{reviewerName}</p>
+            <p className="text-xs text-gray-500">Text Review</p>
           </div>
         </div>
       </div>

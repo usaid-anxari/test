@@ -1,6 +1,323 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* TrueTestify Business-Grade Design System */
+:root {
+  /* Premium Brand Colors - Blue + Orange Theme */
+  --color-primary-blue: #1e3a8a;
+  --color-primary-blue-light: #3b82f6;
+  --color-primary-blue-dark: #1e40af;
+  --color-primary-orange: #ef7c00;
+  --color-primary-orange-light: #fed7aa;
+  --color-primary-orange-dark: #c2410c;
+  
+  /* Business Gradients */
+  --gradient-primary: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  --gradient-secondary: linear-gradient(135deg, #ef7c00 0%, #f97316 100%);
+  --gradient-hero: linear-gradient(135deg, #1e3a8a 0%, #ef7c00 100%);
+  --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  
+  /* Widget Accent Colors */
+  --color-video-accent: #ef7c00;
+  --color-video-bg: #fff7ed;
+  --color-audio-accent: #8b5cf6;
+  --color-audio-bg: #f3f4f6;
+  --color-text-accent: #10b981;
+  --color-text-bg: #ecfdf5;
+  
+  /* Professional Typography */
+  --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-heading: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  
+  /* Business Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  
+  /* Business Spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-family-primary);
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-family: var(--font-family-primary);
+    line-height: 1.6;
+    color: #111827;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-heading);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+}
+
+@layer components {
+  /* Business-Grade Typography */
+  .heading-1 {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900;
+    font-family: var(--font-family-heading);
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .heading-2 {
+    @apply text-3xl md:text-4xl font-bold text-gray-900;
+    font-family: var(--font-family-heading);
+  }
+  
+  .heading-3 {
+    @apply text-2xl md:text-3xl font-semibold text-gray-800;
+    font-family: var(--font-family-heading);
+  }
+  
+  .text-lead {
+    @apply text-lg md:text-xl text-gray-600 leading-relaxed;
+  }
+  
+  /* Premium Button System */
+  .btn-truetestify {
+    @apply inline-flex items-center justify-center px-8 py-4 text-sm font-semibold rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 relative overflow-hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .btn-truetestify:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+  }
+  
+  .btn-primary {
+    @apply btn-truetestify text-white focus:ring-orange-500;
+    background: var(--gradient-secondary);
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+  }
+  
+  .btn-secondary {
+    @apply btn-truetestify text-white focus:ring-blue-500;
+    background: var(--gradient-primary);
+  }
+  
+  .btn-secondary:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  }
+  
+  .btn-outline {
+    @apply btn-truetestify bg-white text-blue-600 border-2 border-blue-600 hover:text-white focus:ring-blue-500;
+  }
+  
+  .btn-outline:hover {
+    background: var(--gradient-primary);
+    border-color: transparent;
+  }
+  
+  .btn-ghost {
+    @apply btn-truetestify bg-transparent text-gray-600 hover:bg-gray-100 focus:ring-gray-500 shadow-none;
+  }
+}
+  /* Premium Card System */
+  .card-professional {
+    @apply bg-white rounded-2xl border border-gray-200/50 transition-all duration-500 relative overflow-hidden;
+    background: var(--gradient-card);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .card-professional:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-2xl);
+  }
+  
+  .card-professional::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+  }
+  
+  .card-business {
+    @apply card-professional p-8;
+  }
+  
+  .card-feature {
+    @apply card-professional p-6 text-center;
+  }
+  
+  .card-testimonial {
+    @apply card-professional p-6 relative;
+  }
+  
+  /* Business Review Card System - As per ProjectMVP.md */
+  .review-card-height {
+    @apply h-[480px] transition-all duration-300;
+  }
+  
+  @media (min-width: 768px) {
+    .review-card-height {
+      @apply h-[560px];
+    }
+  }
+  
+  .review-card-business {
+    @apply review-card-height card-professional relative overflow-hidden;
+  }
+  
+  .review-card-business:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: var(--shadow-2xl);
+  }
+  
+  /* Review Type Styling - As per ProjectMVP.md */
+  .review-type-video {
+    @apply bg-orange-100 text-orange-600 border-orange-200;
+  }
+  
+  .review-type-audio {
+    @apply bg-purple-100 text-purple-600 border-purple-200;
+  }
+  
+  .review-type-text {
+    @apply bg-green-100 text-green-600 border-green-200;
+  }
+  
+  /* Professional Status Badges */
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;
+  }
+  
+  .status-approved {
+    @apply bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;
+  }
+  
+  .status-rejected {
+    @apply bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;
+  }
+  
+  /* Premium Form System */
+  .form-group {
+    @apply space-y-2;
+  }
+  
+  .form-label {
+    @apply block text-sm font-semibold text-gray-700 mb-2;
+  }
+  
+  .input-professional {
+    @apply w-full px-6 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 bg-white text-gray-900 placeholder-gray-400;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .input-professional:focus {
+    box-shadow: var(--shadow-md), 0 0 0 4px rgb(59 130 246 / 0.1);
+    transform: translateY(-1px);
+  }
+  
+  .textarea-professional {
+    @apply input-professional resize-none min-h-[120px];
+  }
+  
+  .select-professional {
+    @apply input-professional cursor-pointer;
+  }
+  
+  /* Business Navigation System */
+  .navbar-professional {
+    @apply backdrop-blur-md border-b border-white/10 relative;
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.95) 0%, rgba(59, 130, 246, 0.95) 100%);
+  }
+  
+  .navbar-professional::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+    animation: shimmer 3s infinite;
+  }
+  
+  .sidebar-professional {
+    @apply bg-white border-r border-gray-200/50 relative overflow-hidden;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .sidebar-professional::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--gradient-secondary);
+  }
+  
+  /* Premium Modal System */
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+  }
+  
+  .modal-content {
+    @apply bg-white rounded-3xl relative overflow-hidden max-w-4xl max-h-[90vh];
+    box-shadow: var(--shadow-2xl);
+    background: var(--gradient-card);
+  }
+  
+  .modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--gradient-secondary);
+  }
+  
+  /* Business Layout System */
+  .container-business {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .section-business {
+    @apply py-16 md:py-24;
+  }
+  
+  .grid-2 {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
+  
+  .grid-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+  
+  .grid-4 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
 
 html, body, #root {
   width: 100%;
@@ -12,50 +329,264 @@ img, video {
   height: auto;
   display: block;
 }
-.bubble-container {
-  position: relative;
-  width: 100%;
-  height: 0;
-  padding-bottom: 120%; /* Adjust for aspect */
-  overflow: hidden;
+
+/* Business Hero Sections */
+.hero-business {
+  @apply relative overflow-hidden;
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #ef7c00 100%);
 }
+
+.hero-business::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+}
+
+.hero-content {
+  @apply relative z-10 text-center text-white py-24 md:py-32;
+}
+
+/* Business Feature Highlights */
+.feature-highlight {
+  @apply relative p-8 rounded-2xl overflow-hidden;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.feature-highlight::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-secondary);
+}
+
+/* Business Stats Cards */
+.stats-card {
+  @apply text-center p-6 rounded-xl;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.stats-number {
+  @apply text-3xl md:text-4xl font-bold mb-2;
+  background: var(--gradient-secondary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stats-label {
+  @apply text-sm font-medium text-gray-600 uppercase tracking-wide;
+}
+
+/* Professional Scrollbar Styling */
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
-.pre {
-  overflow-x: auto;
-}
 
-/* Styling for browsers that use WebKit (Chrome, Safari, Edge) */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px; /* Sets the width of the scrollbar */
-  background-color: transparent; /* Makes the scrollbar area transparent */
+  width: 8px;
+  background-color: transparent;
 }
 
-/* Styles the track (the background) of the scrollbar */
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #374151; /* A dark gray that matches your theme */
-  border-radius: 10px; /* Adds rounded corners to the track */
+  background: #f3f4f6;
+  border-radius: 10px;
 }
 
-/* Styles the thumb (the draggable part) of the scrollbar */
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #6b7280; /* A lighter gray for the thumb */
-  border-radius: 10px; /* Adds rounded corners to the thumb */
+  background: #d1d5db;
+  border-radius: 10px;
 }
 
-/* Changes the color of the thumb when you hover over it */
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af; /* A slightly lighter gray on hover */
+  background: #9ca3af;
 }
 
-/* Hide scrollbar for Firefox. */
-/* You can't style individual parts with pseudo-elements in Firefox */
 .custom-scrollbar {
-  scrollbar-width: thin; /* 'auto' or 'thin' */
-  scrollbar-color: #6b7280 #374151; /* thumb color track color */
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+/* Professional Loading Animation */
+.loading-spinner {
+  @apply inline-block w-8 h-8 border-4 border-gray-200 border-t-orange-500 rounded-full animate-spin;
+}
+
+/* Professional Grid Layouts */
+.grid-responsive {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* Mobile Optimizations */
+@media (max-width: 640px) {
+  .btn-truetestify {
+    @apply w-full justify-center;
+  }
+  
+  .grid-responsive {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-content {
+    @apply m-4 max-w-[calc(100vw-2rem)];
+  }
+  
+  .review-card-height {
+    @apply h-auto min-h-[400px];
+  }
+}
+
+/* Business-Grade Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.8s ease-out;
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.8s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.8s ease-out;
+}
+
+.scale-in {
+  animation: scaleIn 0.6s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 3s infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
+}
+
+/* Business Focus States */
+.focus-ring {
+  @apply focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:ring-offset-2;
+}
+
+.focus-ring-orange {
+  @apply focus:outline-none focus:ring-4 focus:ring-orange-500/20 focus:ring-offset-2;
+}
+
+/* Business Hover Effects */
+.hover-lift {
+  @apply transition-all duration-300;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.hover-scale {
+  @apply transition-transform duration-300;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-glow {
+  @apply transition-all duration-300;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
 }

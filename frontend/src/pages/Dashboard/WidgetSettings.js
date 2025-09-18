@@ -6,6 +6,11 @@ import {
   Cog6ToothIcon,
   CodeBracketIcon,
   ArrowRightCircleIcon,
+  QrCodeIcon,
+  EyeIcon,
+  PlusIcon,
+  CheckCircleIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
 import QRCode from "qrcode";
 import PublicReviews from "../../pages/PublicReviews";
@@ -15,6 +20,7 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../service/axiosInstanse";
 import { API_PATHS } from "../../service/apiPaths";
+import { motion } from "framer-motion";
 
 const WidgetSettings = ({ business }) => {
   const navigate = useNavigate();
@@ -43,26 +49,28 @@ const WidgetSettings = ({ business }) => {
     e.preventDefault();
     try {
       if (formData.id) {
-        await axiosInstance.put(
-          API_PATHS.WIDGETS.UPDATE_WIDGET(formData.id),
-          formData
-        );
+        await axiosInstance.put(API_PATHS.WIDGETS.UPDATE_WIDGET(formData.id), {
+          name: formData.name,
+          style: formData.layout,
+          settingsJson: formData.themeJson,
+          isActive: formData.isActive,
+        });
         toast.success("Widget updated successfully!");
         setSelectedWidget(formData);
       } else {
         const newWidgetData = {
           name: formData.name,
-          layout: formData.layout,
-          themeJson: formData.themeJson,
+          style: formData.layout,
+          settingsJson: formData.themeJson,
           isActive: formData.isActive,
         };
         await axiosInstance.post(
-          API_PATHS.WIDGETS.CREATE_WIDGET(tenant.id),
+          API_PATHS.WIDGETS.CREATE_WIDGET,
           newWidgetData
         );
         toast.success("Widget created successfully!");
       }
-      fetchWidgets(tenant?.id);
+      fetchWidgets();
       setShowEditModal(false);
       setFormData(null);
     } catch (error) {
@@ -78,9 +86,16 @@ const WidgetSettings = ({ business }) => {
     setSelectedWidget(updatedWidget);
 
     try {
+      const updateData = {
+        name: updatedWidget.name,
+        style: updatedWidget.style,
+        settingsJson: updatedWidget.settingsJson || updatedWidget.settings,
+        isActive: updatedWidget.isActive,
+      };
+
       await axiosInstance.put(
         API_PATHS.WIDGETS.UPDATE_WIDGET(selectedWidget.id),
-        updatedWidget
+        updateData
       );
       toast.success("Widget settings updated!");
     } catch (error) {
@@ -93,11 +108,14 @@ const WidgetSettings = ({ business }) => {
   const toggleWidget = async (widget) => {
     try {
       const newIsActive = !widget.isActive;
-      await axiosInstance.patch(API_PATHS.WIDGETS.TOGGLE_WIDGET(widget.id), {
+      await axiosInstance.put(API_PATHS.WIDGETS.UPDATE_WIDGET(widget.id), {
+        name: widget.name,
+        style: widget.style,
+        settingsJson: widget.settingsJson || widget.settings,
         isActive: newIsActive,
       });
       toast.success(`Widget ${newIsActive ? "activated" : "deactivated"}!`);
-      fetchWidgets(tenant?.id);
+      fetchWidgets();
     } catch (error) {
       toast.error("Failed to toggle widget.");
       console.error("Error toggling widget:", error);
@@ -179,157 +197,287 @@ const WidgetSettings = ({ business }) => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-8">
-          Widgets & Embeds
-        </h1>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center">
-            <PuzzlePieceIcon className="h-8 w-8 text-orange-500 mr-4" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
+      {/* Premium Header */}
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-lg font-semibold text-gray-800">
-                TrueTestify Account
-              </p>
-              <p className="text-sm text-gray-500">
-                Connected as{" "}
-                <span className="font-medium text-gray-700">{user?.email}</span>
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+                Widget Management
+              </h1>
+              <p className="text-blue-100 text-lg font-medium">
+                Create, customize, and embed your review widgets
               </p>
             </div>
-          </div>
-          <button className="text-sm font-medium text-orange-600 hover:text-orange-500 transition-colors">
-            Disconnect
-          </button>
-        </div>
-
-        {/* --- Widgets Management Section --- */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">Your Widgets</h2>
-            <button
-              onClick={() => {
-                setFormData({
-                  name: "",
-                  layout: "CAROUSEL",
-                  themeJson: {
-                    theme: "light",
-                    primary: "#428ee5",
-                    background: "#fff",
-                    autoplay: true,
-                  },
-                  isActive: true,
-                });
-                setShowEditModal(true);
-              }}
-              className="px-6 py-2 font-semibold text-white bg-orange-500 rounded-md hover:bg-orange-600 transition-colors"
-            >
-              Create New
-            </button>
-          </div>
-
-          <p className="text-gray-600 mb-6">
-            Manage your testimonial widgets here. Click **"Edit"** to configure
-            settings or **"Embed"** to get the code.
-          </p>
-
-          <div className="space-y-4">
-            {widgets.length > 0 ? (
-              widgets.map((widget) => (
-                <div
-                  key={widget.id}
-                  className={`
-                    flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg transition-all
-                    ${
-                      selectedWidget?.id === widget.id
-                        ? "bg-gray-100 border-2 border-orange-500"
-                        : "bg-white border-2 border-gray-200 hover:bg-gray-50"
-                    }
-                  `}
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-gray-800 truncate">
-                      {widget.name}
-                      <span
-                        className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide
-                        ${
-                          widget.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }
-                      `}
-                      >
-                        {widget.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Layout: {widget.layout}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2 mt-3 sm:mt-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedWidget(widget);
-                        setShowEmbedModal(true);
-                      }}
-                      className="p-2 rounded-full text-gray-500 hover:bg-gray-200"
-                      title="Get Embed Code"
-                    >
-                      <CodeBracketIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFormData({
-                          id: widget.id,
-                          name: widget.name,
-                          layout: widget.layout,
-                          themeJson: widget.themeJson,
-                          isActive: widget.isActive,
-                        });
-                        setShowEditModal(true);
-                      }}
-                      className="p-2 rounded-full text-gray-500 hover:bg-gray-200"
-                      title="Edit Widget"
-                    >
-                      <Cog6ToothIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleWidget(widget);
-                      }}
-                      className={`
-                        px-4 py-2 rounded-full font-semibold text-sm transition-colors
-                        ${
-                          widget.isActive
-                            ? "bg-red-500 text-white hover:bg-red-600"
-                            : "bg-green-500 text-white hover:bg-green-600"
-                        }
-                      `}
-                      title={
-                        widget.isActive
-                          ? "Deactivate Widget"
-                          : "Activate Widget"
-                      }
-                    >
-                      {widget.isActive ? "Deactivate" : "Activate"}
-                    </button>
-                  </div>
+            <div className="mt-6 lg:mt-0 grid grid-cols-2 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
+                <div className="text-2xl font-bold">{widgets.length}</div>
+                <div className="text-sm text-blue-100">Total Widgets</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
+                <div className="text-2xl font-bold text-green-300">
+                  {widgets.filter((w) => w.isActive).length}
                 </div>
-              ))
+                <div className="text-sm text-blue-100">Active</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+        {/* Account Status Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 mb-8"
+        >
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-orange-500 rounded-xl flex items-center justify-center">
+                <PuzzlePieceIcon className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">
+                  TrueTestify Account
+                </h3>
+                <p className="text-gray-600">
+                  Connected as{" "}
+                  <span className="font-semibold text-blue-600">
+                    {user?.email}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg">
+                <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                <span className="text-sm font-semibold text-green-700">
+                  Connected
+                </span>
+              </div>
+              <button className="text-sm font-semibold text-red-600 hover:text-red-700 transition-colors px-4 py-2 bg-red-50 hover:bg-red-100 rounded-lg">
+                Disconnect
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Widgets Management Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
+        >
+          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+                  <CodeBracketIcon className="w-8 h-8 mr-3 text-blue-600" />
+                  Widget Library
+                </h2>
+                <p className="text-gray-600">
+                  Create and manage your embeddable review widgets
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setFormData({
+                    name: "",
+                    layout: "CAROUSEL",
+                    themeJson: {
+                      theme: "light",
+                      primary: "#428ee5",
+                      background: "#fff",
+                      autoplay: true,
+                    },
+                    isActive: true,
+                  });
+                  setShowEditModal(true);
+                }}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-bold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <PlusIcon className="w-5 h-5 mr-2" />
+                Create New Widget
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {widgets.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {widgets.map((widget, index) => (
+                  <motion.div
+                    key={widget.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    className={`bg-white border-2 rounded-2xl p-6 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 ${
+                      selectedWidget?.id === widget.id
+                        ? "border-blue-500 shadow-lg bg-blue-50"
+                        : "border-gray-200 hover:border-blue-300"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                          {widget.name}
+                        </h3>
+                        <div className="flex items-center space-x-3">
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                              widget.isActive
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {widget.isActive ? (
+                              <CheckCircleIcon className="w-4 h-4 mr-1" />
+                            ) : (
+                              <XCircleIcon className="w-4 h-4 mr-1" />
+                            )}
+                            {widget.isActive ? "Active" : "Inactive"}
+                          </span>
+                          <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                            {widget.layout}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          12
+                        </div>
+                        <div className="text-sm text-gray-500">Total Views</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <div className="text-2xl font-bold text-orange-600">
+                          3
+                        </div>
+                        <div className="text-sm text-gray-500">Embeds</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedWidget(widget);
+                          setShowEmbedModal(true);
+                        }}
+                        className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-semibold text-sm"
+                      >
+                        <CodeBracketIcon className="w-4 h-4 mr-2" />
+                        Get Code
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFormData({
+                            id: widget.id,
+                            name: widget.name,
+                            layout: widget.layout,
+                            themeJson: widget.themeJson,
+                            isActive: widget.isActive,
+                          });
+                          setShowEditModal(true);
+                        }}
+                        className="inline-flex items-center px-4 py-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors font-semibold text-sm"
+                      >
+                        <Cog6ToothIcon className="w-4 h-4 mr-2" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedWidget(widget);
+                        }}
+                        className="inline-flex items-center px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors font-semibold text-sm"
+                      >
+                        <EyeIcon className="w-4 h-4 mr-2" />
+                        Preview
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleWidget(widget);
+                        }}
+                        className={`inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                          widget.isActive
+                            ? "bg-red-50 text-red-600 hover:bg-red-100"
+                            : "bg-green-50 text-green-600 hover:bg-green-100"
+                        }`}
+                      >
+                        {widget.isActive ? (
+                          <XCircleIcon className="w-4 h-4 mr-2" />
+                        ) : (
+                          <CheckCircleIcon className="w-4 h-4 mr-2" />
+                        )}
+                        {widget.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             ) : (
-              <p className="text-center text-gray-500 py-8">
-                No widgets found. Click "Create New" to get started!
-              </p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-16"
+              >
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CodeBracketIcon className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-600 mb-4">
+                  No Widgets Yet
+                </h3>
+                <p className="text-gray-500 mb-8 max-w-md mx-auto">
+                  Create your first widget to start embedding reviews on your
+                  website
+                </p>
+                <button
+                  onClick={() => {
+                    setFormData({
+                      name: "",
+                      layout: "CAROUSEL",
+                      themeJson: {
+                        theme: "light",
+                        primary: "#428ee5",
+                        background: "#fff",
+                        autoplay: true,
+                      },
+                      isActive: true,
+                    });
+                    setShowEditModal(true);
+                  }}
+                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <PlusIcon className="w-5 h-5 mr-2" />
+                  Create Your First Widget
+                </button>
+              </motion.div>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        {/* --- Selected Widget Configuration & Live Preview --- */}
+        {/* Selected Widget Preview */}
         {selectedWidget && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
+          >
+            <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+              <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+                <EyeIcon className="w-8 h-8 mr-3 text-blue-600" />
+                Widget Preview: "{selectedWidget.name}"
+              </h2>
+              <p className="text-gray-600">
+                Live preview of how your widget will appear on your website
+              </p>
+            </div>
             {/* <h2 className="text-2xl font-bold text-gray-800 mb-6">
               Configure "{selectedWidget.name}"
             </h2> */}
@@ -421,329 +569,376 @@ const WidgetSettings = ({ business }) => {
                 ></span>
               </button>
             </div> */}
-            <div className="mt-8">
-              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                <ArrowRightCircleIcon className="h-6 w-6 mr-2 text-orange-500" />
-                Live Preview
-              </h3>
-              <div className="border border-gray-300 p-4 rounded-lg">
-                <p className="text-sm text-gray-500 mb-4">
-                  This is a live preview of how your widget will look with the
-                  current settings.
-                </p>
-                <div className="bg-gray-100 p-4 rounded-lg">
+            <div className="p-6">
+              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <span className="text-sm font-semibold text-gray-700">
+                      Layout:
+                    </span>
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      {selectedWidget.layout}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-700">
+                      Theme:
+                    </span>
+                    <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">
+                      {selectedWidget.themeJson?.theme || "Light"}
+                    </span>
+                  </div>
+                  {!hasFeature("widget_embed") && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+                      <p className="text-sm text-red-600 font-semibold">
+                        Widget embedding requires a premium plan
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white rounded-xl p-6 border-2 border-dashed border-gray-300">
                   <PublicReviews />
                 </div>
-                {!hasFeature("widget_embed") && (
-                  <p className="mt-4 text-sm text-red-500 font-medium">
-                    <span className="font-bold">Note:</span> Widget embedding is
-                    not available on your current plan.
-                  </p>
-                )}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* --- Offline Collection & QR Code --- */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            Offline Collection QR Code
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Print this QR on packaging, receipts, or displays. Scanning
-            redirects customers to your public review page where they can submit
-            a review.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              {qrDataUrl ? (
-                <img
-                  src={qrDataUrl}
-                  alt="Record review QR"
-                  className="w-48 h-48 rounded-md"
-                />
-              ) : (
-                <div className="w-48 h-48 flex items-center justify-center border border-dashed border-gray-300 text-gray-400 text-sm rounded-md">
-                  Generating…
+        {/* QR Code Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+        >
+          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+              <QrCodeIcon className="w-8 h-8 mr-3 text-blue-600" />
+              QR Code Collection
+            </h2>
+            <p className="text-gray-600">
+              Generate QR codes for offline review collection on packaging,
+              receipts, or displays
+            </p>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="text-center">
+                <div className="bg-gradient-to-br from-blue-50 to-orange-50 p-8 rounded-2xl border-2 border-dashed border-gray-300">
+                  {qrDataUrl ? (
+                    <img
+                      src={qrDataUrl}
+                      alt="Record review QR"
+                      className="w-64 h-64 mx-auto rounded-xl shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-64 h-64 mx-auto flex items-center justify-center border-2 border-dashed border-gray-300 text-gray-400 text-lg rounded-xl bg-white">
+                      <div className="text-center">
+                        <QrCodeIcon className="w-16 h-16 mx-auto mb-4" />
+                        <div>Generating QR Code...</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="flex-1 flex flex-col items-center sm:items-start text-center sm:text-left">
-              <p className="text-sm text-gray-500 mb-2">Target URL:</p>
-              <span className="font-mono text-gray-800 break-all bg-gray-100 px-3 py-1 rounded-md">
-                {publicRecordUrl}
-              </span>
-              <div className="mt-4 flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={handleDownloadQr}
-                  className="px-6 py-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors"
-                >
-                  Download QR Code
-                </button>
-                <a
-                  href={`/record/${businessSlug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-2 bg-gray-200 text-gray-800 font-semibold rounded-md hover:bg-gray-300 transition-colors text-center"
-                >
-                  Open Review Page
-                </a>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">
+                    QR Code Details
+                  </h3>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="text-sm text-gray-500 mb-2">
+                      Target URL:
+                    </div>
+                    <div className="font-mono text-sm text-gray-800 bg-white px-3 py-2 rounded-lg border break-all">
+                      {publicRecordUrl}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={handleDownloadQr}
+                    className="w-full inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-bold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    <ArrowUpOnSquareStackIcon className="w-5 h-5 mr-2" />
+                    Download QR Code
+                  </button>
+                  <a
+                    href={`/record/${businessSlug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                  >
+                    <EyeIcon className="w-5 h-5 mr-2" />
+                    Preview Review Page
+                  </a>
+                </div>
+
+                <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                  <h4 className="font-semibold text-blue-800 mb-2">
+                    Usage Tips:
+                  </h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Print on product packaging</li>
+                    <li>• Add to receipts and invoices</li>
+                    <li>• Display in your physical store</li>
+                    <li>• Include in email signatures</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
+      </div>
 
-        {/* --- Modal for Creating/Editing a Widget --- */}
-        {showEditModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
-            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
-              <h4 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-                {formData?.id ? "Edit Widget" : "Create New Widget"}
-              </h4>
-              <form onSubmit={handleFormSubmit}>
-                <div className="mb-5">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Widget Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData?.name || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    placeholder="e.g., Homepage Carousel"
-                    required
-                  />
-                </div>
-                <div className="mb-5">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Widget Layout
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {layouts.map((layout) => (
-                      <button
-                        type="button"
-                        key={layout.value}
-                        onClick={() =>
-                          setFormData({ ...formData, layout: layout.value })
-                        }
-                        disabled={!hasFeature(layout.feature)}
-                        className={`px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
+      {/* --- Modal for Creating/Editing a Widget --- */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
+            <h4 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+              {formData?.id ? "Edit Widget" : "Create New Widget"}
+            </h4>
+            <form onSubmit={handleFormSubmit}>
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Widget Name
+                </label>
+                <input
+                  type="text"
+                  value={formData?.name || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  placeholder="e.g., Homepage Carousel"
+                  required
+                />
+              </div>
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Widget Layout
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {layouts.map((layout) => (
+                    <button
+                      type="button"
+                      key={layout.value}
+                      onClick={() =>
+                        setFormData({ ...formData, layout: layout.value })
+                      }
+                      disabled={!hasFeature(layout.feature)}
+                      className={`px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
                           ${
                             formData?.layout === layout.value
                               ? "bg-gray-900 text-white border-gray-900"
                               : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                           } ${
-                          !hasFeature(layout.feature)
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                        }
+                        !hasFeature(layout.feature)
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }
                         `}
-                      >
-                        {layout.name}
-                      </button>
-                    ))}
-                  </div>
+                    >
+                      {layout.name}
+                    </button>
+                  ))}
                 </div>
-                <div className="mb-5">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Widget Theme
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {themes.map((theme) => (
-                      <button
-                        type="button"
-                        key={theme.value}
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            themeJson: {
-                              ...formData.themeJson,
-                              ...theme.themeJson,
-                            },
-                          })
-                        }
-                        className={`flex items-center justify-center px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
+              </div>
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Widget Theme
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {themes.map((theme) => (
+                    <button
+                      type="button"
+                      key={theme.value}
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          themeJson: {
+                            ...formData.themeJson,
+                            ...theme.themeJson,
+                          },
+                        })
+                      }
+                      className={`flex items-center justify-center px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
                           ${
                             formData?.themeJson?.theme === theme.value
                               ? "bg-gray-900 text-white border-gray-900"
                               : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                           }
                         `}
-                      >
-                        {theme.icon}
-                        <span className="ml-2">{theme.name}</span>
-                      </button>
-                    ))}
-                  </div>
+                    >
+                      {theme.icon}
+                      <span className="ml-2">{theme.name}</span>
+                    </button>
+                  ))}
                 </div>
-                <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg mb-6">
-                  <label
-                    htmlFor="autoplay-toggle"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    Autoplay Videos
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData({
-                        ...formData,
-                        themeJson: {
-                          ...formData.themeJson,
-                          autoplay: !formData.themeJson?.autoplay,
-                        },
-                      })
-                    }
-                    className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-full
+              </div>
+              <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg mb-6">
+                <label
+                  htmlFor="autoplay-toggle"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Autoplay Videos
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      themeJson: {
+                        ...formData.themeJson,
+                        autoplay: !formData.themeJson?.autoplay,
+                      },
+                    })
+                  }
+                  className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-full
                       ${
                         formData?.themeJson?.autoplay
                           ? "bg-orange-500"
                           : "bg-gray-200"
                       }`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none inline-block h-5 w-5 bg-white shadow transform ring-0 transition ease-in-out duration-200 rounded-full
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 bg-white shadow transform ring-0 transition ease-in-out duration-200 rounded-full
                         ${
                           formData?.themeJson?.autoplay
                             ? "translate-x-5"
                             : "translate-x-0"
                         }`}
-                    ></span>
-                  </button>
-                </div>
-
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowEditModal(false);
-                      setFormData(null);
-                    }}
-                    className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 text-sm font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
-                  >
-                    {formData?.id ? "Save Changes" : "Create Widget"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* --- Modal for Embed Codes --- */}
-        {selectedWidget && showEmbedModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-50 backdrop-blur-sm p-4">
-            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
-              <div className="flex justify-between items-center mb-6">
-                <h4 className="text-2xl font-bold text-gray-800">
-                  Embed "{selectedWidget.name}"
-                </h4>
-                <button
-                  onClick={() => setShowEmbedModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  ></span>
                 </button>
               </div>
 
-              <p className="text-gray-600 mb-6">
-                Copy the code below to add this widget to your website.
-              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setFormData(null);
+                  }}
+                  className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 text-sm font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
+                >
+                  {formData?.id ? "Save Changes" : "Create Widget"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-              <div className="space-y-4">
+      {/* --- Modal for Embed Codes --- */}
+      {selectedWidget && showEmbedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="text-2xl font-bold text-gray-800">
+                Embed "{selectedWidget.name}"
+              </h4>
+              <button
+                onClick={() => setShowEmbedModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              Copy the code below to add this widget to your website.
+            </p>
+
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  WordPress Shortcode
+                </p>
+                <div className="relative">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`[truetestify_widget id="${selectedWidget.id}"]`}
+                    className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-sm text-gray-700 font-mono focus:outline-none"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `[truetestify_widget id="${selectedWidget.id}"]`
+                      );
+                      toast.success("Shortcode copied!");
+                    }}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-orange-500"
+                  >
+                    <ArrowUpOnSquareStackIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <p className="text-sm font-medium text-gray-700 mb-2">
-                    WordPress Shortcode
+                    JavaScript Embed
                   </p>
                   <div className="relative">
-                    <input
-                      type="text"
-                      readOnly
-                      value={`[truetestify_widget id="${selectedWidget.id}"]`}
-                      className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-sm text-gray-700 font-mono focus:outline-none"
-                    />
+                    <pre className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap">{`<script src="https://cdn.truetestify.com/widget.js" data-widget-id="${selectedWidget.id}"></script>`}</pre>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(
-                          `[truetestify_widget id="${selectedWidget.id}"]`
+                          `<script src="https://cdn.truetestify.com/widget.js" data-widget-id="${selectedWidget.id}"></script>`
                         );
-                        toast.success("Shortcode copied!");
+                        toast.success("Code copied!");
                       }}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-orange-500"
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-orange-500"
                     >
                       <ArrowUpOnSquareStackIcon className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-sm font-medium text-gray-700 mb-2">
-                      JavaScript Embed
-                    </p>
-                    <div className="relative">
-                      <pre className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap">{`<script src="https://cdn.truetestify.com/widget.js" data-widget-id="${selectedWidget.id}"></script>`}</pre>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `<script src="https://cdn.truetestify.com/widget.js" data-widget-id="${selectedWidget.id}"></script>`
-                          );
-                          toast.success("Code copied!");
-                        }}
-                        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-orange-500"
-                      >
-                        <ArrowUpOnSquareStackIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-sm font-medium text-gray-700 mb-2">
-                      Iframe Embed
-                    </p>
-                    <div className="relative">
-                      <pre className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap">{`<iframe src="${publicReviewBaseUrl}/public-reviews/${business?.slug}?widgetId=${selectedWidget.id}" style="width:100%;height:420px;border:0;" loading="lazy"></iframe>`}</pre>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            `<iframe src="${publicReviewBaseUrl}/public-reviews/${business?.slug}?widgetId=${selectedWidget.id}" style="width:100%;height:420px;border:0;" loading="lazy"></iframe>`
-                          );
-                          toast.success("Code copied!");
-                        }}
-                        className="absolute top-2 right-2 p-1 text-gray-400 hover:text-orange-500"
-                      >
-                        <ArrowUpOnSquareStackIcon className="h-5 w-5" />
-                      </button>
-                    </div>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Iframe Embed
+                  </p>
+                  <div className="relative">
+                    <pre className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap">{`<iframe src="${publicReviewBaseUrl}/public-reviews/${business?.slug}?widgetId=${selectedWidget.id}" style="width:100%;height:420px;border:0;" loading="lazy"></iframe>`}</pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `<iframe src="${publicReviewBaseUrl}/public-reviews/${business?.slug}?widgetId=${selectedWidget.id}" style="width:100%;height:420px;border:0;" loading="lazy"></iframe>`
+                        );
+                        toast.success("Code copied!");
+                      }}
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-orange-500"
+                    >
+                      <ArrowUpOnSquareStackIcon className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

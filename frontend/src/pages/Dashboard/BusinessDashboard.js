@@ -41,19 +41,24 @@ const BusinessDashboard = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        const response = await axiosInstance.get(
+        // Get business info
+        const businessResponse = await axiosInstance.get(
           API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE
         );
-        console.log("API Response:", response.data.reviews); // Debug log
-        const reviewsData = Array.isArray(response.data.reviews)
-          ? response.data.reviews
-          : [];
-        setBusiness(response.data.business);
-        setReviews(reviewsData);
+        setBusiness(businessResponse.data.business);
+        
+        // Get all reviews using admin endpoint
+        if (businessResponse.data.business?.slug) {
+          const reviewsResponse = await axiosInstance.get(
+            API_PATHS.REVIEWS.GET_REVIEWS(businessResponse.data.business.slug)
+          );
+          setReviews(reviewsResponse.data.reviews || []);
+        }
+        
         setFormData({
-          name: response.data.business.name || "",
-          website: response.data.business.website || "",
-          brandColor: response.data.business.brandColor || DEFAULT_PRIMARY,
+          name: businessResponse.data.business.name || "",
+          website: businessResponse.data.business.website || "",
+          brandColor: businessResponse.data.business.brandColor || DEFAULT_PRIMARY,
           logo: null, // Reset logo on fetch
         });
       } catch (error) {
@@ -124,18 +129,22 @@ const BusinessDashboard = () => {
       toast.success("Profile updated successfully!");
       setEditing(false);
       // Refresh data
-      const response = await axiosInstance.get(
+      const businessResponse = await axiosInstance.get(
         API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE
       );
-      const reviewsData = Array.isArray(response.data.reviews)
-        ? response.data.reviews
-        : [];
-      setBusiness(response.data.business);
-      setReviews(reviewsData);
+      setBusiness(businessResponse.data.business);
+      
+      // Refresh reviews using admin endpoint
+      if (businessResponse.data.business?.slug) {
+        const reviewsResponse = await axiosInstance.get(
+          API_PATHS.REVIEWS.GET_REVIEWS(businessResponse.data.business.slug)
+        );
+        setReviews(reviewsResponse.data.reviews || []);
+      }
       setFormData({
-        name: response?.data?.business?.name,
-        website: response?.data?.business?.website,
-        brandColor: response?.data?.business?.brandColor,
+        name: businessResponse?.data?.business?.name,
+        website: businessResponse?.data?.business?.website,
+        brandColor: businessResponse?.data?.business?.brandColor,
       });
     } catch (error) {
       console.error("Failed to update profile:", error.response?.data || error); // Enhanced error logging
@@ -410,207 +419,287 @@ const BusinessDashboard = () => {
   };
 
   return (
-    <>
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">Admin Profile</h2>
-      <div className={containerClass}>
-        {/* Profile Header */}
-        {loading ? (
-          renderProfileSkeleton()
-        ) : business ? (
-          <div className="mb-12">
-            <div className="flex flex-col items-center text-center">
-              {renderLogo()}
-              {editing ? (
-                <form
-                  onSubmit={handleUpdateProfile}
-                  className="mt-6 w-full max-w-md space-y-4"
-                >
-                  <div>
-                    <label
-                      className="block text-sm font-medium"
-                      style={{ color: textColor }}
-                    >
-                      Business Name
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className={`mt-1 w-full p-3 rounded-lg border ${
-                        themeMode === "dark"
-                          ? "bg-gray-800 border-gray-700 text-gray-200"
-                          : "bg-white border-gray-200 text-gray-800"
-                      }`}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium"
-                      style={{ color: textColor }}
-                    >
-                      Website
-                    </label>
-                    <input
-                      type="url"
-                      name="website"
-                      value={formData.website}
-                      onChange={handleInputChange}
-                      className={`mt-1 w-full p-3 rounded-lg border ${
-                        themeMode === "dark"
-                          ? "bg-gray-800 border-gray-700 text-gray-200"
-                          : "bg-white border-gray-200 text-gray-800"
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium"
-                      style={{ color: textColor }}
-                    >
-                      Brand Color
-                    </label>
-                    <input
-                      type="color"
-                      name="brandColor"
-                      value={formData.brandColor}
-                      onChange={handleInputChange}
-                      className="mt-1 w-full h-10 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="block text-sm font-medium"
-                      style={{ color: textColor }}
-                    >
-                      Logo
-                    </label>
-                    <input
-                      type="file"
-                      name="logo"
-                      accept="image/*"
-                      onChange={handleInputChange}
-                      className={`mt-1 w-full p-3 rounded-lg border ${
-                        themeMode === "dark"
-                          ? "bg-gray-800 border-gray-700 text-gray-200"
-                          : "bg-white border-gray-200 text-gray-800"
-                      }`}
-                    />
-                    {formData.logo && (
-                      <p className="mt-2 text-sm" style={{ color: mutedText }}>
-                        Selected: {formData.logo.name}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex space-x-4">
-                    <button
-                      type="submit"
-                      style={{ backgroundColor: primaryColor }}
-                      className="px-6 py-3 text-white font-bold rounded-lg hover:brightness-110 transition-all"
-                    >
-                      Save Changes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditing(false)}
-                      className="px-6 py-3 text-gray-600 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="mt-6">
-                  <h1
-                    className="text-4xl font-extrabold"
-                    style={{ color: textColor }}
-                  >
-                    {business.name}
-                  </h1>
-                  {business.website && (
-                    <a
-                      href={business.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 text-lg font-medium hover:underline"
-                      style={{ color: primaryColor }}
-                    >
-                      Visit Website
-                    </a>
-                  )}
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="mt-4 px-6 py-2 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    style={{ color: primaryColor }}
-                  >
-                    Edit Profile
-                  </button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
+      {/* Premium Header Section */}
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+                Business Dashboard
+              </h1>
+              <p className="text-blue-100 text-lg font-medium">
+                Manage your business profile and customer reviews
+              </p>
+            </div>
+            <div className="hidden md:flex items-center space-x-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-3 border border-white/20">
+                <div className="text-sm text-blue-100">Total Reviews</div>
+                <div className="text-2xl font-bold">{reviews.length}</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-3 border border-white/20">
+                <div className="text-sm text-blue-100">Approved</div>
+                <div className="text-2xl font-bold">
+                  {reviews.filter(r => r.status === 'approved').length}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <p className="text-center text-red-500 text-lg">
-            Failed to load business profile.
-          </p>
-        )}
-
-        {/* Reviews Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold" style={{ color: textColor }}>
-              Reviews
-            </h2>
-            <div className="flex space-x-2">
-              {["all", "approved", "pending"].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilter(status)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    filter === status
-                      ? "text-white"
-                      : themeMode === "dark"
-                      ? "text-gray-300 hover:bg-gray-700"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                  style={{
-                    backgroundColor:
-                      filter === status ? primaryColor : "transparent",
-                  }}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex space-x-2 mt-4">
-            {["GRID", "CAROUSEL", "SPOTLIGHT", "FLOATING_BUBBLE"].map(
-              (option) => (
-                <button
-                  key={option}
-                  onClick={() => setLayout(option)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    layout === option
-                      ? "text-white"
-                      : themeMode === "dark"
-                      ? "text-gray-300 hover:bg-gray-700"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                  style={{
-                    backgroundColor:
-                      layout === option ? primaryColor : "transparent",
-                  }}
-                >
-                  {option.charAt(0) + option.slice(1).toLowerCase()}
-                </button>
-              )
-            )}
           </div>
         </div>
-        {renderLayout()}
       </div>
-    </>
+
+      <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          {/* Executive Profile Section */}
+          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-8 border-b border-gray-100">
+            {loading ? (
+              renderProfileSkeleton()
+            ) : business ? (
+              <div className="flex flex-col lg:flex-row items-center lg:items-start space-y-6 lg:space-y-0 lg:space-x-8">
+                <div className="flex-shrink-0">
+                  {renderLogo()}
+                </div>
+                <div className="flex-1 text-center lg:text-left">
+                  {editing ? (
+                    <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+                      <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        Edit Business Profile
+                      </h3>
+                      <form onSubmit={handleUpdateProfile} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Business Name *
+                            </label>
+                            <input
+                              type="text"
+                              name="name"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                              placeholder="Enter your business name"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Website URL
+                            </label>
+                            <input
+                              type="url"
+                              name="website"
+                              value={formData.website}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                              placeholder="https://yourbusiness.com"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Brand Color
+                            </label>
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="color"
+                                name="brandColor"
+                                value={formData.brandColor}
+                                onChange={handleInputChange}
+                                className="w-16 h-12 rounded-xl border-2 border-gray-200 cursor-pointer"
+                              />
+                              <input
+                                type="text"
+                                value={formData.brandColor}
+                                onChange={(e) => setFormData(prev => ({...prev, brandColor: e.target.value}))}
+                                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
+                                placeholder="#ef7c00"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Business Logo
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="file"
+                                name="logo"
+                                accept="image/*"
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-3 rounded-xl border-2 border-dashed border-gray-300 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                              />
+                              {formData.logo && (
+                                <div className="mt-2 flex items-center text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                  {formData.logo.name}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                          <button
+                            type="button"
+                            onClick={() => setEditing(false)}
+                            className="px-6 py-3 text-gray-600 font-semibold rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-all duration-200"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-bold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    <div>
+                      <h1 className="text-4xl font-bold text-gray-800 mb-3">
+                        {business.name}
+                      </h1>
+                      <div className="flex flex-wrap items-center gap-4 mb-6">
+                        {business.website && (
+                          <a
+                            href={business.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+                          >
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+                            </svg>
+                            Visit Website
+                          </a>
+                        )}
+                        <button
+                          onClick={() => setEditing(true)}
+                          className="inline-flex items-center px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                          Edit Profile
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                          <div className="text-sm text-gray-500 mb-1">Business Slug</div>
+                          <div className="font-semibold text-gray-800">/{business.slug}</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                          <div className="text-sm text-gray-500 mb-1">Brand Color</div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 rounded-full border border-gray-300" style={{backgroundColor: business.brandColor}}></div>
+                            <span className="font-semibold text-gray-800">{business.brandColor}</span>
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                          <div className="text-sm text-gray-500 mb-1">Created</div>
+                          <div className="font-semibold text-gray-800">
+                            {new Date(business.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <p className="text-red-600 text-lg font-semibold">
+                  Failed to load business profile
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Premium Reviews Management Section */}
+          <div className="bg-white p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+                  <svg className="w-8 h-8 mr-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
+                  </svg>
+                  Customer Reviews
+                </h2>
+                <p className="text-gray-600">Manage and showcase your customer feedback</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 mt-6 lg:mt-0">
+                {/* Status Filter Pills */}
+                <div className="flex flex-wrap gap-2">
+                  {["all", "approved", "pending"].map((status) => {
+                    const count = status === 'all' ? reviews.length : reviews.filter(r => r.status === status).length;
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => setFilter(status)}
+                        className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                          filter === status
+                            ? "bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-lg transform scale-105"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:scale-105"
+                        }`}
+                      >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                        <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                          filter === status ? "bg-white/20" : "bg-gray-200"
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Layout Selection */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Display Layout</h3>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  { key: "GRID", label: "Grid View", icon: "⊞" },
+                  { key: "CAROUSEL", label: "Carousel", icon: "⟷" },
+                  { key: "SPOTLIGHT", label: "Spotlight", icon: "★" },
+                  { key: "FLOATING_BUBBLE", label: "Floating", icon: "○" }
+                ].map((option) => (
+                  <button
+                    key={option.key}
+                    onClick={() => setLayout(option.key)}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-center ${
+                      layout === option.key
+                        ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md transform scale-105"
+                        : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">{option.icon}</div>
+                    <div className="text-sm font-semibold">{option.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Reviews Display */}
+            <div className="bg-gray-50 rounded-xl p-6">
+              {renderLayout()}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
