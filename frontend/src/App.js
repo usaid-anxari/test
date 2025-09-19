@@ -1,56 +1,56 @@
 import { useLocation } from "react-router-dom";
 import { Route, Routes } from "react-router-dom";
-import Home from "./pages/Home/Home";
-import RecordReview from "./pages/RecordReview";
-import PublicReviews from "./pages/PublicReviews";
-import DashboardLayout from "./layouts/DashboardLayout";
-import AdminSettings from "./pages/Dashboard/AdminSettings";
-import Moderation from "./pages/Dashboard/Moderation";
-import Analytics from "./pages/Dashboard/Analytics";
-import ManageSubscription from "./pages/Dashboard/ManageSubscrption";
-import Pricing from "./pages/Pricing";
-import Billing from "./pages/Billing";
-import AdminProtectedRoute from "./service/AdminProtectedRoute";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Features from "./components/Features";
-import WidgetSettings from "./pages/Dashboard/WidgetSettings";
+import { lazy, Suspense, useContext } from "react";
+import { AuthContext } from "./context/AuthContext";
+import { Toaster } from "react-hot-toast";
+import { useAuth0 } from "@auth0/auth0-react";
+
+// Core Components (Always loaded)
+import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import FloatingReviewWidget from "./components/FloatingReviewWidget";
-import Contact from "./pages/Contact";
-import NotFound from "./pages/NotFound";
-import Account from "./pages/Account";
-import Navbar from "./components/Navbar";
-import Integrations from "./pages/Integrations";
-import Support from "./pages/Support";
-import TermsOfService from "./pages/TermsOfService";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Blog from "./pages/Blog";
-import Testimonial from "./pages/Testimonial";
-import About from "./pages/About";
-import VideoReviews from "./pages/Services/VideoReviews";
-import AudioReviews from "./pages/Services/AudioReviews";
-import TextReviews from "./pages/Services/TextReviews";
-import QRCodeCollection from "./pages/Services/QRCodeCollection";
-import CarouselWidget from "./pages/Widgets/CarouselWidget";
-import GridWidget from "./pages/Widgets/GridWidget";
-import SpotlightWidget from "./pages/Widgets/SpotlightWidget";
-import WallWidget from "./pages/Widgets/WallWidget";
-import GoogleEmbed from "./pages/GoogleEmbed";
-import Document from "./pages/Document";
-import { useContext } from "react";
-import { AuthContext } from "./context/AuthContext";
-import BusinessDashboard from "./pages/Dashboard/BusinessDashboard";
-import { Toaster } from "react-hot-toast";
-import Auth0Signup from "./pages/Auth0Signup";
-import Auth0Login from "./pages/Auth0Login";
-import Auth0ProtectedRoute from "./components/Auth0ProtectedRoute";
-import CreateBusiness from "./pages/CreateBusiness";
-import GoogleReviews from "./pages/Dashboard/GoogleReviews";
 import EmailVerification from "./components/EmailVerification";
 import Onboarding from "./components/Onboarding";
+import Auth0ProtectedRoute from "./components/Auth0ProtectedRoute";
 import PaymentGuard from "./components/PaymentGuard";
-import { useAuth0 } from "@auth0/auth0-react";
+import NotFound from "./pages/NotFound";
+import AdminSettings from "./pages/Dashboard/AdminSettings";
+
+// Lazy loaded components for better performance
+const Home = lazy(() => import("./pages/Home/Home"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Support = lazy(() => import("./pages/Support"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const Features = lazy(() => import("./components/Features"));
+
+// Auth Components
+const Auth0Login = lazy(() => import("./pages/Auth0Login"));
+const Auth0Signup = lazy(() => import("./pages/Auth0Signup"));
+const CreateBusiness = lazy(() => import("./pages/CreateBusiness"));
+
+// Public Review Components
+const PublicReviews = lazy(() => import("./pages/PublicReviews"));
+const RecordReview = lazy(() => import("./pages/RecordReview"));
+
+// Dashboard Components
+const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
+const Moderation = lazy(() => import("./pages/Dashboard/Moderation"));
+const Analytics = lazy(() => import("./pages/Dashboard/Analytics"));
+const BusinessDashboard = lazy(() => import("./pages/Dashboard/BusinessDashboard"));
+const WidgetSettings = lazy(() => import("./pages/Dashboard/WidgetSettings"));
+const GoogleReviews = lazy(() => import("./pages/Dashboard/GoogleReviews"));
+const Account = lazy(() => import("./pages/Account"));
+const Billing = lazy(() => import("./pages/Billing"));
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+  </div>
+);
 
 function App() {
   const { user, tenant, needsOnboarding } = useContext(AuthContext);
@@ -59,69 +59,61 @@ function App() {
   const isDashboardRoute = location.pathname.startsWith("/dashboard");
   const isOnboardingRoute = location.pathname === "/onboarding";
   const isCreateBusinessRoute = location.pathname === "/create-business";
+  const isPublicRoute = location.pathname.startsWith("/record/") || 
+                       (!location.pathname.startsWith("/dashboard") && 
+                        !location.pathname.startsWith("/auth0") &&
+                        !location.pathname.startsWith("/onboarding") &&
+                        !location.pathname.startsWith("/create-business"));
 
-  // Show email verification if user is authenticated but email not verified
-  if (!isLoading && isAuthenticated && auth0User && !auth0User.email_verified) {
+  // Loading state
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  // SaaS Flow: Email Verification Required
+  if (isAuthenticated && auth0User && !auth0User.email_verified) {
     return <EmailVerification />;
   }
 
-  // Show onboarding if user is verified but needs business setup
-  if (!isLoading && isAuthenticated && auth0User && auth0User.email_verified && needsOnboarding && !isOnboardingRoute && !isCreateBusinessRoute) {
+  // SaaS Flow: Business Setup Required (Onboarding)
+  if (isAuthenticated && auth0User && auth0User.email_verified && needsOnboarding && !isOnboardingRoute && !isCreateBusinessRoute) {
     return <Onboarding />;
   }
 
   return (
-    <>
-      <div className="min-h-screen flex flex-col font-sans bg-gray-50">
-        <Toaster position="top-center" reverseOrder={false} />
-        {!isDashboardRoute && <Navbar />}
+    <div className="min-h-screen flex flex-col font-sans bg-gray-50">
+      <Toaster position="top-center" reverseOrder={false} />
+      
+      {/* Navbar - Only show on public routes */}
+      {isPublicRoute && <Navbar />}
 
-        {/* The main content area with a max-width and padding */}
-        <main
-          className={`flex-1 w-full ${
-            !isDashboardRoute ? "max-w-7xl mx-auto p-4 mt-5 pb-32" : ""
-          }`}
-        >
+      {/* Main content area */}
+      <main className={`flex-1 w-full ${isPublicRoute ? "max-w-7xl mx-auto p-4 mt-5 pb-32" : ""}`}>
+        <Suspense fallback={<LoadingSpinner />}>
           <Routes>
+            {/* Public Marketing Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/about" element={<About />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/integrations" element={<Integrations />} />
-            <Route path="/services/video-reviews" element={<VideoReviews />} />
-            <Route path="/services/audio-reviews" element={<AudioReviews />} />
-            <Route path="/services/text-reviews" element={<TextReviews />} />
-            <Route path="/widgets/carousel" element={<CarouselWidget />} />
-            <Route path="/widgets/grid" element={<GridWidget />} />
-            <Route path="/widgets/spotlight" element={<SpotlightWidget />} />
-            <Route path="/widgets/wall" element={<WallWidget />} />
-            <Route path="/docs" element={<Document />} />
-            <Route path="/testimonial" element={<Testimonial />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/reviews/google-embed" element={<GoogleEmbed />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/record/:businessName" element={<RecordReview />} />
-            <Route path="/features" element={<Features />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/support" element={<Support />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/integrations" element={<Integrations />} />
-            <Route
-              path="/services/qr-collection"
-              element={<QRCodeCollection />}
-            />
-            <Route path=":businessName" element={<PublicReviews />} />
-            <Route path="/auth0-signup" element={<Auth0Signup />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/features" element={<Features />} />
+
+            {/* Auth Routes */}
             <Route path="/auth0-login" element={<Auth0Login />} />
+            <Route path="/auth0-signup" element={<Auth0Signup />} />
+            
+            {/* Onboarding Flow */}
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/create-business" element={<CreateBusiness />} />
 
-            {/* Dashboard routes for admins */}
+            {/* Public Review Routes */}
+            <Route path="/record/:businessName" element={<RecordReview />} />
+            <Route path="/:businessName" element={<PublicReviews />} />
+
+            {/* Protected Dashboard Routes */}
             <Route
               path="/dashboard"
               element={
@@ -132,39 +124,31 @@ function App() {
                 </Auth0ProtectedRoute>
               }
             >
-              <Route
-                index
-                element={<Moderation userInfo={user} business={tenant} />}
-              />
+              <Route index element={<Moderation />} />
               <Route path="moderation" element={<Moderation />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="business/me" element={<BusinessDashboard />} />
-              <Route
-                path="widget-settings"
-                element={<WidgetSettings business={tenant} />}
-              />
+              <Route path="widgets" element={<WidgetSettings />} />
               <Route path="billing" element={<Billing />} />
-              <Route
-                path="account"
-                element={<Account userInfo={user} business={tenant} />}
-              />
-              <Route
-                path="manage-subscription"
-                element={<ManageSubscription />}
-              />
-              <Route path="admin-settings" element={<AdminSettings />} />
+              <Route path="account" element={<Account />} />
+              <Route path="settings" element={<AdminSettings />} />
               <Route path="google-reviews" element={<GoogleReviews />} />
             </Route>
-            {/* A catch-all route for 404 errors */}
+
+            {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </main>
+        </Suspense>
+      </main>
 
-        {/* The new Footer component */}
-        {!isDashboardRoute && <Footer />}
-        {!isDashboardRoute && <FloatingReviewWidget />}
-      </div>
-    </>
+      {/* Footer and Floating Widget - Only on public routes */}
+      {isPublicRoute && (
+        <>
+          <Footer />
+          <FloatingReviewWidget />
+        </>
+      )}
+    </div>
   );
 }
 

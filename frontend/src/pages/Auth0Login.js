@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const Auth0Login = () => {
   const {
@@ -9,6 +11,21 @@ const Auth0Login = () => {
     getAccessTokenSilently,
     logout,
   } = useAuth0();
+  
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // Handle email verification success redirect
+  useEffect(() => {
+    const verified = searchParams.get('verified');
+    if (verified === 'true' && isAuthenticated) {
+      toast.success('Email verified successfully! Welcome to TrueTestify.');
+      // Redirect to dashboard or home after a short delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    }
+  }, [searchParams, isAuthenticated, navigate]);
 
   const handleLogin = async () => {
     try {

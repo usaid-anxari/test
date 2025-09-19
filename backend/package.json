@@ -15,7 +15,8 @@
     "test:milestone7": "node test-milestone7.js",
     "test:milestone8": "node test-milestone8.js",
     "test:milestone9": "node test-milestone9.js",
-    "test:milestone10": "node test-milestone10.js"
+    "test:milestone10": "node test-milestone10.js",
+    "test:email-verification": "node test-email-verification.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.888.0",
@@ -30,6 +31,7 @@
     "@nestjs/typeorm": "^10.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/nodemailer": "^7.0.1",
+    "auth0": "^5.0.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",

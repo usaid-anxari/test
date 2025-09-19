@@ -15,10 +15,16 @@ import NavLink from "./NavLink";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { UserCircleIcon } from "@heroicons/react/20/solid";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const Sidebar = ({ setIsSidebarOpen }) => {
-  const { logout, user } = useContext(AuthContext);
+  const { logout,user } = useContext(AuthContext);
+  const {logout: auth0Logout,isAuthenticated} = useAuth0()
 
+  const handleLogout = () => {
+    logout();
+    auth0Logout({ returnTo: window.location.origin });
+  };
   return (
     <div className="w-64 sidebar-professional text-gray-800 p-6 flex flex-col h-full">
       {/* Header */}
@@ -70,7 +76,7 @@ const Sidebar = ({ setIsSidebarOpen }) => {
             </li>
             <li>
               <NavLink
-                to="/dashboard/widget-settings"
+                to="/dashboard/widgets"
                 icon={<PuzzlePieceIcon className="h-5 w-5" />}
                 label="Widget Manager"
                 onClick={() => setIsSidebarOpen(false)}
@@ -101,7 +107,7 @@ const Sidebar = ({ setIsSidebarOpen }) => {
             </li>
             <li>
               <NavLink
-                to="/dashboard/admin-settings"
+                to="/dashboard/settings"
                 icon={<CogIcon className="h-5 w-5" />}
                 label="Settings"
                 onClick={() => setIsSidebarOpen(false)}
@@ -130,10 +136,10 @@ const Sidebar = ({ setIsSidebarOpen }) => {
                 onClick={() => setIsSidebarOpen(false)}
               />
             </li>
-            {user ? (
+            {isAuthenticated ? (
               <li>
                 <button
-                  onClick={() => { logout(); setIsSidebarOpen(false); }}
+                  onClick={() => { handleLogout(); setIsSidebarOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200 group"
                 >
                   <ArrowRightEndOnRectangleIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
