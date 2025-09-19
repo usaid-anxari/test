@@ -46,21 +46,29 @@ import Auth0Signup from "./pages/Auth0Signup";
 import Auth0Login from "./pages/Auth0Login";
 import Auth0ProtectedRoute from "./components/Auth0ProtectedRoute";
 import CreateBusiness from "./pages/CreateBusiness";
-
-
-// const Root = ()=>{
-//   // Check Token
-//   const isAuthenticated = !!localStorage.getItem("token")
-
-//   // Redirect The Location
-//   return isAuthenticated ?( <Navigate to='/dashboard'/> ): (<Navigate to='/login' />)
-
-// }
+import GoogleReviews from "./pages/Dashboard/GoogleReviews";
+import EmailVerification from "./components/EmailVerification";
+import Onboarding from "./components/Onboarding";
+import PaymentGuard from "./components/PaymentGuard";
+import { useAuth0 } from "@auth0/auth0-react";
 
 function App() {
-  const { user, tenant } = useContext(AuthContext);
+  const { user, tenant, needsOnboarding } = useContext(AuthContext);
+  const { isAuthenticated, user: auth0User, isLoading } = useAuth0();
   const location = useLocation();
   const isDashboardRoute = location.pathname.startsWith("/dashboard");
+  const isOnboardingRoute = location.pathname === "/onboarding";
+  const isCreateBusinessRoute = location.pathname === "/create-business";
+
+  // Show email verification if user is authenticated but email not verified
+  if (!isLoading && isAuthenticated && auth0User && !auth0User.email_verified) {
+    return <EmailVerification />;
+  }
+
+  // Show onboarding if user is verified but needs business setup
+  if (!isLoading && isAuthenticated && auth0User && auth0User.email_verified && needsOnboarding && !isOnboardingRoute && !isCreateBusinessRoute) {
+    return <Onboarding />;
+  }
 
   return (
     <>
@@ -110,6 +118,7 @@ function App() {
             <Route path=":businessName" element={<PublicReviews />} />
             <Route path="/auth0-signup" element={<Auth0Signup />} />
             <Route path="/auth0-login" element={<Auth0Login />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/create-business" element={<CreateBusiness />} />
 
             {/* Dashboard routes for admins */}
@@ -117,7 +126,9 @@ function App() {
               path="/dashboard"
               element={
                 <Auth0ProtectedRoute>
-                  <DashboardLayout />
+                  <PaymentGuard>
+                    <DashboardLayout />
+                  </PaymentGuard>
                 </Auth0ProtectedRoute>
               }
             >
@@ -142,6 +153,7 @@ function App() {
                 element={<ManageSubscription />}
               />
               <Route path="admin-settings" element={<AdminSettings />} />
+              <Route path="google-reviews" element={<GoogleReviews />} />
             </Route>
             {/* A catch-all route for 404 errors */}
             <Route path="*" element={<NotFound />} />

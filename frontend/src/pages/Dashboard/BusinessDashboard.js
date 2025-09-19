@@ -20,7 +20,8 @@ const BusinessDashboard = () => {
   const [filter, setFilter] = useState("all");
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState("");
-
+  console.log(business);
+  
   // Default theme values
   const DEFAULT_PRIMARY = "#f97316";
   const DEFAULT_BG = "#ffffff";
@@ -36,33 +37,26 @@ const BusinessDashboard = () => {
     }
   }, [user, navigate]);
 
-  // Fetch business data
+  // Fetch business data and reviews in single API call
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        // Get business info
-        const businessResponse = await axiosInstance.get(
+        // Get business info and all reviews in single call
+        const response = await axiosInstance.get(
           API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE
         );
-        setBusiness(businessResponse.data.business);
-        
-        // Get all reviews using admin endpoint
-        if (businessResponse.data.business?.slug) {
-          const reviewsResponse = await axiosInstance.get(
-            API_PATHS.REVIEWS.GET_REVIEWS(businessResponse.data.business.slug)
-          );
-          setReviews(reviewsResponse.data.reviews || []);
-        }
+        setBusiness(response.data.business);
+        setReviews(response.data.reviews || []);
         
         setFormData({
-          name: businessResponse.data.business.name || "",
-          website: businessResponse.data.business.website || "",
-          brandColor: businessResponse.data.business.brandColor || DEFAULT_PRIMARY,
-          logo: null, // Reset logo on fetch
+          name: response.data.business?.name || "",
+          website: response.data.business?.website || "",
+          brandColor: response.data.business?.brandColor || DEFAULT_PRIMARY,
+          logo: null,
         });
       } catch (error) {
-        console.error("API Error:", error.response?.data || error); // Enhanced error logging
+        console.error("API Error:", error.response?.data || error);
         toast.error("Could not load dashboard.");
         setBusiness(null);
         setReviews([]);
@@ -121,30 +115,23 @@ const BusinessDashboard = () => {
         console.log("Appending file to FormData:", formData.logo); // Debug log
       }
 
-      await axiosInstance.put(API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE, form, {
+      await axiosInstance.put(API_PATHS.BUSINESSES.UPDATE_PRIVATE_PROFILE, form, {
         headers: {
-          "Content-Type": "multipart/form-data", // Explicitly set Content-Type
+          "Content-Type": "multipart/form-data",
         },
       });
       toast.success("Profile updated successfully!");
       setEditing(false);
-      // Refresh data
-      const businessResponse = await axiosInstance.get(
+      // Refresh data with single API call
+      const response = await axiosInstance.get(
         API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE
       );
-      setBusiness(businessResponse.data.business);
-      
-      // Refresh reviews using admin endpoint
-      if (businessResponse.data.business?.slug) {
-        const reviewsResponse = await axiosInstance.get(
-          API_PATHS.REVIEWS.GET_REVIEWS(businessResponse.data.business.slug)
-        );
-        setReviews(reviewsResponse.data.reviews || []);
-      }
+      setBusiness(response.data.business);
+      setReviews(response.data.reviews || []);
       setFormData({
-        name: businessResponse?.data?.business?.name,
-        website: businessResponse?.data?.business?.website,
-        brandColor: businessResponse?.data?.business?.brandColor,
+        name: response.data.business?.name,
+        website: response.data.business?.website,
+        brandColor: response.data.business?.brandColor,
       });
     } catch (error) {
       console.error("Failed to update profile:", error.response?.data || error); // Enhanced error logging

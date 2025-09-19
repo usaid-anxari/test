@@ -41,16 +41,16 @@ const Home = () => {
         </p>
         <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-12">
           <Link
-            to="/signup"
+            to="/features"
             className="px-12 py-5 text-white bg-orange-500 font-bold text-lg tracking-wide transition-all hover:bg-orange-600 hover:shadow-lg transform hover:-translate-y-1"
           >
-            Start Free Trial
+            Explore Features
           </Link>
           <Link
-            to="/features"
+            to="/pricing"
             className="px-12 py-5 text-gray-800 font-bold text-lg border-2 border-gray-300 hover:bg-gray-100 transition-all hover:shadow-lg transform hover:-translate-y-1"
           >
-            See How It Works
+            Check Pricing
           </Link>
         </div>
         

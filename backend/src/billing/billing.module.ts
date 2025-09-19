@@ -7,6 +7,7 @@ import { BillingAccount } from './entities/billing-account.entity';
 import { BillingTransaction } from './entities/billing-transaction.entity';
 import { StorageModule } from '../storage/storage.module';
 import { AuthModule } from '../auth/auth.module';
+import { BusinessModule } from '../business/business.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from '../auth/auth.module';
     ConfigModule,
     StorageModule,
     AuthModule,
+    BusinessModule,
   ],
   providers: [BillingService],
   controllers: [BillingController],

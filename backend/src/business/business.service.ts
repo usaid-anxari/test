@@ -229,6 +229,57 @@ export class BusinessService {
     };
   }
 
+  // Get all reviews for business (for dashboard - includes pending, approved, rejected)
+  async getAllReviewsForBusiness(businessId: string) {
+    const reviews = await this.reviewRepo
+      .createQueryBuilder('r')
+      .leftJoinAndSelect('r.mediaAssets', 'm')
+      .where('r.businessId = :businessId', { businessId })
+      .orderBy('r.submittedAt', 'DESC')
+      .getMany();
+
+    return reviews.map((review) => {
+      const mediaAssets = (review.mediaAssets || []).map((asset) => ({
+        id: asset.id,
+        assetType: asset.assetType,
+        s3Key: asset.s3Key,
+        durationSec: asset.durationSec,
+        sizeBytes: asset.sizeBytes,
+      }));
+
+      return {
+        id: review.id,
+        type: review.type,
+        status: review.status,
+        title: review.title,
+        bodyText: review.bodyText,
+        rating: review.rating,
+        reviewerName: review.reviewerName,
+        submittedAt: review.submittedAt,
+        publishedAt: review.publishedAt,
+        mediaAssets,
+      };
+    });
+  }
+
+  // Update business information (excluding slug)
+  async updateBusiness(businessId: string, updateData: Partial<Business>): Promise<Business> {
+    const business = await this.findById(businessId);
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    // Prevent slug updates
+    delete updateData.slug;
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.deletedAt;
+
+    Object.assign(business, updateData);
+    return this.businessRepo.save(business);
+  }
+
   private generateSlug(name: string): string {
     return name
       .toLowerCase()

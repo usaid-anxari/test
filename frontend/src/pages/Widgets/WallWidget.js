@@ -13,7 +13,9 @@ import {
   PhotoIcon,
   HeartIcon,
   ChatBubbleLeftIcon,
-} from "@heroicons/react/16/solid";
+} from "@heroicons/react/24/solid";
+
+
 
 const WallWidget = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);

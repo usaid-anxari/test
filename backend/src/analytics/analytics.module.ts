@@ -7,6 +7,7 @@ import { Review } from '../review/entities/review.entity';
 import { Widget } from '../widgets/entities/widget.entity';
 import { StorageModule } from '../storage/storage.module';
 import { AuthModule } from '../auth/auth.module';
+import { BusinessModule } from '../business/business.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from '../auth/auth.module';
     ]),
     StorageModule,
     AuthModule,
+    BusinessModule,
   ],
   providers: [AnalyticsService],
   controllers: [AnalyticsController],

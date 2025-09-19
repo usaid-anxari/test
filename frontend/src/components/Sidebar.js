@@ -8,6 +8,7 @@ import {
   PuzzlePieceIcon,
   UserIcon,
   XMarkIcon,
+  StarIcon,
 } from "@heroicons/react/16/solid";
 import { Link } from "react-router-dom";
 import NavLink from "./NavLink";
@@ -103,6 +104,14 @@ const Sidebar = ({ setIsSidebarOpen }) => {
                 to="/dashboard/admin-settings"
                 icon={<CogIcon className="h-5 w-5" />}
                 label="Settings"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            </li>
+            <li>
+              <NavLink
+                to="/dashboard/google-reviews"
+                icon={<StarIcon className="h-5 w-5" />}
+                label="Google Reviews"
                 onClick={() => setIsSidebarOpen(false)}
               />
             </li>

@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import axiosInstance from '../service/axiosInstanse';
 import { API_PATHS } from '../service/apiPaths';
+import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const CreateBusiness = () => {
   const { user, getAccessTokenSilently } = useAuth0();
+  const { setTenant, setNeedsOnboarding } = useContext(AuthContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -49,6 +51,10 @@ const CreateBusiness = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
+      // Update AuthContext with new business
+      setTenant(response.data.business);
+      setNeedsOnboarding(false);
+      
       toast.success('Business created successfully!');
       navigate('/dashboard');
     } catch (error) {

@@ -8,6 +8,7 @@ export const API_PATHS = {
   },
   BUSINESSES: {
     GET_PRIVATE_PROFILE: "/api/business/me",
+    UPDATE_PRIVATE_PROFILE: "/api/business/me",
     GET_PUBLIC_PROFILE: (slug) => `/business/${slug}`,
     CREATE_BUSINESS: "/api/business",
     TOGGLE_TEXT_REVIEWS: "/api/business/settings/text-reviews",
@@ -27,8 +28,11 @@ export const API_PATHS = {
     GET_EMBED_CODE: (id) => `/api/widgets/${id}/embed-code`,
   },
   ANALYTICS: {
-    GET_EVENTS: (businessId) => `/api/analytics/business/${businessId}/events`,
-    GET_SUMMARY: (businessId) => `/api/analytics/business/${businessId}/summary`,
+    GET_DASHBOARD: "/api/analytics/dashboard",
+    GET_WIDGET_PERFORMANCE: (widgetId) => `/api/analytics/widgets/${widgetId}/performance`,
+    GET_REVIEW_TRENDS: "/api/analytics/reviews/trends",
+    GET_STORAGE_USAGE: "/api/analytics/storage/usage",
+    TRACK_EVENT: "/api/analytics/events",
   },
   BILLING: {
     GET_PRICING_PLANS: "/api/billing/pricing-plans",
@@ -42,5 +46,12 @@ export const API_PATHS = {
     GET_PREFERENCES: "/api/email/preferences",
     UPDATE_PREFERENCES: "/api/email/preferences",
     UNSUBSCRIBE: (token) => `/api/email/unsubscribe/${token}`,
+  },
+  GOOGLE: {
+    CONNECT: "/api/google/connect",
+    GET_STATUS: "/api/google/status",
+    IMPORT_REVIEWS: "/api/google/import-reviews",
+    GET_REVIEWS: "/api/google/reviews",
+    DISCONNECT: "/api/google/disconnect",
   },
 };

@@ -3,7 +3,7 @@ import { AuthContext } from "../context/AuthContext";
 import axiosInstance from "../service/axiosInstanse";
 import { API_PATHS } from "../service/apiPaths";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   CreditCardIcon,
@@ -126,9 +126,13 @@ TrueTestify
 
 const Billing = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useContext(AuthContext);
+  const paymentStatus = searchParams.get('status');
+  const paymentReason = searchParams.get('reason');
   const [billingAccount, setBillingAccount] = useState(null);
   const [pricingPlans, setPricingPlans] = useState([]);
+  const [storageStatus, setStorageStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({
     name: "",
@@ -157,7 +161,14 @@ const Billing = () => {
           setBillingAccount(billingResponse.data);
         } catch (billingError) {
           console.log("No billing account found:", billingError);
-          setBillingAccount(null);
+          // Set default billing account for free tier
+          setBillingAccount({
+            planName: "Free",
+            planPrice: 0,
+            status: "active",
+            storageLimitGb: 1,
+            storageUsageGb: 0
+          });
         }
 
         // Fetch pricing plans
@@ -171,8 +182,27 @@ const Billing = () => {
           // Set default plans
           setPricingPlans([
             { id: "free", name: "Free", price: 0, storageLimit: 1 },
-            { id: "pro", name: "Pro", price: 49, storageLimit: 10 },
+            { id: "starter", name: "Starter", price: 19, storageLimit: 10 },
+            { id: "professional", name: "Professional", price: 49, storageLimit: 50 },
+            { id: "enterprise", name: "Enterprise", price: 99, storageLimit: 200 },
           ]);
+        }
+
+        // Fetch storage status
+        try {
+          const storageResponse = await axiosInstance.get(
+            API_PATHS.BILLING.GET_STORAGE_STATUS
+          );
+          setStorageStatus(storageResponse.data);
+        } catch (storageError) {
+          console.log("Storage status not available:", storageError);
+          setStorageStatus({
+            storageUsageGb: 0.1,
+            storageLimitGb: 1,
+            usagePercentage: 10,
+            isExceeded: false,
+            canUpload: true
+          });
         }
       } catch (error) {
         console.error("Error fetching billing data:", error);
@@ -221,9 +251,9 @@ const Billing = () => {
       const checkoutResponse = await axiosInstance.post(
         API_PATHS.BILLING.CREATE_CHECKOUT_SESSION,
         {
-          priceId: "pro-plan",
-          successUrl: window.location.origin + "/dashboard",
-          cancelUrl: window.location.origin + "/billing",
+          pricingTier: "starter", // or professional, enterprise
+          successUrl: window.location.origin + "/dashboard?payment=success",
+          cancelUrl: window.location.origin + "/billing?payment=cancelled",
         }
       );
 
@@ -301,6 +331,91 @@ const Billing = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+        {/* Payment Status Alert */}
+        {(paymentStatus === 'expired' || paymentReason === 'no_payment') && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-8"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
+              <h3 className="text-lg font-bold text-red-800">
+                {paymentStatus === 'expired' ? 'Payment Required' : 'No Active Subscription'}
+              </h3>
+            </div>
+            <p className="text-red-700 mb-4">
+              {paymentStatus === 'expired' 
+                ? 'Your subscription payment has failed or expired. Please update your payment method to continue using TrueTestify.'
+                : 'You need an active subscription to access premium features. Choose a plan below to get started.'
+              }
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate('/pricing')}
+                className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+              >
+                View Pricing Plans
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Storage Usage */}
+        {storageStatus && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
+          >
+            <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+              <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+                <svg className="w-8 h-8 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                </svg>
+                Storage Usage
+              </h2>
+              <p className="text-gray-600">
+                Monitor your video and audio storage consumption
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    {storageStatus.storageUsageGb.toFixed(2)} GB of {storageStatus.storageLimitGb} GB used
+                  </span>
+                  <span className={`text-sm font-bold ${
+                    storageStatus.isExceeded ? 'text-red-600' : 
+                    storageStatus.usagePercentage > 80 ? 'text-orange-600' : 'text-green-600'
+                  }`}>
+                    {storageStatus.usagePercentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div 
+                    className={`h-3 rounded-full transition-all duration-300 ${
+                      storageStatus.isExceeded ? 'bg-red-500' :
+                      storageStatus.usagePercentage > 80 ? 'bg-orange-500' : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min(storageStatus.usagePercentage, 100)}%` }}
+                  />
+                </div>
+              </div>
+              {storageStatus.isExceeded && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <div className="flex items-center">
+                    <ExclamationTriangleIcon className="w-5 h-5 text-red-600 mr-2" />
+                    <span className="font-semibold text-red-800">
+                      Storage limit exceeded! Upgrade your plan to continue uploading.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Subscription Overview */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -369,6 +484,29 @@ const Billing = () => {
                 </span>
               </div>
             </div>
+
+            {billingAccount?.status === 'active' && (
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={async () => {
+                    try {
+                      const portalResponse = await axiosInstance.post(
+                        API_PATHS.BILLING.CREATE_PORTAL_SESSION
+                      );
+                      if (portalResponse.data.url) {
+                        window.open(portalResponse.data.url, '_blank');
+                      }
+                    } catch (error) {
+                      toast.error('Failed to open customer portal');
+                    }
+                  }}
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  <CreditCardIcon className="w-5 h-5 mr-2" />
+                  Manage Subscription
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
 

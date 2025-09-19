@@ -55,12 +55,13 @@ export class WidgetsService {
   }
 
   // Update widget
-  async updateWidget(businessId: string, widgetId: string, updates: Partial<CreateWidgetDto>) {
+  async updateWidget(businessId: string, widgetId: string, updates: Partial<CreateWidgetDto & { isActive?: boolean }>) {
     const widget = await this.getWidget(businessId, widgetId);
     
     if (updates.name) widget.name = updates.name;
     if (updates.style) widget.style = updates.style;
     if (updates.settings) widget.settingsJson = updates.settings;
+    if (typeof updates.isActive !== 'undefined') widget.isActive = updates.isActive;
 
     return await this.widgetRepo.save(widget);
   }
@@ -68,6 +69,13 @@ export class WidgetsService {
   // Delete widget
   async deleteWidget(businessId: string, widgetId: string) {
     const widget = await this.getWidget(businessId, widgetId);
+    
+    // Delete related analytics events first
+    await this.widgetRepo.query(
+      'DELETE FROM analytics_events WHERE widget_id = $1',
+      [widgetId]
+    );
+    
     await this.widgetRepo.remove(widget);
     
     return { message: 'Widget deleted successfully' };

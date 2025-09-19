@@ -34,9 +34,8 @@ const RecordReview = () => {
   const [email, setEmail] = useState("");
   const [progress, setProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [allowTextReviews, setAllowTextReviews] = useState(
-    getInitialData("allowTextReviews", false)
-  );
+  const [businessSettings, setBusinessSettings] = useState(null);
+  const [allowTextReviews, setAllowTextReviews] = useState(false);
   const [allowTextGoogleReviews, setAllowTextGoogleReviews] = useState(
     getInitialData("allowTextGoogleReviews", false)
   );
@@ -64,9 +63,29 @@ const RecordReview = () => {
   // Normalize mimetype (remove codec information)
   const normalizeMimetype = (mimetype) => mimetype.split(";")[0];
 
+  // Fetch business settings on component mount
+  useEffect(() => {
+    const fetchBusinessSettings = async () => {
+      try {
+        const response = await axiosInstance.get(
+          API_PATHS.BUSINESSES.GET_PUBLIC_PROFILE(businessName)
+        );
+        setBusinessSettings(response.data.business);
+        setAllowTextReviews(response.data.business.textReviewsEnabled ?? true);
+      } catch (error) {
+        console.error("Failed to fetch business settings:", error);
+        // Default to allowing text reviews if fetch fails
+        setAllowTextReviews(true);
+      }
+    };
+
+    if (businessName) {
+      fetchBusinessSettings();
+    }
+  }, [businessName]);
+
   useEffect(() => {
     const handleStorageChange = () => {
-      setAllowTextReviews(getInitialData("allowTextReviews", false));
       setAllowTextGoogleReviews(
         getInitialData("allowTextGoogleReviews", false)
       );

@@ -24,6 +24,7 @@ const AuthProvider = ({ children }) => {
   const [tenant, setTenant] = useState("");
   const [user, setUser] = useState("");
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [subscription, setSubscription] = useState(
     getInitialData("subscription", {
       plan: "Starter",
@@ -61,6 +62,17 @@ const AuthProvider = ({ children }) => {
       if (isLoading) return;
       
       if (isAuthenticated && auth0User) {
+        // Check if email is verified
+        if (!auth0User.email_verified) {
+          toast.error("Please verify your email before accessing the application.");
+          setUser(null);
+          setTenant("");
+          setWidgets([]);
+          setSelectedWidget(null);
+          setLoading(false);
+          return;
+        }
+
         try {
           // Get Auth0 token
           const token = await getAccessTokenSilently({
@@ -79,7 +91,11 @@ const AuthProvider = ({ children }) => {
           const businessInfo = await fetchBusinessInfo();
           if (businessInfo) {
             setTenant(businessInfo);
+            setNeedsOnboarding(false);
             await fetchWidgets();
+          } else {
+            // New user needs onboarding
+            setNeedsOnboarding(true);
           }
         } catch (error) {
           console.error('Auth check failed:', error);
@@ -106,6 +122,14 @@ const AuthProvider = ({ children }) => {
       console.error("Failed to fetch business info:", error);
       return null;
     }
+  };
+
+  const refreshBusinessInfo = async () => {
+    const businessInfo = await fetchBusinessInfo();
+    if (businessInfo) {
+      setTenant(businessInfo);
+    }
+    return businessInfo;
   };
 
   // Set The User
@@ -218,12 +242,15 @@ const AuthProvider = ({ children }) => {
     hasFeature,
     setTenant,
     tenant,
+    refreshBusinessInfo,
     // Provide the new state and functions here
     widgets,
     setWidgets,
     selectedWidget,
     setSelectedWidget,
     fetchWidgets,
+    needsOnboarding,
+    setNeedsOnboarding,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

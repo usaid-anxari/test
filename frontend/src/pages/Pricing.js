@@ -3,11 +3,14 @@ import {
   DocumentTextIcon,
 } from "@heroicons/react/16/solid";
 import { useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 const Pricing = () => {
-    const navigate = useNavigate()
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const paymentReason = searchParams.get('reason');
   const { selectPlan, subscription } = useContext(AuthContext);
   const handleChoose = (plan) => {
     selectPlan(plan.name);
@@ -93,6 +96,22 @@ const Pricing = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Payment Status Alert */}
+        {paymentReason === 'no_payment' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <ExclamationTriangleIcon className="w-6 h-6 text-blue-600" />
+              <h3 className="text-lg font-bold text-blue-800">
+                Choose Your Plan
+              </h3>
+            </div>
+            <p className="text-blue-700 mb-4">
+              You need an active subscription to access TrueTestify's premium features. 
+              Choose a plan below to get started with unlimited video testimonials and advanced features.
+            </p>
+          </div>
+        )}
+
         {/* Integrations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {pricingPlans.map((plan, index) => (

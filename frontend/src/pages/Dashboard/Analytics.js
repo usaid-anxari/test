@@ -9,6 +9,8 @@ import {
   ClockIcon,
   StarIcon,
   ArrowTrendingUpIcon,
+  CursorArrowRaysIcon,
+  PresentationChartLineIcon,
 } from "@heroicons/react/16/solid";
 import AnalyticsCard from "../../components/AnalyticsCard";
 import { MOCK_REVIEWS } from "../../assets/mockData";
@@ -18,12 +20,16 @@ import axiosInstance from "../../service/axiosInstanse";
 import { API_PATHS } from "../../service/apiPaths";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { useStorageStatus } from "../../hooks/useFeatureAccess";
 
 const Analytics = () => {
   const { user } = useContext(AuthContext);
+  const { storageStatus } = useStorageStatus();
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [widgets, setWidgets] = useState([]);
+  const [widgetAnalytics, setWidgetAnalytics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
   
@@ -38,21 +44,50 @@ const Analytics = () => {
         setBusiness(businessResponse.data.business);
         setReviews(businessResponse.data.reviews || []);
         
-        // Fetch analytics if business exists
+        // Fetch analytics and widgets if business exists
         if (businessResponse.data.business?.id) {
           try {
-            const analyticsResponse = await axiosInstance.get(
-              API_PATHS.ANALYTICS.GET_SUMMARY(businessResponse.data.business.id)
-            );
+            // Fetch dashboard analytics
+            const analyticsResponse = await axiosInstance.get(API_PATHS.ANALYTICS.GET_DASHBOARD);
             setAnalytics(analyticsResponse.data);
+            
+            // Fetch widgets
+            const widgetsResponse = await axiosInstance.get(API_PATHS.WIDGETS.GET_WIDGETS);
+            setWidgets(widgetsResponse.data);
+            
+            // Fetch widget performance data
+            const widgetPerformance = await Promise.all(
+              widgetsResponse.data.map(async (widget) => {
+                try {
+                  const perfResponse = await axiosInstance.get(API_PATHS.ANALYTICS.GET_WIDGET_PERFORMANCE(widget.id));
+                  return { ...widget, performance: perfResponse.data };
+                } catch (error) {
+                  console.log(`Widget ${widget.id} analytics not available:`, error);
+                  return { 
+                    ...widget, 
+                    performance: { 
+                      views: 0, 
+                      clicks: 0, 
+                      conversions: 0, 
+                      conversionRate: 0 
+                    } 
+                  };
+                }
+              })
+            );
+            setWidgetAnalytics(widgetPerformance);
+            
           } catch (analyticsError) {
             console.log("Analytics not available yet:", analyticsError);
             // Set default analytics if API not available
             setAnalytics({
               totalViews: 0,
               totalClicks: 0,
+              totalSubmissions: 0,
               storageUsed: 0,
-              storageLimit: 10
+              storageLimit: 10,
+              widgetPerformance: [],
+              topPerformingWidgets: []
             });
           }
         }
@@ -75,8 +110,11 @@ const Analytics = () => {
     audioCollected: reviews.filter((r) => r.type === "audio").length,
     textCollected: reviews.filter((r) => r.type === "text").length,
     widgetViews: analytics?.totalViews || 0,
-    storageUsed: analytics?.storageUsed || 0,
-    storageLimit: analytics?.storageLimit || 10,
+    widgetClicks: analytics?.totalClicks || 0,
+    totalSubmissions: analytics?.totalSubmissions || 0,
+    storageUsed: storageStatus?.storageUsageGb || 0,
+    storageLimit: storageStatus?.storageLimitGb || 1,
+    activeWidgets: widgets.filter(w => w.isActive).length,
   };
 
   // Mock trend data for charts (will be replaced with real data later)
@@ -212,12 +250,63 @@ const Analytics = () => {
             trend={trendData.engagement}
           />
           <MetricCard
-            title="Storage Used"
-            value={`${storagePercentage}%`}
-            change={-5.2}
-            icon={<CogIcon />}
+            title="Widget Clicks"
+            value={data.widgetClicks.toLocaleString()}
+            change={15.7}
+            icon={<CursorArrowRaysIcon />}
             color="purple"
           />
+        </div>
+
+        {/* Performance Overview Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 text-center"
+          >
+            <div className="p-3 rounded-xl bg-blue-50 w-fit mx-auto mb-3">
+              <PresentationChartLineIcon className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="text-2xl font-bold text-gray-800">{data.activeWidgets}</div>
+            <div className="text-sm text-gray-500">Active Widgets</div>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 text-center"
+          >
+            <div className="p-3 rounded-xl bg-red-50 w-fit mx-auto mb-3">
+              <ClockIcon className="w-6 h-6 text-red-600" />
+            </div>
+            <div className="text-2xl font-bold text-gray-800">{reviews.filter(r => r.status === 'pending').length}</div>
+            <div className="text-sm text-gray-500">Pending Reviews</div>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 text-center"
+          >
+            <div className="p-3 rounded-xl bg-green-50 w-fit mx-auto mb-3">
+              <ArrowTrendingUpIcon className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="text-2xl font-bold text-gray-800">{data.totalSubmissions}</div>
+            <div className="text-sm text-gray-500">Submissions</div>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 text-center"
+          >
+            <div className="p-3 rounded-xl bg-orange-50 w-fit mx-auto mb-3">
+              <CogIcon className="w-6 h-6 text-orange-600" />
+            </div>
+            <div className="text-2xl font-bold text-gray-800">{data.storageUsed}GB</div>
+            <div className="text-sm text-gray-500">Storage Used</div>
+          </motion.div>
         </div>
 
         {/* Charts and Detailed Analytics */}
@@ -251,25 +340,47 @@ const Analytics = () => {
             </div>
           </ChartCard>
 
-          {/* Performance Metrics */}
-          <ChartCard title="Performance Overview">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-xl">
-                <div className="text-2xl font-bold text-blue-600">{analytics?.activeWidgets || 0}</div>
-                <div className="text-sm text-blue-500 font-medium">Active Widgets</div>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-xl">
-                <div className="text-2xl font-bold text-red-600">{reviews.filter(r => r.status === 'pending').length}</div>
-                <div className="text-sm text-red-500 font-medium">Pending Reviews</div>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-xl">
-                <div className="text-2xl font-bold text-green-600">{analytics?.totalClicks || 0}</div>
-                <div className="text-sm text-green-500 font-medium">Total Clicks</div>
-              </div>
-              <div className="text-center p-4 bg-orange-50 rounded-xl">
-                <div className="text-2xl font-bold text-orange-600">{data.storageUsed}GB</div>
-                <div className="text-sm text-orange-500 font-medium">Storage Used</div>
-              </div>
+          {/* Widget Performance */}
+          <ChartCard title="Widget Performance">
+            <div className="space-y-4">
+              {widgetAnalytics.length > 0 ? (
+                widgetAnalytics.slice(0, 4).map((widget) => {
+                  const conversionRate = widget.performance?.conversionRate || 0;
+                  return (
+                    <div key={widget.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                          <PresentationChartLineIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-800">{widget.name}</div>
+                          <div className="text-sm text-gray-500">{widget.type} widget</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm">
+                        <div className="text-center">
+                          <div className="font-semibold text-blue-600">{widget.performance?.views || 0}</div>
+                          <div className="text-gray-500">Views</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-semibold text-green-600">{widget.performance?.clicks || 0}</div>
+                          <div className="text-gray-500">Clicks</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-semibold text-orange-600">{conversionRate.toFixed(1)}%</div>
+                          <div className="text-gray-500">CVR</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <PresentationChartLineIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>No widget data available yet</p>
+                  <p className="text-sm">Create widgets to see performance metrics</p>
+                </div>
+              )}
             </div>
           </ChartCard>
         </div>
@@ -332,9 +443,14 @@ const Analytics = () => {
                 <div className="text-2xl font-bold">{((data.widgetViews / totalReviews) || 0).toFixed(1)}</div>
                 <div className="text-sm opacity-90">Views per Review</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <div className="text-2xl font-bold">{data.storageLimit - data.storageUsed}GB</div>
-                <div className="text-sm opacity-90">Storage Remaining</div>
+              <div className={`backdrop-blur-sm rounded-xl p-4 ${
+                storageStatus?.isExceeded ? 'bg-red-500/20' : 
+                storageStatus?.usagePercentage > 80 ? 'bg-orange-500/20' : 'bg-white/10'
+              }`}>
+                <div className="text-2xl font-bold">{(data.storageLimit - data.storageUsed).toFixed(1)}GB</div>
+                <div className="text-sm opacity-90">
+                  {storageStatus?.isExceeded ? 'Over Limit!' : 'Storage Remaining'}
+                </div>
               </div>
             </div>
           </motion.div>

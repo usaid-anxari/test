@@ -106,7 +106,7 @@ export class WidgetsController {
   async updateWidget(
     @Req() req,
     @Param('id') widgetId: string,
-    @Body() body: Partial<CreateWidgetDto>
+    @Body() body: Partial<CreateWidgetDto & { isActive?: boolean }>
   ) {
     const userId = req.userEntity.id;
     const business = await this.businessService.findDefaultForUser(userId);
@@ -124,6 +124,7 @@ export class WidgetsController {
         name: widget.name,
         style: widget.style,
         settings: widget.settingsJson,
+        isActive: widget.isActive,
         updatedAt: widget.updatedAt,
       },
     };

@@ -17,9 +17,11 @@ import { API_PATHS } from "../../service/apiPaths";
 import axiosInstance from "../../service/axiosInstanse";
 import { SpeakerWaveIcon } from "@heroicons/react/20/solid";
 import { motion } from "framer-motion";
+import PaymentPrompt from "../../components/PaymentPrompt";
 
 const Moderation = () => {
   const { user } = useContext(AuthContext);
+  const [showPaymentPrompt, setShowPaymentPrompt] = useState(true);
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [selectedReview, setSelectedReview] = useState(null);
@@ -168,6 +170,11 @@ const Moderation = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+        {/* Payment Prompt for Free Users */}
+        {showPaymentPrompt && (
+          <PaymentPrompt onDismiss={() => setShowPaymentPrompt(false)} />
+        )}
+        
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
           {/* Filters and Search */}
           <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">

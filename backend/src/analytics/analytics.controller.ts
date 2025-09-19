@@ -1,13 +1,17 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Request, Param, NotFoundException } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/jwt-auth/jwt-auth.guard';
 import { AnalyticsService } from './analytics.service';
 import { TrackEventDto } from './dto/track-event.dto';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { DashboardStatsDto, WidgetPerformanceDto } from './dto/dashboard-stats.dto';
+import { BusinessService } from '../business/business.service';
 
 @Controller('api/analytics')
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly businessService: BusinessService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('dashboard')
@@ -15,7 +19,14 @@ export class AnalyticsController {
     @Request() req,
     @Query() query: AnalyticsQueryDto,
   ): Promise<DashboardStatsDto> {
-    return this.analyticsService.getDashboardStats(req.user.businessId, query);
+    const userId = req.userEntity.id;
+    const business = await this.businessService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('No business found for user');
+    }
+    
+    return this.analyticsService.getDashboardStats(business.id, query);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -25,7 +36,14 @@ export class AnalyticsController {
     @Param('widgetId') widgetId: string,
     @Query() query: AnalyticsQueryDto,
   ): Promise<WidgetPerformanceDto> {
-    return this.analyticsService.getWidgetAnalytics(req.user.businessId, widgetId, query);
+    const userId = req.userEntity.id;
+    const business = await this.businessService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('No business found for user');
+    }
+    
+    return this.analyticsService.getWidgetAnalytics(business.id, widgetId, query);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -34,14 +52,28 @@ export class AnalyticsController {
     @Request() req,
     @Query() query: AnalyticsQueryDto,
   ) {
+    const userId = req.userEntity.id;
+    const business = await this.businessService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('No business found for user');
+    }
+    
     const { startDate, endDate } = this.getDateRange(query);
-    return this.analyticsService.getReviewTrends(req.user.businessId, startDate, endDate);
+    return this.analyticsService.getReviewTrends(business.id, startDate, endDate);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('storage/usage')
   async getStorageUsage(@Request() req) {
-    const stats = await this.analyticsService.getDashboardStats(req.user.businessId, {});
+    const userId = req.userEntity.id;
+    const business = await this.businessService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('No business found for user');
+    }
+    
+    const stats = await this.analyticsService.getDashboardStats(business.id, {});
     return {
       storageUsed: stats.storageUsed,
       storageLimit: stats.storageLimit,

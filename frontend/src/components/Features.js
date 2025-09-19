@@ -161,11 +161,11 @@ const Features = () => {
                 View Documentation
               </Link>
               <Link
-                to="/signup"
+                to="/auth0-signup"
                 className="px-8 py-4 text-white border-2 border-white font-bold text-lg rounded-lg hover:bg-white hover:text-blue-600 transition-colors duration-200 flex items-center justify-center gap-2"
               >
                 <ArrowRightIcon className="h-5 w-5" />
-                Get Start
+                Sign Up Now
               </Link>
             </div>
           </div>

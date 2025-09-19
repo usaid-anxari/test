@@ -18,3 +18,50 @@ export const MOCK_REVIEWS = [
   { id: 17, type: 'audio', title: 'Love the features', status: 'pending', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
   { id: 18, type: 'text', title: 'Could be better', status: 'reject', text: 'While the core functionality works, there are several bugs and the user experience could use improvement. Updates seem slow.' }
 ];
+
+export const MOCK_GOOGLE_REVIEWS = [
+  {
+    id: 'google-1',
+    type: 'google',
+    title: '5 star review',
+    rating: 5,
+    reviewerName: 'John Smith',
+    bodyText: 'Excellent service! The team was professional and delivered exactly what we needed. Highly recommend to anyone looking for quality work.',
+    publishedAt: '2024-01-15T10:30:00Z',
+    submittedAt: '2024-01-15T10:30:00Z',
+    media: []
+  },
+  {
+    id: 'google-2',
+    type: 'google', 
+    title: '4 star review',
+    rating: 4,
+    reviewerName: 'Sarah Johnson',
+    bodyText: 'Great experience overall. The process was smooth and the results exceeded our expectations. Will definitely use their services again.',
+    publishedAt: '2024-01-10T14:20:00Z',
+    submittedAt: '2024-01-10T14:20:00Z',
+    media: []
+  },
+  {
+    id: 'google-3',
+    type: 'google',
+    title: '5 star review',
+    rating: 5,
+    reviewerName: 'Mike Chen',
+    bodyText: 'Outstanding customer support and attention to detail. They went above and beyond to ensure we were satisfied with the final product.',
+    publishedAt: '2024-01-08T09:15:00Z',
+    submittedAt: '2024-01-08T09:15:00Z',
+    media: []
+  },
+  {
+    id: 'google-4',
+    type: 'google',
+    title: '4 star review', 
+    rating: 4,
+    reviewerName: 'Emily Davis',
+    bodyText: 'Professional team with great communication throughout the project. The quality of work was impressive and delivered on time.',
+    publishedAt: '2024-01-05T16:45:00Z',
+    submittedAt: '2024-01-05T16:45:00Z',
+    media: []
+  }
+];

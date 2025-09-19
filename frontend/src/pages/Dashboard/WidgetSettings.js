@@ -11,6 +11,7 @@ import {
   PlusIcon,
   CheckCircleIcon,
   XCircleIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import QRCode from "qrcode";
 import PublicReviews from "../../pages/PublicReviews";
@@ -37,6 +38,13 @@ const WidgetSettings = ({ business }) => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [formData, setFormData] = useState(null);
+  const [embedCode, setEmbedCode] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Fetch widgets on component mount
+  useEffect(() => {
+    fetchWidgets();
+  }, []);
 
   // Set the first widget as selected by default
   useEffect(() => {
@@ -47,35 +55,36 @@ const WidgetSettings = ({ business }) => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
+      const widgetData = {
+        name: formData.name,
+        style: formData.style || formData.layout,
+        settings: formData.settings || formData.themeJson,
+      };
+
       if (formData.id) {
-        await axiosInstance.put(API_PATHS.WIDGETS.UPDATE_WIDGET(formData.id), {
-          name: formData.name,
-          style: formData.layout,
-          settingsJson: formData.themeJson,
-          isActive: formData.isActive,
-        });
+        const response = await axiosInstance.put(
+          API_PATHS.WIDGETS.UPDATE_WIDGET(formData.id),
+          widgetData
+        );
         toast.success("Widget updated successfully!");
-        setSelectedWidget(formData);
+        setSelectedWidget({ ...formData, ...response.data.widget });
       } else {
-        const newWidgetData = {
-          name: formData.name,
-          style: formData.layout,
-          settingsJson: formData.themeJson,
-          isActive: formData.isActive,
-        };
-        await axiosInstance.post(
+        const response = await axiosInstance.post(
           API_PATHS.WIDGETS.CREATE_WIDGET,
-          newWidgetData
+          widgetData
         );
         toast.success("Widget created successfully!");
       }
-      fetchWidgets();
+      await fetchWidgets();
       setShowEditModal(false);
       setFormData(null);
     } catch (error) {
-      toast.error("An error occurred. Please try again.");
+      toast.error(error.response?.data?.message || "An error occurred. Please try again.");
       console.error("Form submission error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,18 +98,18 @@ const WidgetSettings = ({ business }) => {
       const updateData = {
         name: updatedWidget.name,
         style: updatedWidget.style,
-        settingsJson: updatedWidget.settingsJson || updatedWidget.settings,
-        isActive: updatedWidget.isActive,
+        settings: updatedWidget.settings || updatedWidget.settingsJson,
       };
 
-      await axiosInstance.put(
+      const response = await axiosInstance.put(
         API_PATHS.WIDGETS.UPDATE_WIDGET(selectedWidget.id),
         updateData
       );
       toast.success("Widget settings updated!");
+      await fetchWidgets(); // Refresh widgets list
     } catch (error) {
-      setSelectedWidget(selectedWidget);
-      toast.error("Failed to update widget.");
+      setSelectedWidget(selectedWidget); // Revert changes
+      toast.error(error.response?.data?.message || "Failed to update widget.");
       console.error("Error updating widget:", error);
     }
   };
@@ -108,50 +117,81 @@ const WidgetSettings = ({ business }) => {
   const toggleWidget = async (widget) => {
     try {
       const newIsActive = !widget.isActive;
-      await axiosInstance.put(API_PATHS.WIDGETS.UPDATE_WIDGET(widget.id), {
+      const updateData = {
         name: widget.name,
         style: widget.style,
-        settingsJson: widget.settingsJson || widget.settings,
+        settings: widget.settings || widget.settingsJson,
         isActive: newIsActive,
-      });
+      };
+      
+      await axiosInstance.put(API_PATHS.WIDGETS.UPDATE_WIDGET(widget.id), updateData);
       toast.success(`Widget ${newIsActive ? "activated" : "deactivated"}!`);
-      fetchWidgets();
+      await fetchWidgets();
     } catch (error) {
-      toast.error("Failed to toggle widget.");
+      toast.error(error.response?.data?.message || "Failed to toggle widget.");
       console.error("Error toggling widget:", error);
     }
   };
 
+  const deleteWidget = async (widgetId) => {
+    if (!window.confirm("Are you sure you want to delete this widget?")) return;
+
+    try {
+      await axiosInstance.delete(API_PATHS.WIDGETS.DELETE_WIDGET(widgetId));
+      toast.success("Widget deleted successfully!");
+      if (selectedWidget?.id === widgetId) {
+        setSelectedWidget(null);                                                  
+      }
+      await fetchWidgets();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete widget.");                           
+      console.error("Error deleting widget:", error);
+    }
+  };
+
+  const fetchEmbedCode = async (widgetId) => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(           
+        API_PATHS.WIDGETS.GET_EMBED_CODE(widgetId)
+      );
+      setEmbedCode(response.data.embedCode);
+      setShowEmbedModal(true);          
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to fetch embed code.");
+      console.error("Error fetching embed code:", error);
+    } finally {     
+      setLoading(false);
+    }
+  };
+
   const layouts = [
-    { name: "Carousel", value: "CAROUSEL", feature: "layout_carousel" },
-    { name: "Grid", value: "GRID", feature: "layout_grid" },
-    { name: "Spotlight", value: "SPOTLIGHT", feature: "layout_spotlight" },
-    {
-      name: "Floating",
-      value: "FLOATING_BUBBLE",
-      feature: "layout_floating_bubble",
-    },
+    { name: "Carousel", value: "carousel", feature: "layout_carousel" },
+    { name: "Grid", value: "grid", feature: "layout_grid" },
+    { name: "Spotlight", value: "spotlight", feature: "layout_spotlight" },
+    { name: "Floating", value: "floating", feature: "layout_floating_bubble" },
   ];
 
-  // UPDATED: Theme options with primary and background colors
   const themes = [
     {
       name: "Light",
       value: "light",
       icon: <SunIcon className="h-5 w-5" />,
-      themeJson: {
+      settings: {
         theme: "light",
-        primary: "#428ee5",
-        background: "#fff",
+        primary: "#1e3a8a",
+        secondary: "#ef7c00",
+        background: "#ffffff",
       },
     },
     {
       name: "Dark",
       value: "dark",
       icon: <MoonIcon className="h-5 w-5" />,
-      themeJson: {
+      settings: {
         theme: "dark",
-        primary: "#428ee5",
+        primary: "#3b82f6",
+        secondary: "#f97316",
         background: "#1a202c",
       },
     },
@@ -264,203 +304,108 @@ const WidgetSettings = ({ business }) => {
           </div>
         </motion.div>
 
-        {/* Widgets Management Section */}
+        {/* Create New Widget Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
+          className="mb-8"
         >
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
-                  <CodeBracketIcon className="w-8 h-8 mr-3 text-blue-600" />
-                  Widget Library
-                </h2>
-                <p className="text-gray-600">
-                  Create and manage your embeddable review widgets
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setFormData({
-                    name: "",
-                    layout: "CAROUSEL",
-                    themeJson: {
-                      theme: "light",
-                      primary: "#428ee5",
-                      background: "#fff",
-                      autoplay: true,
-                    },
-                    isActive: true,
-                  });
-                  setShowEditModal(true);
-                }}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-bold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <PlusIcon className="w-5 h-5 mr-2" />
-                Create New Widget
-              </button>
+          <button
+            onClick={() => {
+              setFormData({
+                name: "",
+                style: "carousel",
+                settings: themes[0].settings,
+              });
+              setShowEditModal(true);
+            }}
+            className="bg-gradient-to-r from-blue-600 to-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-orange-600 transition-all duration-200 flex items-center space-x-2 shadow-lg"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span>Create New Widget</span>
+          </button>
+        </motion.div>
+
+        {/* Widgets List */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 mb-8"
+        >
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Widgets</h2>
+          {widgets.length === 0 ? (
+            <div className="text-center py-12">
+              <PuzzlePieceIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">No widgets created yet</p>
+              <p className="text-gray-400">Create your first widget to get started</p>
             </div>
-          </div>
-
-          <div className="p-6">
-            {widgets.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {widgets.map((widget, index) => (
-                  <motion.div
-                    key={widget.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className={`bg-white border-2 rounded-2xl p-6 transition-all duration-200 hover:shadow-xl hover:-translate-y-1 ${
-                      selectedWidget?.id === widget.id
-                        ? "border-blue-500 shadow-lg bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">
-                          {widget.name}
-                        </h3>
-                        <div className="flex items-center space-x-3">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                              widget.isActive
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {widget.isActive ? (
-                              <CheckCircleIcon className="w-4 h-4 mr-1" />
-                            ) : (
-                              <XCircleIcon className="w-4 h-4 mr-1" />
-                            )}
-                            {widget.isActive ? "Active" : "Inactive"}
-                          </span>
-                          <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                            {widget.layout}
-                          </span>
-                        </div>
-                      </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {widgets.map((widget) => (
+                <div
+                  key={widget.id}
+                  className={`border-2 rounded-xl p-4 cursor-pointer transition-all duration-200 ${
+                    selectedWidget?.id === widget.id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                  onClick={() => setSelectedWidget(widget)}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-gray-800">{widget.name}</h3>
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          widget.isActive
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {widget.isActive ? "Active" : "Inactive"}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteWidget(widget.id);
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-gray-50 rounded-xl p-4 text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          12
-                        </div>
-                        <div className="text-sm text-gray-500">Total Views</div>
-                      </div>
-                      <div className="bg-gray-50 rounded-xl p-4 text-center">
-                        <div className="text-2xl font-bold text-orange-600">
-                          3
-                        </div>
-                        <div className="text-sm text-gray-500">Embeds</div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedWidget(widget);
-                          setShowEmbedModal(true);
-                        }}
-                        className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-semibold text-sm"
-                      >
-                        <CodeBracketIcon className="w-4 h-4 mr-2" />
-                        Get Code
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFormData({
-                            id: widget.id,
-                            name: widget.name,
-                            layout: widget.layout,
-                            themeJson: widget.themeJson,
-                            isActive: widget.isActive,
-                          });
-                          setShowEditModal(true);
-                        }}
-                        className="inline-flex items-center px-4 py-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors font-semibold text-sm"
-                      >
-                        <Cog6ToothIcon className="w-4 h-4 mr-2" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedWidget(widget);
-                        }}
-                        className="inline-flex items-center px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors font-semibold text-sm"
-                      >
-                        <EyeIcon className="w-4 h-4 mr-2" />
-                        Preview
-                      </button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 capitalize">
+                      {widget.style} Layout
+                    </span>
+                    <div className="flex space-x-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleWidget(widget);
                         }}
-                        className={`inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                          widget.isActive
-                            ? "bg-red-50 text-red-600 hover:bg-red-100"
-                            : "bg-green-50 text-green-600 hover:bg-green-100"
-                        }`}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
-                        {widget.isActive ? (
-                          <XCircleIcon className="w-4 h-4 mr-2" />
-                        ) : (
-                          <CheckCircleIcon className="w-4 h-4 mr-2" />
-                        )}
                         {widget.isActive ? "Deactivate" : "Activate"}
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fetchEmbedCode(widget.id);
+                        }}
+                        className="text-orange-600 hover:text-orange-800 text-sm font-medium"
+                      >
+                        Get Code
+                      </button>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-16"
-              >
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CodeBracketIcon className="w-12 h-12 text-gray-400" />
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-600 mb-4">
-                  No Widgets Yet
-                </h3>
-                <p className="text-gray-500 mb-8 max-w-md mx-auto">
-                  Create your first widget to start embedding reviews on your
-                  website
-                </p>
-                <button
-                  onClick={() => {
-                    setFormData({
-                      name: "",
-                      layout: "CAROUSEL",
-                      themeJson: {
-                        theme: "light",
-                        primary: "#428ee5",
-                        background: "#fff",
-                        autoplay: true,
-                      },
-                      isActive: true,
-                    });
-                    setShowEditModal(true);
-                  }}
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  <PlusIcon className="w-5 h-5 mr-2" />
-                  Create Your First Widget
-                </button>
-              </motion.div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </motion.div>
+
+
 
         {/* Selected Widget Preview */}
         {selectedWidget && (
@@ -723,12 +668,12 @@ const WidgetSettings = ({ business }) => {
                       type="button"
                       key={layout.value}
                       onClick={() =>
-                        setFormData({ ...formData, layout: layout.value })
+                        setFormData({ ...formData, style: layout.value })
                       }
                       disabled={!hasFeature(layout.feature)}
                       className={`px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
                           ${
-                            formData?.layout === layout.value
+                            formData?.style === layout.value
                               ? "bg-gray-900 text-white border-gray-900"
                               : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                           } ${
@@ -755,15 +700,15 @@ const WidgetSettings = ({ business }) => {
                       onClick={() =>
                         setFormData({
                           ...formData,
-                          themeJson: {
-                            ...formData.themeJson,
-                            ...theme.themeJson,
+                          settings: {
+                            ...formData.settings,
+                            ...theme.settings,
                           },
                         })
                       }
                       className={`flex items-center justify-center px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
                           ${
-                            formData?.themeJson?.theme === theme.value
+                            formData?.settings?.theme === theme.value
                               ? "bg-gray-900 text-white border-gray-900"
                               : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                           }
@@ -787,15 +732,15 @@ const WidgetSettings = ({ business }) => {
                   onClick={() =>
                     setFormData({
                       ...formData,
-                      themeJson: {
-                        ...formData.themeJson,
-                        autoplay: !formData.themeJson?.autoplay,
+                      settings: {
+                        ...formData.settings,
+                        autoplay: !formData.settings?.autoplay,
                       },
                     })
                   }
                   className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-full
                       ${
-                        formData?.themeJson?.autoplay
+                        formData?.settings?.autoplay
                           ? "bg-orange-500"
                           : "bg-gray-200"
                       }`}
@@ -804,7 +749,7 @@ const WidgetSettings = ({ business }) => {
                     aria-hidden="true"
                     className={`pointer-events-none inline-block h-5 w-5 bg-white shadow transform ring-0 transition ease-in-out duration-200 rounded-full
                         ${
-                          formData?.themeJson?.autoplay
+                          formData?.settings?.autoplay
                             ? "translate-x-5"
                             : "translate-x-0"
                         }`}
@@ -836,15 +781,18 @@ const WidgetSettings = ({ business }) => {
       )}
 
       {/* --- Modal for Embed Codes --- */}
-      {selectedWidget && showEmbedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-50 backdrop-blur-sm p-4">
-          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
+      {showEmbedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h4 className="text-2xl font-bold text-gray-800">
-                Embed "{selectedWidget.name}"
+                Embed Code
               </h4>
               <button
-                onClick={() => setShowEmbedModal(false)}
+                onClick={() => {
+                  setShowEmbedModal(false);
+                  setEmbedCode("");
+                }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <svg
@@ -864,78 +812,40 @@ const WidgetSettings = ({ business }) => {
               </button>
             </div>
 
-            <p className="text-gray-600 mb-6">
-              Copy the code below to add this widget to your website.
-            </p>
-
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  WordPress Shortcode
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600 mt-2">Loading embed code...</p>
+              </div>
+            ) : embedCode ? (
+              <div className="space-y-4">
+                <p className="text-gray-600 mb-6">
+                  Copy the code below to add this widget to your website.
                 </p>
-                <div className="relative">
-                  <input
-                    type="text"
-                    readOnly
-                    value={`[truetestify_widget id="${selectedWidget.id}"]`}
-                    className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-sm text-gray-700 font-mono focus:outline-none"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `[truetestify_widget id="${selectedWidget.id}"]`
-                      );
-                      toast.success("Shortcode copied!");
-                    }}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-orange-500"
-                  >
-                    <ArrowUpOnSquareStackIcon className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <p className="text-sm font-medium text-gray-700 mb-2">
-                    JavaScript Embed
+                    HTML Embed Code
                   </p>
                   <div className="relative">
-                    <pre className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap">{`<script src="https://cdn.truetestify.com/widget.js" data-widget-id="${selectedWidget.id}"></script>`}</pre>
+                    <pre className="w-full p-3 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap max-h-40">{embedCode}</pre>
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(
-                          `<script src="https://cdn.truetestify.com/widget.js" data-widget-id="${selectedWidget.id}"></script>`
-                        );
-                        toast.success("Code copied!");
+                        navigator.clipboard.writeText(embedCode);
+                        toast.success("Embed code copied!");
                       }}
-                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-orange-500"
-                    >
-                      <ArrowUpOnSquareStackIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Iframe Embed
-                  </p>
-                  <div className="relative">
-                    <pre className="w-full pl-3 pr-12 py-2 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap">{`<iframe src="${publicReviewBaseUrl}/public-reviews/${business?.slug}?widgetId=${selectedWidget.id}" style="width:100%;height:420px;border:0;" loading="lazy"></iframe>`}</pre>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(
-                          `<iframe src="${publicReviewBaseUrl}/public-reviews/${business?.slug}?widgetId=${selectedWidget.id}" style="width:100%;height:420px;border:0;" loading="lazy"></iframe>`
-                        );
-                        toast.success("Code copied!");
-                      }}
-                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-orange-500"
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-orange-500 bg-white rounded"
                     >
                       <ArrowUpOnSquareStackIcon className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Failed to load embed code. Please try again.</p>
+              </div>
+            )}
           </div>
         </div>
       )}

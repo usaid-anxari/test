@@ -1,38 +1,55 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import toast from "react-hot-toast";
-import Account from "../../pages/Account";
 import { motion } from "framer-motion";
+import axiosInstance from "../../service/axiosInstanse";
+import { API_PATHS } from "../../service/apiPaths";
 import {
-  Cog6ToothIcon,
-  PaintBrushIcon,
   ShieldCheckIcon,
   DocumentTextIcon,
-  EyeIcon,
   CheckCircleIcon,
   XCircleIcon,
   ExclamationTriangleIcon,
-  SwatchIcon,
-  PhotoIcon,
   StarIcon,
 } from "@heroicons/react/24/outline";
 
 const AdminSettings = () => {
-  const { getInitialData, hasFeature } = useContext(AuthContext);
-  const [allowTextReviews, setAllowTextReviews] = useState(
-    getInitialData("allowTextReviews", false)
-  );
+  const { getInitialData, hasFeature, tenant, refreshBusinessInfo } = useContext(AuthContext);
+  const [allowTextReviews, setAllowTextReviews] = useState(false);
   const [allowTextGoogleReviews, setAllowTextGoogleReviews] = useState(
     getInitialData("allowTextGoogleReviews", false)
   );
+  const [loading, setLoading] = useState(false);
 
-  const handleToggle = () => {
-    const newSetting = !allowTextReviews;
-    localStorage.setItem("allowTextReviews", JSON.stringify(newSetting));
-    setAllowTextReviews(newSetting);
-    toast.success(
-      `Text reviews are now ${newSetting ? "enabled" : "disabled"}.`
-    );
+  // Load text reviews setting from business data
+  useEffect(() => {
+    if (tenant?.settingsJson?.textReviewsEnabled !== undefined) {
+      setAllowTextReviews(tenant.settingsJson.textReviewsEnabled);
+    }
+  }, [tenant]);
+
+  const handleToggle = async () => {
+    if (loading) return;
+    
+    setLoading(true);
+    try {
+      const newSetting = !allowTextReviews;
+      
+      await axiosInstance.post(API_PATHS.BUSINESSES.TOGGLE_TEXT_REVIEWS, {
+        enabled: newSetting
+      });
+      
+      setAllowTextReviews(newSetting);
+      await refreshBusinessInfo(); // Refresh business data
+      toast.success(
+        `Text reviews are now ${newSetting ? "enabled" : "disabled"}.`
+      );
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update setting.");
+      console.error("Error toggling text reviews:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleToggleGoogleReviews = () => {
@@ -44,24 +61,9 @@ const AdminSettings = () => {
     );
   };
 
-  const [logoUrl, setLogoUrl] = useState(
-    JSON.parse(localStorage.getItem("brandLogoUrl") || "null")
-  );
-  const [primaryColor, setPrimaryColor] = useState(
-    JSON.parse(localStorage.getItem("brandPrimaryColor") || '"#1f2937"')
-  );
   const [showConsent, setShowConsent] = useState(
     JSON.parse(localStorage.getItem("showConsent") || "true")
   );
-
-  const saveBranding = () => {
-    localStorage.setItem("brandLogoUrl", JSON.stringify(logoUrl || ""));
-    localStorage.setItem(
-      "brandPrimaryColor",
-      JSON.stringify(primaryColor || "#1f2937")
-    );
-    toast.success("Branding updated");
-  };
 
   const saveConsent = () => {
     localStorage.setItem("showConsent", JSON.stringify(showConsent));
@@ -143,11 +145,11 @@ const AdminSettings = () => {
                   </div>
                   <button
                     onClick={handleToggle}
-                    disabled={!hasFeature("advanced_moderation")}
+                    disabled={!hasFeature("advanced_moderation") || loading}
                     className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                       allowTextReviews ? "bg-gradient-to-r from-green-500 to-green-600" : "bg-gray-300"
                     } ${
-                      !hasFeature("advanced_moderation")
+                      !hasFeature("advanced_moderation") || loading
                         ? "opacity-50 cursor-not-allowed"
                         : "hover:shadow-lg"
                     }`}
@@ -225,124 +227,7 @@ const AdminSettings = () => {
           </div>
         </motion.div>
 
-        {/* Branding Settings */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
-        >
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
-              <PaintBrushIcon className="w-8 h-8 mr-3 text-blue-600" />
-              Brand Customization
-            </h2>
-            <p className="text-gray-600">Customize your brand appearance across all review widgets and pages</p>
-          </div>
-          
-          <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Logo Settings */}
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                    <PhotoIcon className="w-5 h-5 mr-2 text-gray-600" />
-                    Business Logo URL
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="https://yourbusiness.com/logo.png"
-                    value={logoUrl || ""}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white"
-                  />
-                  <p className="text-sm text-gray-500 mt-2">Enter the URL of your business logo. Recommended size: 200x200px</p>
-                </div>
-                
-                {/* Logo Preview */}
-                {logoUrl && (
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="text-sm font-semibold text-gray-700 mb-3">Logo Preview:</div>
-                    <div className="flex items-center justify-center bg-white rounded-lg p-4 border-2 border-dashed border-gray-300">
-                      <img 
-                        src={logoUrl} 
-                        alt="Logo preview" 
-                        className="max-w-24 max-h-24 object-contain"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'block';
-                        }}
-                      />
-                      <div className="text-red-500 text-sm" style={{display: 'none'}}>
-                        Failed to load image
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Color Settings */}
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                    <SwatchIcon className="w-5 h-5 mr-2 text-gray-600" />
-                    Primary Brand Color
-                  </label>
-                  <div className="flex items-center space-x-4">
-                    <input
-                      type="color"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="w-16 h-12 border-2 border-gray-200 rounded-xl cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-gray-50 focus:bg-white font-mono"
-                      placeholder="#1f2937"
-                    />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">This color will be used for buttons, accents, and branding elements</p>
-                </div>
-                
-                {/* Color Preview */}
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="text-sm font-semibold text-gray-700 mb-3">Color Preview:</div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div 
-                      className="h-12 rounded-lg flex items-center justify-center text-white text-sm font-semibold"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      Button
-                    </div>
-                    <div 
-                      className="h-12 rounded-lg flex items-center justify-center text-sm font-semibold border-2"
-                      style={{ borderColor: primaryColor, color: primaryColor }}
-                    >
-                      Border
-                    </div>
-                    <div 
-                      className="h-12 rounded-lg flex items-center justify-center text-sm font-semibold"
-                      style={{ backgroundColor: primaryColor + '20', color: primaryColor }}
-                    >
-                      Accent
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end mt-8 pt-6 border-t border-gray-200">
-              <button
-                onClick={saveBranding}
-                className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-bold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                <PaintBrushIcon className="w-5 h-5 mr-2" />
-                Save Brand Settings
-              </button>
-            </div>
-          </div>
-        </motion.div>
+
 
         {/* Privacy & Compliance */}
         <motion.div

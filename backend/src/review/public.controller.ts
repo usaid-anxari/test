@@ -17,10 +17,26 @@ export class PublicReviewsController {
     @Query('page') page = '1',
     @Query('limit') limit = '12',
   ) {
-    return this.reviewsService.getApprovedReviewsWithMedia(
+    const business = await this.reviewsService.findBusinessBySlug(slug);
+    if (!business) {
+      throw new Error('Business not found');
+    }
+
+    const reviewsData = await this.reviewsService.getApprovedReviewsWithMedia(
       slug,
       Number(page),
       Number(limit),
     );
+
+    return {
+      business: {
+        id: business.id,
+        name: business.name,
+        slug: business.slug,
+        logoUrl: business.logoUrl,
+        brandColor: business.brandColor,
+      },
+      ...reviewsData,
+    };
   }
 }

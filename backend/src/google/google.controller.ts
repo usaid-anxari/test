@@ -7,6 +7,7 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { GoogleService } from './google.service';
@@ -115,6 +116,23 @@ export class GoogleController {
         createdAt: review.createdAt,
       })),
     };
+  }
+
+  // OAuth callback handler
+  @Get('callback')
+  @ApiResponse({ status: 200, description: 'OAuth callback processed' })
+  async handleCallback(@Query('code') code: string, @Query('state') state: string) {
+    if (!code) {
+      throw new BadRequestException('Authorization code not provided');
+    }
+
+    // In production, validate state parameter for security
+    const businessId = state; // Pass businessId as state parameter
+    
+    const connection = await this.googleService.connectGoogleBusiness(businessId, code);
+    
+    // Redirect back to dashboard with success message
+    return `<script>window.close(); window.opener.location.reload();</script>`;
   }
 
   // Disconnect Google Business Profile

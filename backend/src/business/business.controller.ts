@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   UseGuards,
   Req,
@@ -168,6 +169,7 @@ export class BusinessController {
           brandColor: biz.brandColor,
           website: biz.website,
           contactEmail: biz.contactEmail,
+          createdAt:biz.createdAt
         }
       };
     } catch (err) {
@@ -181,7 +183,7 @@ export class BusinessController {
     }
   }
 
-  // Dashboard: return business for current user's default business
+  // Dashboard: return business for current user's default business with all reviews
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get('api/business/me')
@@ -192,9 +194,13 @@ export class BusinessController {
     if (!b) {
       return { 
         message: 'No business found. Please create one.',
-        business: null 
+        business: null,
+        reviews: []
       };
     }
+    
+    // Get all reviews for this business (not just approved)
+    const allReviews = await this.bizService.getAllReviewsForBusiness(b.id);
     
     return { 
       business: {
@@ -206,6 +212,86 @@ export class BusinessController {
         website: b.website,
         contactEmail: b.contactEmail,
         settingsJson: b.settingsJson,
+        createdAt : b.createdAt
+      },
+      reviews: allReviews
+    };
+  }
+
+  // Update business information (excluding slug)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Put('api/business/me')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('logo', {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB max for logo
+      },
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+          cb(new BadRequestException('Only image files are allowed'), false);
+        } else {
+          cb(null, true);
+        }
+      },
+    }),
+  )
+  async updateMyBusiness(
+    @Req() req,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { name?: string; website?: string; brandColor?: string; contactEmail?: string },
+  ) {
+    const userId = req.userEntity.id;
+    const business = await this.bizService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const updateData: any = {};
+    
+    // Update allowed fields
+    if (body.name) updateData.name = body.name;
+    if (body.website) updateData.website = body.website;
+    if (body.brandColor) updateData.brandColor = body.brandColor;
+    if (body.contactEmail) updateData.contactEmail = body.contactEmail;
+
+    // Handle logo upload if provided
+    if (file) {
+      const timestamp = Date.now();
+      const safeFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const s3Key = `businesses/logos/${timestamp}-${safeFilename}`;
+      
+      const stream = Readable.from(file.buffer);
+      
+      await this.s3Service.uploadStream(
+        s3Key,
+        stream,
+        file.size,
+        file.mimetype
+      );
+      
+      updateData.logoUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+      
+      this.logger.log(`Logo updated for business: ${business.id}`);
+    }
+
+    // Update business
+    const updatedBusiness = await this.bizService.updateBusiness(business.id, updateData);
+    
+    return {
+      message: 'Business updated successfully',
+      business: {
+        id: updatedBusiness.id,
+        name: updatedBusiness.name,
+        slug: updatedBusiness.slug,
+        logoUrl: updatedBusiness.logoUrl,
+        brandColor: updatedBusiness.brandColor,
+        website: updatedBusiness.website,
+        contactEmail: updatedBusiness.contactEmail,
+        settingsJson: updatedBusiness.settingsJson,
       }
     };
   }

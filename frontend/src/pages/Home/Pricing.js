@@ -49,7 +49,7 @@ const Pricing = () => {
   ];
 
   const handleChoose = () => {
-    navigate("/billing");
+    navigate("/auth0-signup");
   };
 
   return (
@@ -126,7 +126,7 @@ const Pricing = () => {
               className={`mt-8 w-full px-8 py-3 font-bold tracking-wide bg-orange-500 text-white hover:bg-orange-600 transition-colors 
                `}
             >
-              Get Started
+              Choose Plan
             </button>
           </div>
         ))}
