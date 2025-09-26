@@ -23,11 +23,9 @@ const Auth0ProtectedRoute = ({ children }) => {
 
         // Set token in axios
         axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
-
         // Check if user has business
-        const response = await axiosInstance.get(API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE);
-        
-        if (response.data.business) {
+        const response = await axiosInstance.get(API_PATHS.AUTH?.PROFILE);        
+        if (response.data.user?.isActive === true) {
           setBusinessStatus('exists');
           setUserStatus('active');
         } else {

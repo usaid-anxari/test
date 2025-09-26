@@ -12,10 +12,10 @@ import { motion, AnimatePresence } from "framer-motion";
 const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => { 
   const [mediaError, setMediaError] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  
+   
   // Debug state changes
   useEffect(() => {
-    // console.log("ReviewCard: isPopupOpen changed to", isPopupOpen, "at", new Date().toISOString());
+    console.log("ReviewCard: isPopupOpen changed to", isPopupOpen, "at", new Date().toISOString());
   }, [isPopupOpen]);
 
   // Debug window focus/blur
@@ -31,7 +31,7 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
   }, []);
 
   // Determine media URL and type
-  const reviewUrl = review.mediaAssets && review.mediaAssets.length > 0 ? review.mediaAssets[0].s3Key : null;
+  const reviewUrl = review.media && review.media.length > 0 ? review.media[0].s3Key : null;
    
    
   // Destructure review data
@@ -41,7 +41,7 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
     bodyText = "",
     rating = 0,
     reviewerName = "Anonymous",
-    submittedAt,
+    publishedAt,
   } = review;
 
   // Determine media type
@@ -53,7 +53,6 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
   // Final media URL
   const s3BaseUrl = process.env.REACT_APP_S3_BASE_URL;
   const finalMediaUrl = reviewUrl ? `${s3BaseUrl}${reviewUrl}` : null;
-  console.log(finalMediaUrl);
   
   // Theme classes
   const isDark = theme === "dark";
@@ -64,7 +63,7 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
   const mutedColor = isDark ? "text-gray-400" : "text-gray-500";
 
   // Format date
-  const formattedDate = submittedAt ? format(new Date(submittedAt), "MMM d, yyyy") : "Unknown date";
+  const formattedDate = publishedAt ? format(new Date(publishedAt), "MMM d, yyyy") : "Unknown date";
 
   // Render stars for rating
   const renderStars = (rating) => (
@@ -100,7 +99,6 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
             autoPlay
             className="w-full h-auto rounded-lg shadow-md"
             onError={() => {
-              // console.log("ReviewCard: Video error in modal at", new Date().toISOString());
               setMediaError(true);
             }}
           />
@@ -113,7 +111,6 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
             autoPlay
             className="w-full rounded-lg shadow-md"
             onError={() => {
-              // console.log("ReviewCard: Audio error in modal at", new Date().toISOString());
               setMediaError(true);
             }}
           />
@@ -391,10 +388,8 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
       <div
         className="cursor-pointer"
         onClick={() => {
-          // console.log("ReviewCard: Card clicked at", new Date().toISOString());
           setIsPopupOpen(true);
           setTimeout(() => {
-            // console.log("ReviewCard: Forcing modal check at", new Date().toISOString());
             setIsPopupOpen((prev) => prev);
           }, 0);
         }}
@@ -404,10 +399,8 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             e.stopPropagation();
-            // console.log("ReviewCard: Enter/Space pressed at", new Date().toISOString());
             setIsPopupOpen(true);
             setTimeout(() => {
-              // console.log("ReviewCard: Forcing modal check at", new Date().toISOString());
               setIsPopupOpen((prev) => prev);
             }, 0);
           }
@@ -428,7 +421,6 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
             {/* Blurred Background */}
             <div
               onClick={() => {
-                // console.log("ReviewCard: Background clicked at", new Date().toISOString());
                 setIsPopupOpen(false);
               }}
               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -444,7 +436,6 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
               {/* Close Button */}
               <button
                 onClick={() => {
-                  // console.log("ReviewCard: Close button clicked at", new Date().toISOString());
                   setIsPopupOpen(false);
                 }}
                 className={`absolute top-4 right-4 rounded-full ${isDark ? "bg-gray-700 text-white" : "bg-gray-800 text-white"} hover:bg-gray-600 transition-colors p-2 cursor-pointer z-50 shadow-lg`}

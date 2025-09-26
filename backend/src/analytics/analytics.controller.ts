@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Request, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Request, Param, NotFoundException, Req } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/jwt-auth/jwt-auth.guard';
 import { AnalyticsService } from './analytics.service';
 import { TrackEventDto } from './dto/track-event.dto';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { DashboardStatsDto, WidgetPerformanceDto } from './dto/dashboard-stats.dto';
 import { BusinessService } from '../business/business.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('api/analytics')
 export class AnalyticsController {
@@ -14,6 +15,14 @@ export class AnalyticsController {
   ) {}
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('me')
+  async getUser(@Req() req) {
+    return req.userEntity;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('dashboard')
   async getDashboardStats(
     @Request() req,
@@ -30,6 +39,7 @@ export class AnalyticsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('widgets/:widgetId/performance')
   async getWidgetAnalytics(
     @Request() req,
@@ -47,6 +57,7 @@ export class AnalyticsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('reviews/trends')
   async getReviewTrends(
     @Request() req,
@@ -63,7 +74,8 @@ export class AnalyticsController {
     return this.analyticsService.getReviewTrends(business.id, startDate, endDate);
   }
 
-  @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get('storage/usage')
   async getStorageUsage(@Request() req) {
     const userId = req.userEntity.id;
@@ -80,7 +92,7 @@ export class AnalyticsController {
       usagePercentage: stats.storageLimit > 0 ? (stats.storageUsed / stats.storageLimit) * 100 : 0,
     };
   }
-
+  
   @Post('events')
   async trackEvent(
     @Body() trackEventDto: TrackEventDto,

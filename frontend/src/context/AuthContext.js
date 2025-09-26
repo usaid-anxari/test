@@ -70,14 +70,14 @@ const AuthProvider = ({ children }) => {
       
       if (isAuthenticated && auth0User) {
         // ✅ STEP 1: Email Verification Check
-        if (!auth0User.email_verified) {
+        if (!auth0User) {
           // Clear state only if needed
           if (user || tenant || widgets.length > 0) {
             setUser(null);
             setTenant("");
             setWidgets([]);
             setSelectedWidget(null);
-          }
+          }          
           setLoading(false);
           return;
         }
@@ -89,17 +89,19 @@ const AuthProvider = ({ children }) => {
               audience: process.env.REACT_APP_AUTH0_AUDIENCE,
             },
           });
-
+     console.log("Auht0 Token :" + token);
+     
           // Set token in axios instance
-          axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
-
+         const ch =  axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
+             console.log("Ch " + ch);
+             
           // ✅ STEP 3: Set user from Auth0 (no API call needed)
           if (!user || user.sub !== auth0User.sub) {
             setUser(auth0User);
           }
 
           // ✅ STEP 4: Fetch business info only if needed
-          if (!tenant && auth0User.email_verified) {
+          if (!tenant) {
             const businessInfo = await fetchBusinessInfo();
             if (businessInfo) {
               setTenant(businessInfo);
@@ -134,12 +136,15 @@ const AuthProvider = ({ children }) => {
     // Debounce auth check to prevent multiple rapid calls
     const timeoutId = setTimeout(checkAuth, 100);
     return () => clearTimeout(timeoutId);
-  }, [isAuthenticated, auth0User?.sub, auth0User?.email_verified, isLoading]);
+  }, [isAuthenticated, auth0User?.sub, isLoading]);
+// console.log("Auth0 User :"+ auth0User?.sub);
+console.log(tenant);
+
 
   const fetchBusinessInfo = async () => {
     try {
       const response = await axiosInstance.get(
-        API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE
+        API_PATHS.BUSINESSES?.GET_PRIVATE_PROFILE
       );
       return response.data.business;
     } catch (error) {

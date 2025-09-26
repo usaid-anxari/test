@@ -241,7 +241,7 @@ export class BusinessController {
   async updateMyBusiness(
     @Req() req,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { name?: string; website?: string; brandColor?: string; contactEmail?: string },
+    @Body() body: { name?: string; website?: string; brandColor?: string; contactEmail?: string; settingsJson?: any },
   ) {
     const userId = req.userEntity.id;
     const business = await this.bizService.findDefaultForUser(userId);
@@ -257,6 +257,7 @@ export class BusinessController {
     if (body.website) updateData.website = body.website;
     if (body.brandColor) updateData.brandColor = body.brandColor;
     if (body.contactEmail) updateData.contactEmail = body.contactEmail;
+    if (body.settingsJson) updateData.settingsJson = body.settingsJson;
 
     // Handle logo upload if provided
     if (file) {

@@ -15,16 +15,17 @@ import {
 
 const AdminSettings = () => {
   const { getInitialData, hasFeature, tenant, refreshBusinessInfo } = useContext(AuthContext);
-  const [allowTextReviews, setAllowTextReviews] = useState(false);
-  const [allowTextGoogleReviews, setAllowTextGoogleReviews] = useState(
-    getInitialData("allowTextGoogleReviews", false)
-  );
+  const [allowTextReviews, setAllowTextReviews] = useState(true);
+  const [allowGoogleReviews, setAllowGoogleReviews] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Load text reviews setting from business data
+  // Load settings from business data
   useEffect(() => {
     if (tenant?.settingsJson?.textReviewsEnabled !== undefined) {
       setAllowTextReviews(tenant.settingsJson.textReviewsEnabled);
+    }
+    if (tenant?.settingsJson?.googleReviewsEnabled !== undefined) {
+      setAllowGoogleReviews(tenant.settingsJson.googleReviewsEnabled);
     }
   }, [tenant]);
 
@@ -52,13 +53,31 @@ const AdminSettings = () => {
     }
   };
 
-  const handleToggleGoogleReviews = () => {
-    const newSetting = !allowTextGoogleReviews;
-    localStorage.setItem("allowTextGoogleReviews", JSON.stringify(newSetting));
-    setAllowTextGoogleReviews(newSetting);
-    toast.success(
-      `Text Google reviews are now ${newSetting ? "enabled" : "disabled"}.`
-    );
+  const handleToggleGoogleReviews = async () => {
+    if (loading) return;
+    
+    setLoading(true);
+    try {
+      const newSetting = !allowGoogleReviews;
+      
+      await axiosInstance.put(API_PATHS.BUSINESSES.UPDATE_PRIVATE_PROFILE, {
+        settingsJson: {
+          ...tenant?.settingsJson,
+          googleReviewsEnabled: newSetting
+        }
+      });
+      
+      setAllowGoogleReviews(newSetting);
+      await refreshBusinessInfo();
+      toast.success(
+        `Google reviews are now ${newSetting ? "enabled" : "disabled"}.`
+      );
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update Google reviews setting.");
+      console.error("Error toggling Google reviews:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const [showConsent, setShowConsent] = useState(
@@ -90,8 +109,8 @@ const AdminSettings = () => {
                 <div className="text-sm text-blue-100">Text Reviews</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold">{showConsent ? '✓' : '✗'}</div>
-                <div className="text-sm text-blue-100">Consent Required</div>
+                <div className="text-2xl font-bold">{allowGoogleReviews ? '✓' : '✗'}</div>
+                <div className="text-sm text-blue-100">Google Reviews</div>
               </div>
             </div>
           </div>
@@ -182,7 +201,7 @@ const AdminSettings = () => {
                       Google Reviews Integration
                     </h3>
                     <p className="text-gray-600">
-                      Enable text-based Google reviews to be displayed alongside your video and audio testimonials
+                      Show Google review submission option on the record review page to encourage customers to also leave Google reviews
                     </p>
                     {!hasFeature("advanced_moderation") && (
                       <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-orange-100 text-orange-800">
@@ -194,27 +213,27 @@ const AdminSettings = () => {
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className={`text-sm font-semibold ${
-                    allowTextGoogleReviews ? 'text-blue-600' : 'text-gray-500'
+                    allowGoogleReviews ? 'text-blue-600' : 'text-gray-500'
                   }`}>
-                    {allowTextGoogleReviews ? 'Enabled' : 'Disabled'}
+                    {allowGoogleReviews ? 'Enabled' : 'Disabled'}
                   </div>
                   <button
                     onClick={handleToggleGoogleReviews}
-                    disabled={!hasFeature("advanced_moderation")}
+                    disabled={!hasFeature("advanced_moderation") || loading}
                     className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      allowTextGoogleReviews ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gray-300"
+                      allowGoogleReviews ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gray-300"
                     } ${
-                      !hasFeature("advanced_moderation")
+                      !hasFeature("advanced_moderation") || loading
                         ? "opacity-50 cursor-not-allowed"
                         : "hover:shadow-lg"
                     }`}
                   >
                     <span
                       className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ${
-                        allowTextGoogleReviews ? "translate-x-7" : "translate-x-1"
+                        allowGoogleReviews ? "translate-x-7" : "translate-x-1"
                       }`}
                     >
-                      {allowTextGoogleReviews ? (
+                      {allowGoogleReviews ? (
                         <CheckCircleIcon className="w-4 h-4 text-blue-500 m-1" />
                       ) : (
                         <XCircleIcon className="w-4 h-4 text-gray-400 m-1" />

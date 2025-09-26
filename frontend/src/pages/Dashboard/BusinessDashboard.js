@@ -8,9 +8,10 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const BusinessDashboard = () => {
-  const { user } = useContext(AuthContext);
+  const { isAuthenticated } = useAuth0();
   const navigate = useNavigate();
 
   const [business, setBusiness] = useState(null);
@@ -29,14 +30,6 @@ const BusinessDashboard = () => {
   const DEFAULT_CARD_BG = "#ffffff";
   const DEFAULT_MUTED_TEXT = "#6b7280";
 
-  // Check authentication
-  useEffect(() => {
-    if (!user) {
-      toast.error("Please log in to access the dashboard.");
-      navigate("/login");
-    }
-  }, [user, navigate]);
-
   // Fetch business data and reviews in single API call
   useEffect(() => {
     const fetchProfile = async () => {
@@ -46,9 +39,10 @@ const BusinessDashboard = () => {
         const response = await axiosInstance.get(
           API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE
         );
+        console.log(response);
         setBusiness(response.data.business);
         setReviews(response.data.reviews || []);
-        
+                
         setFormData({
           name: response.data.business?.name || "",
           website: response.data.business?.website || "",
@@ -64,8 +58,8 @@ const BusinessDashboard = () => {
         setLoading(false);
       }
     };
-    if (user) fetchProfile();
-  }, [user]);
+    if (isAuthenticated) fetchProfile();
+  }, [isAuthenticated]);
 
   // Theme setup
   const systemPrefersDark = window.matchMedia(

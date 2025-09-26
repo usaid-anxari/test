@@ -23,13 +23,16 @@ export class AuthService {
 
   async getUserProfileFromToken(token: string): Promise<any> {
     const url = `${this.auth0Domain.replace(/\/$/, '')}/userinfo`;
-
+   console.log(url);
+   
     try {
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000,
+        timeout: 60000,
       });
+      console.log(response.data);
       return response.data;
+      
     } catch (error) {
       this.logger.error('Failed to fetch user profile from Auth0', error);
       throw new Error('Unable to fetch user profile');

@@ -1,398 +1,372 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import ReviewCard from "../components/ReviewCard";
 import axiosInstance from "../service/axiosInstanse";
 import { API_PATHS } from "../service/apiPaths";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
+import { StarIcon, PlayIcon, SpeakerWaveIcon, DocumentTextIcon, ChevronLeftIcon, ChevronRightIcon, GlobeAltIcon, EnvelopeIcon, PhoneIcon } from "@heroicons/react/24/solid";
 
-const PublicReviews = () => {
+const PublicReviews = ({ businessSlug }) => {
   const { businessName } = useParams();
-
-  const [business, setBusiness] = useState(null);
-  const [reviews, setReviews] = useState([]);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [layout, setLayout] = useState("GRID");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit] = useState(12);
 
-  // Default theme values
-  const DEFAULT_PRIMARY = "#f97316";
-  const DEFAULT_BG = "#ffffff";
-  const DEFAULT_TEXT = "#111827";
-  const DEFAULT_CARD_BG = "#ffffff";
-  const DEFAULT_MUTED_TEXT = "#6b7280";
-
-  // Fetch business profile
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        // Get business info from public profile endpoint
-        const businessResponse = await axiosInstance.get(
-          API_PATHS.BUSINESSES.GET_PUBLIC_PROFILE(businessName)
-        );
-        setBusiness(businessResponse.data);
-        
-        // Get approved reviews only from public reviews endpoint
-        const reviewsResponse = await axiosInstance.get(
-          API_PATHS.REVIEWS.GET_PUBLIC_REVIEWS(businessName)
-        );
-        setReviews(reviewsResponse.data.reviews || reviewsResponse.data || []);
-      } catch (error) {
-        console.error("Failed to load profile:", error);
-        toast.error("Could not load business profile.");
-        setBusiness(null);
-        setReviews([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, [businessName]);
-
-  // Theme setup
-  const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const themeMode = systemPrefersDark ? "dark" : "light";
-  const primaryColor = business?.brandColor || DEFAULT_PRIMARY;
-  const bgColor = themeMode === "dark" ? "#111827" : DEFAULT_BG;
-  const textColor = themeMode === "dark" ? "#f3f4f6" : DEFAULT_TEXT;
-  const cardBg = themeMode === "dark" ? "#1f2937" : DEFAULT_CARD_BG;
-  const mutedText = themeMode === "dark" ? "#9ca3af" : DEFAULT_MUTED_TEXT;
-
-  // Container classes
-  const containerClass = `
-    p-8 sm:p-12 rounded-2xl transition-colors duration-300
-    ${themeMode === "dark" ? "bg-gray-900 text-gray-100" : "bg-white text-gray-800"}
-    border ${themeMode === "dark" ? "border-gray-700" : "border-gray-200"}
-    max-w-6xl mx-auto shadow-lg
-  `;
-
-  // Render logo or avatar
-  const renderLogo = () => {
-    if (loading) {
-      return <Skeleton circle width={100} height={100} />;
-    }
-    if (business?.logoUrl) {
-      return (
-        <img
-          src={business.logoUrl}
-          alt={`${business.name} logo`}
-          className="w-24 h-24 rounded-full object-cover border-4"
-          style={{ borderColor: primaryColor }}
-        />
+  const fetchReviews = async (page = 1) => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(
+        API_PATHS.REVIEWS.GET_PUBLIC_REVIEWS(businessName || businessSlug),
+        { params: { page, limit } }
       );
+      setData(response.data);
+    } catch (error) {
+      console.error("Failed to load reviews:", error);
+      toast.error("Could not load business reviews.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchReviews(currentPage);
+  }, [businessName, businessSlug, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const renderStars = (rating, brandColor) => {
     return (
-      <div
-        className="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold"
-        style={{ backgroundColor: primaryColor, color: "#ffffff" }}
-      >
-        {business?.name?.[0]?.toUpperCase() || "?"}
+      <div className="flex items-center space-x-1">
+        {[...Array(5)].map((_, i) => (
+          <StarIcon
+            key={i}
+            className="w-5 h-5"
+            style={{ color: i < rating ? (brandColor || '#fbbf24') : '#d1d5db' }}
+          />
+        ))}
       </div>
     );
   };
 
-  // Render skeleton loader
-  const renderProfileSkeleton = () => (
-    <div className="flex flex-col items-center space-y-4 mb-12">
-      <Skeleton circle width={100} height={100} />
-      <Skeleton width={250} height={32} />
-      <Skeleton width={150} height={20} />
-    </div>
-  );
-
-  // Render review layouts
-  const renderLayout = () => {
-    if (loading) {
-      return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, index) => (
-            <Skeleton key={index} height={250} borderRadius={16} />
-          ))}
-        </div>
-      );
-    }
-
-    if (reviews.length === 0) {
-      return (
-        <div className="text-center py-20">
-          <div className="relative inline-block mb-8">
-            <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto shadow-lg">
-              <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-              </svg>
-            </div>
-            <div className="absolute -top-2 -right-2 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center animate-bounce-slow">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </div>
-          </div>
-          <h3 className="heading-2 text-gray-800 mb-4">Be the First to Review!</h3>
-          <p className="text-lead text-gray-600 mb-10 max-w-lg mx-auto">
-            Help others discover {business?.name} by sharing your authentic experience. Your review matters!
-          </p>
-          <Link
-            to={`/record/${businessName}`}
-            className="btn-primary text-xl px-12 py-5"
-          >
-            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            Leave the First Review
-          </Link>
-          
-          {/* Benefits */}
-          <div className="grid-3 max-w-2xl mx-auto mt-16">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-gray-700">Quick & Easy</p>
-              <p className="text-xs text-gray-500">Takes 2 minutes</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-gray-700">Secure & Private</p>
-              <p className="text-xs text-gray-500">Your data is safe</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-gray-700">Help Others</p>
-              <p className="text-xs text-gray-500">Share your story</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    switch (layout) {
-      case "CAROUSEL":
-        return (
-          <div className="relative group">
-            <div className="overflow-x-auto hide-scrollbar flex space-x-6 pb-6 snap-x snap-mandatory scroll-smooth">
-              {reviews.map((review) => (
-                <motion.div
-                  key={review.id}
-                  className="min-w-[320px] max-w-[320px] snap-start flex-shrink-0"
-                  initial={{ opacity: 0, x: 60 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <ReviewCard review={review} theme={themeMode} primaryColor={primaryColor} />
-                </motion.div>
-              ))}
-            </div>
-            <div className="absolute top-1/2 -right-4 w-8 h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md opacity-0 group-hover:opacity-90 transition-opacity flex items-center justify-center">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
-        );
-
-      case "SPOTLIGHT":
-        return (
-          <div className="space-y-8">
-            {reviews.map((review, index) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                style={{
-                  backgroundColor: index === 0 ? primaryColor : cardBg,
-                  color: index === 0 ? "#ffffff" : textColor,
-                }}
-                className={`p-6 rounded-2xl border transition-all duration-300 shadow-md ${
-                  index === 0 ? "scale-105 shadow-xl" : "hover:shadow-lg hover:scale-[1.02]"
-                }`}
-              >
-                <ReviewCard review={review} theme={themeMode} primaryColor={index === 0 ? "#ffffff" : primaryColor} />
-                {index === 0 && (
-                  <div
-                    style={{ backgroundColor: "rgba(255,255,255,0.3)", backdropFilter: "blur(4px)" }}
-                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                    </svg>
-                    Featured
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        );
-
-      case "FLOATING_BUBBLE":
-        return (
-          <div className="relative h-[500px] sm:h-[600px]">
-            <motion.div
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 80, damping: 20 }}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <div
-                style={{
-                  backgroundColor: cardBg,
-                  color: textColor,
-                  boxShadow: `0 20px 50px -10px ${primaryColor}40`,
-                }}
-                className="max-w-sm w-full mx-4 rounded-3xl border overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300"
-              >
-                <div style={{ backgroundColor: primaryColor }} className="h-2"></div>
-                <div className="p-8">
-                  {reviews.length > 0 ? (
-                    <ReviewCard review={reviews[0]} theme={themeMode} primaryColor={primaryColor} />
-                  ) : (
-                    <div className="text-center py-12">
-                      <svg className="w-12 h-12 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                      </svg>
-                      <p className="text-base mt-4" style={{ color: mutedText }}>
-                        No reviews yet
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="px-8 pb-6">
-                  <span
-                    style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border border-opacity-30 border-current"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" />
-                    </svg>
-                    {reviews.length} {reviews.length === 1 ? "Review" : "Reviews"}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
-              className="absolute bottom-6 right-6"
-            >
-              <Link
-                to={`/record/${businessName}`}
-                style={{ backgroundColor: primaryColor }}
-                className="flex items-center justify-center w-16 h-16 rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-opacity-30"
-                aria-label="Leave a review"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </Link>
-            </motion.div>
-            <div
-              className="absolute inset-0 pointer-events-none opacity-20 blur-3xl -z-10"
-              style={{ background: `radial-gradient(ellipse at center, ${primaryColor}50 0%, transparent 70%)` }}
-            ></div>
-          </div>
-        );
-
-  case "GRID":
-    default:
-      return (
-        <div className="grid-responsive">
-          {reviews?.map((review, index) => (
-            <motion.div
-              key={review.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-              className="fade-in"
-            >
-              <ReviewCard
-                review={review}
-                theme={themeMode}
-                primaryColor={primaryColor}
-              />
-            </motion.div>
-          ))}
-        </div>
-      );
+  const getTypeIcon = (type, brandColor) => {
+    const iconClass = "w-4 h-4";
+    const iconStyle = { color: brandColor || '#6b7280' };
+    
+    switch (type) {
+      case 'video':
+        return <PlayIcon className={iconClass} style={iconStyle} />;
+      case 'audio':
+        return <SpeakerWaveIcon className={iconClass} style={iconStyle} />;
+      case 'text':
+        return <DocumentTextIcon className={iconClass} style={iconStyle} />;
+      default:
+        return <DocumentTextIcon className={iconClass} style={iconStyle} />;
     }
   };
 
-  return (
-    <div className="py-16 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <div className={containerClass}>
-        {/* Profile Header */}
-        {loading ? (
-          renderProfileSkeleton()
-        ) : business ? (
-          <div className="flex flex-col items-center mb-12 text-center">
-            {renderLogo()}
-            <h1 className="text-4xl font-extrabold mt-4" style={{ color: textColor }}>
-              {business.name}
-            </h1>
-            {business.website && (
-              <a
-                href={business.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 text-lg font-medium hover:underline"
-                style={{ color: primaryColor }}
-              >
-                Visit Website
-              </a>
-            )}
-            {/* Layout Selector */}
-            <div className="mt-6 flex space-x-2">
-              {["GRID", "CAROUSEL", "SPOTLIGHT", "FLOATING_BUBBLE"].map((option) => (
-                <button
-                  key={option}
-                  onClick={() => setLayout(option)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    layout === option
-                      ? "text-white"
-                      : themeMode === "dark"
-                      ? "text-gray-300 hover:bg-gray-700"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                  style={{ backgroundColor: layout === option ? primaryColor : "transparent" }}
-                >
-                  {option.charAt(0) + option.slice(1).toLowerCase()}
-                </button>
+  const renderMedia = (review) => {
+    if (!review.media || review.media.length === 0) return null;
+    
+    const media = review.media[0];
+    const mediaUrl = `${process.env.REACT_APP_S3_BASE_URL}/${media.s3Key}`;
+    
+    if (review.type === 'video') {
+      return (
+        <video 
+          controls 
+          className="w-full h-48 object-cover rounded-lg mb-4"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath fill='%23f97316' d='M8 5v14l11-7z'/%3E%3C/svg%3E"
+        >
+          <source src={mediaUrl} type="video/mp4" />
+        </video>
+      );
+    }
+    
+    if (review.type === 'audio') {
+      return (
+        <div className="p-4 rounded-lg mb-4" style={{ backgroundColor: `${data?.business?.brandColor || '#8b5cf6'}20` }}>
+          <audio controls className="w-full">
+            <source src={mediaUrl} type="audio/mpeg" />
+          </audio>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
+  const renderPagination = () => {
+    if (!data || data.total <= limit) return null;
+    
+    const totalPages = Math.ceil(data.total / limit);
+    const pages = [];
+    
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+        pages.push(i);
+      } else if (i === currentPage - 3 || i === currentPage + 3) {
+        pages.push('...');
+      }
+    }
+    
+    return (
+      <div className="flex items-center justify-center space-x-2 mt-12">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+        >
+          <ChevronLeftIcon className="w-5 h-5" />
+        </button>
+        
+        {pages.map((page, index) => (
+          page === '...' ? (
+            <span key={index} className="px-3 py-2 text-gray-500">...</span>
+          ) : (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                currentPage === page
+                  ? 'text-white'
+                  : 'border border-gray-300 hover:bg-gray-50'
+              }`}
+              style={currentPage === page ? { backgroundColor: business?.brandColor || '#3b82f6' } : {}}
+            >
+              {page}
+            </button>
+          )
+        ))}
+        
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+        >
+          <ChevronRightIcon className="w-5 h-5" />
+        </button>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="animate-pulse">
+            <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
+              <div className="flex items-center space-x-6 mb-8">
+                <div className="w-24 h-24 bg-gray-300 rounded-full"></div>
+                <div className="flex-1">
+                  <div className="h-8 bg-gray-300 rounded mb-2 w-1/3"></div>
+                  <div className="h-4 bg-gray-300 rounded w-1/4"></div>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white rounded-xl shadow-lg p-6">
+                  <div className="h-48 bg-gray-300 rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-300 rounded w-2/3"></div>
+                </div>
               ))}
             </div>
           </div>
-        ) : (
-          <p className="text-center text-red-500 text-lg">Failed to load business profile.</p>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {/* Reviews Section */}
-        <h2 className="text-2xl font-semibold mb-8 text-center" style={{ color: textColor }}>
-          Customer Reviews
-        </h2>
-        {renderLayout()}
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Business Not Found</h2>
+          <p className="text-gray-600">The business you're looking for doesn't exist.</p>
+        </div>
+      </div>
+    );
+  }
 
-        {/* CTA Button */}
-        {layout !== "FLOATING_BUBBLE" && (
-          <div className="text-center mt-12">
-            <Link
-              to={`/record/${businessName}`}
-              style={{ backgroundColor: primaryColor }}
-              className="inline-block px-10 py-4 text-white text-lg font-bold rounded-full hover:brightness-110 transition-all duration-300 shadow-md"
-            >
-              Leave Your Own Review!
-            </Link>
+  const { business, reviews, total } = data;
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Business Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8"
+        >
+          {/* Hero Section with Brand Color */}
+          <div 
+            className="h-32 relative"
+            style={{ 
+              background: `linear-gradient(135deg, ${business.brandColor || '#3b82f6'}, ${business.brandColor || '#3b82f6'}dd)` 
+            }}
+          >
+            <div className="absolute inset-0 bg-black bg-opacity-20"></div>
           </div>
+          
+          <div className="px-8 pb-8 -mt-16 relative">
+            <div className="flex flex-col md:flex-row md:items-end md:space-x-6 mb-6">
+              <div className="relative mb-4 md:mb-0">
+                {business.logoUrl ? (
+                  <img
+                    src={business.logoUrl}
+                    alt={`${business.name} logo`}
+                    className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+                  />
+                ) : (
+                  <div
+                    className="w-32 h-32 rounded-full flex items-center justify-center text-4xl font-bold text-white border-4 border-white shadow-lg"
+                    style={{ backgroundColor: business.brandColor || '#3b82f6' }}
+                  >
+                    {business.name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold text-gray-800 mb-2">{business.name}</h1>
+                <p className="text-gray-600 text-lg mb-4">
+                  {total} {total === 1 ? 'Review' : 'Reviews'}
+                </p>
+                
+                {/* Business Contact Info */}
+                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                  {business.website && (
+                    <a 
+                      href={business.website.startsWith('http') ? business.website : `https://${business.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
+                    >
+                      <GlobeAltIcon className="w-4 h-4" />
+                      <span>Website</span>
+                    </a>
+                  )}
+                  {business.email && (
+                    <a 
+                      href={`mailto:${business.email}`}
+                      className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
+                    >
+                      <EnvelopeIcon className="w-4 h-4" />
+                      <span>{business.email}</span>
+                    </a>
+                  )}
+                  {business.phone && (
+                    <a 
+                      href={`tel:${business.phone}`}
+                      className="flex items-center space-x-1 hover:text-blue-600 transition-colors"
+                    >
+                      <PhoneIcon className="w-4 h-4" />
+                      <span>{business.phone}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+              
+              <Link
+                to={`/record/${business.slug}`}
+                className="text-white px-6 py-3 rounded-lg font-semibold transition-all hover:shadow-lg flex items-center space-x-2 mt-4 md:mt-0"
+                style={{ 
+                  backgroundColor: business.brandColor || '#3b82f6',
+                  ':hover': { backgroundColor: `${business.brandColor || '#3b82f6'}dd` }
+                }}
+              >
+                <PlayIcon className="w-5 h-5" />
+                <span>Leave Review</span>
+              </Link>
+            </div>
+            
+            {/* Business Description */}
+            {business.description && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <p className="text-gray-700">{business.description}</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Reviews Grid */}
+        {reviews.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white rounded-2xl shadow-lg p-12 text-center"
+          >
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <StarIcon className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">No Reviews Yet</h3>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              Be the first to share your experience with {business.name}!
+            </p>
+            <Link
+              to={`/record/${business.slug}`}
+              className="text-white px-8 py-3 rounded-lg font-semibold transition-all hover:shadow-lg inline-flex items-center space-x-2"
+              style={{ backgroundColor: business.brandColor || '#3b82f6' }}
+            >
+              <PlayIcon className="w-5 h-5" />
+              <span>Leave First Review</span>
+            </Link>
+          </motion.div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reviews.map((review, index) => (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border-l-4"
+                  style={{ borderLeftColor: business.brandColor || '#3b82f6' }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <div 
+                        className="p-2 rounded-full"
+                        style={{ backgroundColor: `${business.brandColor || '#3b82f6'}20` }}
+                      >
+                        {getTypeIcon(review.type, business.brandColor)}
+                      </div>
+                      <span className="text-sm font-medium capitalize" style={{ color: business.brandColor || '#3b82f6' }}>
+                        {review.type}
+                      </span>
+                    </div>
+                    {renderStars(review.rating, business.brandColor)}
+                  </div>
+                  
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                    {review.title}
+                  </h3>
+                  
+                  {renderMedia(review)}
+                  
+                  {review.bodyText && (
+                    <p className="text-gray-600 mb-4 line-clamp-3">
+                      {review.bodyText}
+                    </p>
+                  )}
+                  
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span className="font-medium">{review.reviewerName}</span>
+                    <span>{new Date(review.publishedAt).toLocaleDateString()}</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            
+            {renderPagination()}
+          </>
         )}
       </div>
     </div>

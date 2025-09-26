@@ -14,8 +14,8 @@ const ReviewPreviewModal = ({ review, onClose }) => {
     if (!mediaAsset?.s3Key) return null;
     const baseUrl =
       process.env.REACT_APP_S3_BASE_URL ||
-      "https://truetestify.s3.amazonaws.com/";
-    return `${baseUrl}${mediaAsset.s3Key}`;
+      "https://truetestify.s3.amazonaws.com";
+    return `${baseUrl}/${mediaAsset.s3Key}`;
   };
 
   // Try different possible structures for media assets

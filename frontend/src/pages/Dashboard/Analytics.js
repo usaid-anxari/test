@@ -21,9 +21,10 @@ import { API_PATHS } from "../../service/apiPaths";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { useStorageStatus } from "../../hooks/useFeatureAccess";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const Analytics = () => {
-  const { user } = useContext(AuthContext);
+  const { isAuthenticated } = useAuth0();
   const { storageStatus } = useStorageStatus();
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -41,6 +42,7 @@ const Analytics = () => {
         
         // Fetch business profile and reviews
         const businessResponse = await axiosInstance.get(API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE);
+       
         setBusiness(businessResponse.data.business);
         setReviews(businessResponse.data.reviews || []);
         
@@ -48,16 +50,16 @@ const Analytics = () => {
         if (businessResponse.data.business?.id) {
           try {
             // Fetch dashboard analytics
-            const analyticsResponse = await axiosInstance.get(API_PATHS.ANALYTICS.GET_DASHBOARD);
-            setAnalytics(analyticsResponse.data);
-            
+            const analyticsResponse = await axiosInstance.get(API_PATHS.ANALYTICS?.GET_DASHBOARD);
+            setAnalytics(analyticsResponse?.data);            
             // Fetch widgets
             const widgetsResponse = await axiosInstance.get(API_PATHS.WIDGETS.GET_WIDGETS);
-            setWidgets(widgetsResponse.data);
+            setWidgets(Array.isArray(widgetsResponse.data) ? widgetsResponse.data : []);
             
             // Fetch widget performance data
+            const widgetsArray = Array.isArray(widgetsResponse.data) ? widgetsResponse.data : [];
             const widgetPerformance = await Promise.all(
-              widgetsResponse.data.map(async (widget) => {
+              widgetsArray.map(async (widget) => {
                 try {
                   const perfResponse = await axiosInstance.get(API_PATHS.ANALYTICS.GET_WIDGET_PERFORMANCE(widget.id));
                   return { ...widget, performance: perfResponse.data };
@@ -99,10 +101,10 @@ const Analytics = () => {
       }
     };
 
-    if (user) {
+    if (isAuthenticated) {
       fetchData();
     }
-  }, [user]);
+  }, [isAuthenticated]);
 
   // Calculate metrics from actual data
   const data = {
@@ -114,7 +116,7 @@ const Analytics = () => {
     totalSubmissions: analytics?.totalSubmissions || 0,
     storageUsed: storageStatus?.storageUsageGb || 0,
     storageLimit: storageStatus?.storageLimitGb || 1,
-    activeWidgets: widgets.filter(w => w.isActive).length,
+    activeWidgets: Array.isArray(widgets) ? widgets.filter(w => w.isActive).length : 0,
   };
 
   // Mock trend data for charts (will be replaced with real data later)

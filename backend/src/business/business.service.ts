@@ -217,6 +217,8 @@ export class BusinessService {
         website: business.website,
         contactEmail: business.contactEmail,
         textReviewsEnabled: business.settingsJson?.textReviewsEnabled ?? true,
+        googleReviewsEnabled: business.settingsJson?.googleReviewsEnabled ?? false,
+        googlePlaceId: business.settingsJson?.googlePlaceId || null,
       },
       reviews: [...reviewsWithMedia, ...googleReviewsFormatted],
       stats: {

@@ -4,7 +4,8 @@ import { Repository } from 'typeorm';
 import { Widget } from './entities/widget.entity';
 import { EmbedToken } from './entities/embed-token.entity';
 import { CreateWidgetDto } from './dto/create-widget.dto';
-import { v4 as uuidv4 } from 'uuid';
+import { ConfigService } from '@nestjs/config';
+
 
 @Injectable()
 export class WidgetsService {
@@ -13,10 +14,11 @@ export class WidgetsService {
   constructor(
     @InjectRepository(Widget)
     private widgetRepo: Repository<Widget>,
+    private configService: ConfigService,
     @InjectRepository(EmbedToken)
     private embedTokenRepo: Repository<EmbedToken>,
   ) {}
-
+  
   // Milestone 7: Create widget
   async createWidget(businessId: string, dto: CreateWidgetDto) {
     const widget = this.widgetRepo.create({
@@ -52,6 +54,13 @@ export class WidgetsService {
     }
 
     return widget;
+  }
+
+  // Find widget by ID only (for embed)
+  async findById(widgetId: string) {
+    return await this.widgetRepo.findOne({
+      where: { id: widgetId },
+    });
   }
 
   // Update widget
@@ -90,7 +99,7 @@ export class WidgetsService {
 <script>
 (function() {
   var script = document.createElement('script');
-  script.src = '${process.env.FRONTEND_URL || 'http://localhost:5173'}/embed.js';
+  script.src = 'http://localhost:4000/embed.js';
   script.setAttribute('data-widget-id', '${widget.id}');
   script.setAttribute('data-style', '${widget.style}');
   document.head.appendChild(script);
@@ -101,7 +110,7 @@ export class WidgetsService {
       widgetId: widget.id,
       style: widget.style,
       embedCode,
-      iframeCode: `<iframe src="${process.env.FRONTEND_URL || 'http://localhost:5173'}/embed/${widget.id}" width="100%" height="400" frameborder="0"></iframe>`,
+      iframeCode: `<iframe src="http://localhost:4000/embed/${widget.id}" width="100%" height="400" frameborder="0"></iframe>`,
     };
   }
 

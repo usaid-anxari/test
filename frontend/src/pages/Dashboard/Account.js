@@ -15,12 +15,12 @@ import {
   ArrowRightEndOnRectangleIcon,
 } from "@heroicons/react/16/solid";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
-import { useContext, useState, useEffect } from "react";
+import {  useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import axiosInstance from "../service/axiosInstanse";
-import { API_PATHS } from "../service/apiPaths";
+import axiosInstance from "../../service/axiosInstanse";
+import { API_PATHS } from "../../service/apiPaths";
 import toast from "react-hot-toast";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const Account = () => {
   const [business, setBusiness] = useState(null);
@@ -29,9 +29,8 @@ const Account = () => {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
-  const { logout, user } = useContext(AuthContext);
-  const navigate = useNavigate();
-
+  const { isAuthenticated,logout,user:auth0User } = useAuth0();
+  const navigate = useNavigate();  
   // Fetch business data
   useEffect(() => {
     const fetchBusiness = async () => {
@@ -49,10 +48,10 @@ const Account = () => {
       }
     };
 
-    if (user) {
+    if (isAuthenticated) {
       fetchBusiness();
     }
-  }, [user]);
+  }, [isAuthenticated]);
 
   // Mock data for demonstration
   const accountStats = {
@@ -186,7 +185,7 @@ const Account = () => {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-500">Email Address</p>
-                            <p className="text-lg font-bold text-gray-800">{user?.email || 'Not available'}</p>
+                            <p className="text-lg font-bold text-gray-800">{auth0User?.email || 'Not available'}</p>
                           </div>
                         </div>
                       </div>
@@ -216,7 +215,7 @@ const Account = () => {
                           <div>
                             <p className="text-sm font-medium text-gray-500">Account ID</p>
                             <p className="text-sm font-mono text-gray-600 bg-white px-2 py-1 rounded border">
-                              {business?.id || user?.id || 'N/A'}
+                              {business?.id  || auth0User?.sub|| 'N/A'}
                             </p>
                           </div>
                         </div>

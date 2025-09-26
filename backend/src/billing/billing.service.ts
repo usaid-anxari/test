@@ -82,6 +82,12 @@ export class BillingService {
   }
 
   async getPricingPlans(): Promise<PricingPlanDto[]> {
+    // Get actual Stripe price IDs from environment or use null for development
+    const freePriceId = this.configService.get("STRIPE_PRICE_TIER_FREE");
+    const starterPriceId = this.configService.get("STRIPE_PRICE_TIER_STARTER");
+    const professionalPriceId = this.configService.get("STRIPE_PRICE_TIER_PROFESSIONAL");
+    const enterprisePriceId = this.configService.get("STRIPE_PRICE_TIER_ENTERPRISE");
+
     return [
       {
         tier: PricingTier.FREE,
@@ -90,7 +96,7 @@ export class BillingService {
         monthlyPriceCents: 0,
         storageLimitGb: 1,
         features: ['1GB storage', 'Basic widgets', 'Email support'],
-        stripePriceId: null,
+        stripePriceId: freePriceId && freePriceId.startsWith('price_') ? freePriceId : null,
         isPopular: false,
       },
       {
@@ -100,7 +106,7 @@ export class BillingService {
         monthlyPriceCents: 1900, // $19.00
         storageLimitGb: 10,
         features: ['10GB storage', 'All widget styles', 'Priority support', 'Analytics dashboard'],
-        stripePriceId: 'price_starter_monthly',
+        stripePriceId: starterPriceId && starterPriceId.startsWith('price_') ? starterPriceId : null,
         isPopular: true,
       },
       {
@@ -110,7 +116,7 @@ export class BillingService {
         monthlyPriceCents: 4900, // $49.00
         storageLimitGb: 50,
         features: ['50GB storage', 'Custom branding', 'Advanced analytics', 'API access', 'Phone support'],
-        stripePriceId: 'price_professional_monthly',
+        stripePriceId: professionalPriceId && professionalPriceId.startsWith('price_') ? professionalPriceId : null,
         isPopular: false,
       },
       {
@@ -120,7 +126,7 @@ export class BillingService {
         monthlyPriceCents: 9900, // $99.00
         storageLimitGb: 200,
         features: ['200GB storage', 'White-label solution', 'Dedicated support', 'Custom integrations', 'SLA'],
-        stripePriceId: 'price_enterprise_monthly',
+        stripePriceId: enterprisePriceId && enterprisePriceId.startsWith('price_') ? enterprisePriceId : null,
         isPopular: false,
       },
     ];
@@ -134,8 +140,36 @@ export class BillingService {
     const pricingPlans = await this.getPricingPlans();
     const selectedPlan = pricingPlans.find(plan => plan.tier === createCheckoutSessionDto.pricingTier);
 
-    if (!selectedPlan || selectedPlan.tier === PricingTier.FREE || !selectedPlan.stripePriceId) {
-      throw new Error('Invalid pricing tier for checkout');
+    if (!selectedPlan) {
+      throw new Error('Invalid pricing tier selected');
+    }
+
+    if (selectedPlan.tier === PricingTier.FREE) {
+      throw new Error('Cannot create checkout session for free tier');
+    }
+
+    // Development mode: Skip Stripe checkout if price IDs not configured
+    const isDevelopment = this.configService.get('NODE_ENV') === 'development';
+    if (!selectedPlan.stripePriceId) {
+      if (isDevelopment) {
+        // In development, immediately update subscription and return success URL
+        await this.updateSubscription(
+          businessId,
+          'sub_dev_mode_' + Date.now(),
+          selectedPlan.tier,
+          BillingStatus.ACTIVE,
+        );
+        
+        return {
+          checkoutUrl: createCheckoutSessionDto.successUrl || `${this.configService.get('FRONTEND_URL')}/dashboard/billing?payment=success&session_id=cs_test_dev_mode`,
+          sessionId: 'cs_test_dev_mode',
+        };
+      }
+      throw new Error(`Stripe price ID not configured for ${selectedPlan.tier} tier. Please contact support.`);
+    }
+
+    if (!selectedPlan.stripePriceId.startsWith('price_')) {
+      throw new Error(`Invalid Stripe price ID format: ${selectedPlan.stripePriceId}. Expected format: price_xxx`);
     }
 
     // Ensure customer exists in Stripe

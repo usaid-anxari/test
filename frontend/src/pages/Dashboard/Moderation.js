@@ -18,9 +18,10 @@ import axiosInstance from "../../service/axiosInstanse";
 import { SpeakerWaveIcon } from "@heroicons/react/20/solid";
 import { motion } from "framer-motion";
 import PaymentPrompt from "../../components/PaymentPrompt";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const Moderation = () => {
-  const { user } = useContext(AuthContext);
+  const { isAuthenticated } = useAuth0();
   const [showPaymentPrompt, setShowPaymentPrompt] = useState(true);
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -30,7 +31,7 @@ const Moderation = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('newest');
-
+  
   // Fetch business and reviews data
   useEffect(() => {
     const fetchData = async () => {
@@ -38,15 +39,15 @@ const Moderation = () => {
         setLoading(true);
         
         // First get business info
-        const businessResponse = await axiosInstance.get(API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE);
+        const businessResponse = await axiosInstance.get(API_PATHS.BUSINESSES?.GET_PRIVATE_PROFILE);
         setBusiness(businessResponse.data.business);
+        
         if (businessResponse.data.business?.slug) {
           const reviewsResponse = await axiosInstance.get(
             API_PATHS.REVIEWS.GET_REVIEWS(businessResponse.data.business.slug)
           );
           setReviews(reviewsResponse.data.reviews || []);
         }
-        
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to load reviews");
@@ -55,16 +56,12 @@ const Moderation = () => {
       }
     };
 
-    if (user) {
+    if (isAuthenticated) {
       fetchData();
     }
-  }, [user]);
-
-  // Debug: Log reviews to see actual status values
-  console.log('Reviews data:', reviews);
+  }, [isAuthenticated]);
   
   const openModal = (review) => {
-    console.log('Opening modal for review:', review); // Debug selected review
     setSelectedReview(review);
     setIsModalOpen(true);
   };

@@ -90,6 +90,7 @@ const Navbar = () => {
       description: "Social media-style display",
     },
   ];
+console.log({widgetsLinks,servicesLinks});
 
   const handleLogout = () => {
     logout();

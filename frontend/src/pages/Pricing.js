@@ -14,7 +14,7 @@ const Pricing = () => {
   const { selectPlan, subscription } = useContext(AuthContext);
   const handleChoose = (plan) => {
     selectPlan(plan.name);
-    navigate("/login");
+    // navigate("/login");
   };
   
   const handleSelect = (plan)=>{

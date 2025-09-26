@@ -36,9 +36,7 @@ const RecordReview = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [businessSettings, setBusinessSettings] = useState(null);
   const [allowTextReviews, setAllowTextReviews] = useState(false);
-  const [allowTextGoogleReviews, setAllowTextGoogleReviews] = useState(
-    getInitialData("allowTextGoogleReviews", false)
-  );
+  const [allowGoogleReviews, setAllowGoogleReviews] = useState(false);
   const navigate = useNavigate();
 
   // State for MediaRecorder
@@ -72,6 +70,7 @@ const RecordReview = () => {
         );
         setBusinessSettings(response.data.business);
         setAllowTextReviews(response.data.business.textReviewsEnabled ?? true);
+        setAllowGoogleReviews(response.data.business.googleReviewsEnabled ?? false);
       } catch (error) {
         console.error("Failed to fetch business settings:", error);
         // Default to allowing text reviews if fetch fails
@@ -84,15 +83,7 @@ const RecordReview = () => {
     }
   }, [businessName]);
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setAllowTextGoogleReviews(
-        getInitialData("allowTextGoogleReviews", false)
-      );
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, [getInitialData]);
+
 
   const cleanupActiveMedia = () => {
     try {
@@ -439,6 +430,13 @@ const RecordReview = () => {
           );
           return;
         }
+
+        // Check file size (maximum 2MB limit)
+        const fileSizeMB = file.size / (1024 * 1024);
+        if (fileSizeMB > 2) {
+          toast.error("File too large. Maximum size is 2MB.");
+          return;
+        }
         setMediaFile(file);
         setMediaType(isVideo ? "video" : "audio");
       } catch (err) {
@@ -507,14 +505,26 @@ const RecordReview = () => {
           isUploading ? "opacity-50 pointer-events-none" : "opacity-100"
         }`}
       >
-        {allowTextGoogleReviews && (
-          <button
-            onClick={() => navigate("/reviews/google-embed")}
-            className="flex items-center text-indigo-600 font-semibold hover:text-indigo-800 transition-colors mb-4"
-            disabled={isUploading}
-          >
-            <ArrowRightIcon className="w-5 h-5 mr-2" /> Go to Google Reviews
-          </button>
+        {allowGoogleReviews && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <h3 className="text-lg font-semibold text-blue-800 mb-2">
+              Also Leave a Google Review
+            </h3>
+            <p className="text-blue-600 text-sm mb-3">
+              Help others find us by leaving a review on Google too!
+            </p>
+            <button
+              onClick={() => {
+                const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${businessSettings?.googlePlaceId || 'ChIJN1t_tDeuEmsRUsoyG83frY4'}`;
+                window.open(googleReviewUrl, '_blank');
+              }}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+              disabled={isUploading}
+            >
+              <ArrowRightIcon className="w-5 h-5 mr-2" /> 
+              Leave Google Review
+            </button>
+          </div>
         )}
         <h2 className="text-3xl font-bold text-gray-900 mb-6">
           Leave a Review
@@ -755,7 +765,11 @@ const RecordReview = () => {
                             className="inline-flex items-center px-4 py-2 border border-transparent rounded-full shadow-sm text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
                             disabled={isUploading}
                           >
-                            <VideoCameraIcon className="h-5 w-5 mr-2" /> Record{" "}
+                           {mediaType === "video" ? (
+                              <VideoCameraIcon className="h-5 w-5 mr-2" />
+                            ) : (
+                              <MicrophoneIcon className="h-5 w-5 mr-2" />
+                            )}  Record{" "}
                             {mediaType} (WEBM)
                           </button>
                         )}
@@ -789,7 +803,7 @@ const RecordReview = () => {
                         {mediaType === "video"
                           ? "WEBM, MP4, MOV"
                           : "WEBM, MP3, WAV"}{" "}
-                        up to 60 seconds
+                        up to 60 seconds, max 2MB
                       </p>
                     </>
                   )}

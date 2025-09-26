@@ -248,7 +248,7 @@ export class AnalyticsService {
       .andWhere('event.created_at BETWEEN :startDate AND :endDate', { startDate, endDate })
       .setParameters({ view: AnalyticsEventType.WIDGET_VIEW, click: AnalyticsEventType.WIDGET_CLICK })
       .groupBy('event.widget_id, widget.name')
-      .orderBy('totalViews', 'DESC')
+      .orderBy('"totalViews"', 'DESC')
       .limit(5)
       .getRawMany();
 

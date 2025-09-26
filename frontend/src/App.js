@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, Navigate } from "react-router-dom";
 import { Route, Routes } from "react-router-dom";
 import { lazy, Suspense, useContext } from "react";
 import { AuthContext } from "./context/AuthContext";
@@ -42,8 +42,8 @@ const Analytics = lazy(() => import("./pages/Dashboard/Analytics"));
 const BusinessDashboard = lazy(() => import("./pages/Dashboard/BusinessDashboard"));
 const WidgetSettings = lazy(() => import("./pages/Dashboard/WidgetSettings"));
 const GoogleReviews = lazy(() => import("./pages/Dashboard/GoogleReviews"));
-const Account = lazy(() => import("./pages/Account"));
-const Billing = lazy(() => import("./pages/Billing"));
+const Account = lazy(() => import("./pages/Dashboard/Account"));
+const Billing = lazy(() => import("./pages/Dashboard/Billing"));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -71,12 +71,12 @@ function App() {
   }
 
   // SaaS Flow: Email Verification Required
-  if (isAuthenticated && auth0User && !auth0User.email_verified) {
-    return <EmailVerification />;
-  }
+  // if (isAuthenticated && auth0User && !auth0User.email_verified) {
+  //   return <EmailVerification />;
+  // }
 
   // SaaS Flow: Business Setup Required (Onboarding)
-  if (isAuthenticated && auth0User && auth0User.email_verified && needsOnboarding && !isOnboardingRoute && !isCreateBusinessRoute) {
+  if (isAuthenticated && auth0User && needsOnboarding && !isOnboardingRoute && !isCreateBusinessRoute) {
     return <Onboarding />;
   }
 
@@ -92,7 +92,11 @@ function App() {
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Marketing Routes */}
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={
+              isAuthenticated && auth0User && !needsOnboarding ? 
+                <Navigate to="/dashboard" replace /> : 
+                <Home />
+            } />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
@@ -118,9 +122,9 @@ function App() {
               path="/dashboard"
               element={
                 <Auth0ProtectedRoute>
-                  <PaymentGuard>
+                  {/* <PaymentGuard> */}
                     <DashboardLayout />
-                  </PaymentGuard>
+                  {/* </PaymentGuard> */}
                 </Auth0ProtectedRoute>
               }
             >

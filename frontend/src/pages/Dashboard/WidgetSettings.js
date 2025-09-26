@@ -3,45 +3,58 @@ import {
   MoonIcon,
   PuzzlePieceIcon,
   SunIcon,
-  Cog6ToothIcon,
-  CodeBracketIcon,
-  ArrowRightCircleIcon,
   QrCodeIcon,
   EyeIcon,
+  EyeSlashIcon,
   PlusIcon,
   CheckCircleIcon,
-  XCircleIcon,
   TrashIcon,
+  PencilIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import QRCode from "qrcode";
-import PublicReviews from "../../pages/PublicReviews";
+
 import toast from "react-hot-toast";
 import { AuthContext } from "../../context/AuthContext";
 import { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../service/axiosInstanse";
 import { API_PATHS } from "../../service/apiPaths";
 import { motion } from "framer-motion";
 
-const WidgetSettings = ({ business }) => {
-  const navigate = useNavigate();
+const WidgetSettings = () => {
   const {
     tenant,
-    widgets,
-    selectedWidget,
-    setSelectedWidget,
-    fetchWidgets,
     user,
     hasFeature,
   } = useContext(AuthContext);
 
+  const [widgets, setWidgets] = useState([]);
+  const [selectedWidget, setSelectedWidget] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [widgetToDelete, setWidgetToDelete] = useState(null);
+  const  [showIfreamModal,setShowIfreamModal] = useState(false);
   const [formData, setFormData] = useState(null);
   const [embedCode, setEmbedCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Fetch widgets from API
+  const fetchWidgets = async (showRefreshToast = false) => {
+    try {
+      if (showRefreshToast) setRefreshing(true);
+      const response = await axiosInstance.get(API_PATHS.WIDGETS.GET_WIDGETS);
+      setWidgets(response.data.widgets || []);
+      if (showRefreshToast) toast.success("Widgets refreshed!");
+    } catch (error) {
+      console.error("Error fetching widgets:", error);
+      toast.error("Failed to load widgets");
+    } finally {
+      if (showRefreshToast) setRefreshing(false);
+    }
+  };
 
-  // Fetch widgets on component mount
   useEffect(() => {
     fetchWidgets();
   }, []);
@@ -59,92 +72,72 @@ const WidgetSettings = ({ business }) => {
     try {
       const widgetData = {
         name: formData.name,
-        style: formData.style || formData.layout,
-        settings: formData.settings || formData.themeJson,
+        style: formData.style,
+        settings: formData.settings,
       };
 
       if (formData.id) {
-        const response = await axiosInstance.put(
+        await axiosInstance.put(
           API_PATHS.WIDGETS.UPDATE_WIDGET(formData.id),
           widgetData
         );
         toast.success("Widget updated successfully!");
-        setSelectedWidget({ ...formData, ...response.data.widget });
       } else {
-        const response = await axiosInstance.post(
+        await axiosInstance.post(
           API_PATHS.WIDGETS.CREATE_WIDGET,
           widgetData
         );
         toast.success("Widget created successfully!");
       }
-      await fetchWidgets();
+      fetchWidgets();
       setShowEditModal(false);
       setFormData(null);
     } catch (error) {
-      toast.error(error.response?.data?.message || "An error occurred. Please try again.");
+      toast.error("Failed to save widget");
       console.error("Form submission error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateWidget = async (key, value) => {
-    if (!selectedWidget) return;
-
-    const updatedWidget = { ...selectedWidget, [key]: value };
-    setSelectedWidget(updatedWidget);
-
-    try {
-      const updateData = {
-        name: updatedWidget.name,
-        style: updatedWidget.style,
-        settings: updatedWidget.settings || updatedWidget.settingsJson,
-      };
-
-      const response = await axiosInstance.put(
-        API_PATHS.WIDGETS.UPDATE_WIDGET(selectedWidget.id),
-        updateData
-      );
-      toast.success("Widget settings updated!");
-      await fetchWidgets(); // Refresh widgets list
-    } catch (error) {
-      setSelectedWidget(selectedWidget); // Revert changes
-      toast.error(error.response?.data?.message || "Failed to update widget.");
-      console.error("Error updating widget:", error);
-    }
-  };
-
   const toggleWidget = async (widget) => {
     try {
       const newIsActive = !widget.isActive;
-      const updateData = {
-        name: widget.name,
-        style: widget.style,
-        settings: widget.settings || widget.settingsJson,
-        isActive: newIsActive,
-      };
       
-      await axiosInstance.put(API_PATHS.WIDGETS.UPDATE_WIDGET(widget.id), updateData);
+      await axiosInstance.put(
+        API_PATHS.WIDGETS.UPDATE_WIDGET(widget.id),
+        { isActive: newIsActive }
+      );
+      
       toast.success(`Widget ${newIsActive ? "activated" : "deactivated"}!`);
-      await fetchWidgets();
+      fetchWidgets();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to toggle widget.");
+      toast.error("Failed to toggle widget");
       console.error("Error toggling widget:", error);
     }
   };
 
-  const deleteWidget = async (widgetId) => {
-    if (!window.confirm("Are you sure you want to delete this widget?")) return;
+  const handleDeleteClick = (widget) => {
+    setWidgetToDelete(widget);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!widgetToDelete) return;
 
     try {
-      await axiosInstance.delete(API_PATHS.WIDGETS.DELETE_WIDGET(widgetId));
+      await axiosInstance.delete(API_PATHS.WIDGETS.DELETE_WIDGET(widgetToDelete.id));
       toast.success("Widget deleted successfully!");
-      if (selectedWidget?.id === widgetId) {
-        setSelectedWidget(null);                                                  
+      
+      if (selectedWidget?.id === widgetToDelete.id) {
+        setSelectedWidget(null);
       }
-      await fetchWidgets();
+      
+      setShowDeleteModal(false);
+      setWidgetToDelete(null);
+      fetchWidgets();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to delete widget.");                           
+      toast.error("Failed to delete widget");
       console.error("Error deleting widget:", error);
     }
   };
@@ -152,15 +145,37 @@ const WidgetSettings = ({ business }) => {
   const fetchEmbedCode = async (widgetId) => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get(           
+      const response = await axiosInstance.get(
         API_PATHS.WIDGETS.GET_EMBED_CODE(widgetId)
       );
+      console.log(response);
+      
       setEmbedCode(response.data.embedCode);
-      setShowEmbedModal(true);          
+      setShowEmbedModal(true);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to fetch embed code.");
+      toast.error(
+        error.response?.data?.message || "Failed to fetch embed code."
+      );
       console.error("Error fetching embed code:", error);
-    } finally {     
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const fetchIframeCode = async (widgetId) => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(
+        API_PATHS.WIDGETS.GET_EMBED_CODE(widgetId)
+      );
+      setEmbedCode(response.data.iframeCode);
+      setShowIfreamModal(true);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to fetch embed code."
+      );
+      console.error("Error fetching embed code:", error);
+    } finally {
       setLoading(false);
     }
   };
@@ -250,16 +265,26 @@ const WidgetSettings = ({ business }) => {
                 Create, customize, and embed your review widgets
               </p>
             </div>
-            <div className="mt-6 lg:mt-0 grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold">{widgets.length}</div>
-                <div className="text-sm text-blue-100">Total Widgets</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold text-green-300">
-                  {widgets.filter((w) => w.isActive).length}
+            <div className="mt-6 lg:mt-0 flex items-center space-x-4">
+              <button
+                onClick={() => fetchWidgets(true)}
+                disabled={refreshing}
+                className="p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-colors"
+                title="Refresh widgets"
+              >
+                <ArrowPathIcon className={`w-6 h-6 text-white ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
+                  <div className="text-2xl font-bold">{widgets.length}</div>
+                  <div className="text-sm text-blue-100">Total Widgets</div>
                 </div>
-                <div className="text-sm text-blue-100">Active</div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
+                  <div className="text-2xl font-bold text-green-300">
+                    {widgets.filter((w) => w.isActive).length}
+                  </div>
+                  <div className="text-sm text-blue-100">Active</div>
+                </div>
               </div>
             </div>
           </div>
@@ -332,59 +357,122 @@ const WidgetSettings = ({ business }) => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 mb-8"
         >
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Widgets</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Your Widgets
+          </h2>
           {widgets.length === 0 ? (
             <div className="text-center py-12">
               <PuzzlePieceIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 text-lg">No widgets created yet</p>
-              <p className="text-gray-400">Create your first widget to get started</p>
+              <p className="text-gray-400">
+                Create your first widget to get started
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {widgets.map((widget) => (
-                <div
+                <motion.div
                   key={widget.id}
-                  className={`border-2 rounded-xl p-4 cursor-pointer transition-all duration-200 ${
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.02 }}
+                  className={`relative bg-white border-2 rounded-2xl p-6 cursor-pointer transition-all duration-300 shadow-lg hover:shadow-xl ${
                     selectedWidget?.id === widget.id
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
+                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-orange-50 ring-2 ring-blue-200"
+                      : "border-gray-200 hover:border-blue-300"
                   }`}
                   onClick={() => setSelectedWidget(widget)}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-800">{widget.name}</h3>
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          widget.isActive
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {widget.isActive ? "Active" : "Inactive"}
-                      </span>
+                  {/* Header with title and status */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg text-gray-800 mb-1 truncate">
+                        {widget.name}
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500 capitalize">
+                          {widget.style} Layout
+                        </span>
+                        <span className="text-gray-300">•</span>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            widget.isActive
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          <div className={`w-2 h-2 rounded-full mr-1.5 ${
+                            widget.isActive ? "bg-green-500" : "bg-gray-400"
+                          }`} />
+                          {widget.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Action buttons in top right */}
+                    <div className="flex items-center space-x-1 ml-2">
+                      {widget.isActive && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedWidget(widget);
+                          }}
+                          className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Live preview"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteWidget(widget.id);
+                          setFormData({
+                            id: widget.id,
+                            name: widget.name,
+                            style: widget.style,
+                            settings: widget.settings
+                          });
+                          setShowEditModal(true);
                         }}
-                        className="text-red-500 hover:text-red-700 p-1"
+                        className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit widget"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(widget);
+                        }}
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete widget"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 capitalize">
-                      {widget.style} Layout
-                    </span>
+
+                  {/* Widget preview/info */}
+                  <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="text-xs text-gray-500 mb-1">Theme</div>
+                    <div className="text-sm font-semibold text-gray-700 capitalize">
+                      {widget.settings?.theme || "Light"}
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="space-y-2">
                     <div className="flex space-x-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleWidget(widget);
                         }}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          widget.isActive
+                            ? "bg-red-100 text-red-700 hover:bg-red-200"
+                            : "bg-green-100 text-green-700 hover:bg-green-200"
+                        }`}
                       >
                         {widget.isActive ? "Deactivate" : "Activate"}
                       </button>
@@ -393,19 +481,33 @@ const WidgetSettings = ({ business }) => {
                           e.stopPropagation();
                           fetchEmbedCode(widget.id);
                         }}
-                        className="text-orange-600 hover:text-orange-800 text-sm font-medium"
+                        className="flex-1 px-3 py-2 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-lg text-sm font-semibold transition-colors"
                       >
                         Get Code
                       </button>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fetchIframeCode(widget.id);
+                      }}
+                      className="w-full px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg text-sm font-semibold transition-colors"
+                    >
+                      Get Iframe Code
+                    </button>
                   </div>
-                </div>
+
+                  {/* Selected indicator */}
+                  {selectedWidget?.id === widget.id && (
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                      <CheckCircleIcon className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                </motion.div>
               ))}
             </div>
           )}
         </motion.div>
-
-
 
         {/* Selected Widget Preview */}
         {selectedWidget && (
@@ -423,97 +525,6 @@ const WidgetSettings = ({ business }) => {
                 Live preview of how your widget will appear on your website
               </p>
             </div>
-            {/* <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              Configure "{selectedWidget.name}"
-            </h2> */}
-            {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Widget Layout
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {layouts.map((layout) => (
-                    <button
-                      key={layout.value}
-                      onClick={() => handleUpdateWidget("layout", layout.value)}
-                      disabled={!hasFeature(layout.feature)}
-                      className={`px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
-                        ${
-                          selectedWidget.layout === layout.value
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                        } ${
-                        !hasFeature(layout.feature)
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
-                      }
-                      `}
-                    >
-                      {layout.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Widget Theme
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {themes.map((theme) => (
-                    <button
-                      key={theme.value}
-                      onClick={() =>
-                        handleUpdateWidget("themeJson", {
-                          ...selectedWidget.themeJson,
-                          ...theme.themeJson,
-                        })
-                      }
-                      className={`flex items-center justify-center px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
-                        ${
-                          selectedWidget.themeJson?.theme === theme.value
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                        }
-                      `}
-                    >
-                      {theme.icon}
-                      <span className="ml-2">{theme.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg mt-6">
-              <span className="text-sm font-medium text-gray-700">
-                Autoplay Videos
-              </span>
-              <button
-                onClick={() =>
-                  handleUpdateWidget("themeJson", {
-                    ...selectedWidget.themeJson,
-                    autoplay: !selectedWidget.themeJson?.autoplay,
-                  })
-                }
-                className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-full
-                  ${
-                    selectedWidget.themeJson?.autoplay
-                      ? "bg-orange-500"
-                      : "bg-gray-200"
-                  }
-                `}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`pointer-events-none inline-block h-5 w-5 bg-white shadow transform ring-0 transition ease-in-out duration-200 rounded-full
-                    ${
-                      selectedWidget.themeJson?.autoplay
-                        ? "translate-x-5"
-                        : "translate-x-0"
-                    }
-                  `}
-                ></span>
-              </button>
-            </div> */}
             <div className="p-6">
               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                 <div className="mb-4 flex items-center justify-between">
@@ -522,13 +533,13 @@ const WidgetSettings = ({ business }) => {
                       Layout:
                     </span>
                     <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-                      {selectedWidget.layout}
+                      {selectedWidget.style}
                     </span>
                     <span className="text-sm font-semibold text-gray-700">
                       Theme:
                     </span>
                     <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">
-                      {selectedWidget.themeJson?.theme || "Light"}
+                      {selectedWidget.settings?.theme || "Light"}
                     </span>
                   </div>
                   {!hasFeature("widget_embed") && (
@@ -539,8 +550,35 @@ const WidgetSettings = ({ business }) => {
                     </div>
                   )}
                 </div>
-                <div className="bg-white rounded-xl p-6 border-2 border-dashed border-gray-300">
-                  <PublicReviews />
+                <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 overflow-hidden">
+                  {selectedWidget.isActive ? (
+                    <iframe
+                      src={`${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}/embed/${selectedWidget.id}`}
+                      width="100%"
+                      height="500"
+                      frameBorder="0"
+                      className="w-full"
+                      title={`${selectedWidget.name} Widget Preview`}
+                    />
+                  ) : (
+                    <div className="p-12 text-center">
+                      <div className="text-gray-400 mb-4">
+                        <EyeSlashIcon className="w-16 h-16 mx-auto" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        Widget Preview Unavailable
+                      </h3>
+                      <p className="text-gray-500 mb-4">
+                        This widget is currently inactive. Activate it to see the live preview.
+                      </p>
+                      <button
+                        onClick={() => toggleWidget(selectedWidget)}
+                        className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg font-semibold transition-colors"
+                      >
+                        Activate Widget
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -637,7 +675,7 @@ const WidgetSettings = ({ business }) => {
 
       {/* --- Modal for Creating/Editing a Widget --- */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
           <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
             <h4 className="text-2xl font-bold text-gray-800 mb-6 text-center">
               {formData?.id ? "Edit Widget" : "Create New Widget"}
@@ -779,15 +817,12 @@ const WidgetSettings = ({ business }) => {
           </div>
         </div>
       )}
-
       {/* --- Modal for Embed Codes --- */}
       {showEmbedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
           <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h4 className="text-2xl font-bold text-gray-800">
-                Embed Code
-              </h4>
+              <h4 className="text-2xl font-bold text-gray-800">Embed Code</h4>
               <button
                 onClick={() => {
                   setShowEmbedModal(false);
@@ -822,13 +857,15 @@ const WidgetSettings = ({ business }) => {
                 <p className="text-gray-600 mb-6">
                   Copy the code below to add this widget to your website.
                 </p>
-                
+
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     HTML Embed Code
                   </p>
                   <div className="relative">
-                    <pre className="w-full p-3 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap max-h-40">{embedCode}</pre>
+                    <pre className="w-full p-3 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap max-h-40">
+                      {embedCode}
+                    </pre>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(embedCode);
@@ -843,9 +880,117 @@ const WidgetSettings = ({ business }) => {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-gray-600">Failed to load embed code. Please try again.</p>
+                <p className="text-gray-600">
+                  Failed to load embed code. Please try again.
+                </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+     {/* --- Modal for Ifream Codes --- */}
+      {showIfreamModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="text-2xl font-bold text-gray-800">Iframe Code</h4>
+              <button
+                onClick={() => {
+                  setShowIfreamModal(false);
+                  setEmbedCode("");
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-600 mt-2">Loading Iframe code...</p>
+              </div>
+            ) : embedCode ? (
+              <div className="space-y-4">
+                <p className="text-gray-600 mb-6">
+                  Copy the code below to add this widget to your website.
+                </p>
+
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    HTML Ifream Code
+                  </p>
+                  <div className="relative">
+                    <pre className="w-full p-3 bg-white rounded-md border border-gray-300 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap max-h-40">
+                      {embedCode}
+                    </pre>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(embedCode);
+                        toast.success("Embed code copied!");
+                      }}
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-orange-500 bg-white rounded"
+                    >
+                      <ArrowUpOnSquareStackIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600">
+                  Failed to load Iframe code. Please try again.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <TrashIcon className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Delete Widget
+              </h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Are you sure you want to delete "{widgetToDelete?.name}"? This action cannot be undone.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setWidgetToDelete(null);
+                  }}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

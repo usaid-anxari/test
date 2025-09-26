@@ -21,6 +21,9 @@ const GoogleReviews = () => {
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Fetch connection status and reviews on component mount
   useEffect(() => {
@@ -40,13 +43,18 @@ const GoogleReviews = () => {
     }
   };
 
-  const fetchGoogleReviews = async () => {
+  const fetchGoogleReviews = async (showRefreshToast = false) => {
     try {
+      if (showRefreshToast) setRefreshing(true);
       const response = await axiosInstance.get(API_PATHS.GOOGLE.GET_REVIEWS);
       setGoogleReviews(response.data.reviews || []);
+      if (showRefreshToast) toast.success('Google reviews refreshed!');
     } catch (error) {
       console.error('Error fetching Google reviews:', error);
       setGoogleReviews([]);
+      if (showRefreshToast) toast.error('Failed to refresh reviews');
+    } finally {
+      if (showRefreshToast) setRefreshing(false);
     }
   };
 
@@ -112,6 +120,24 @@ const GoogleReviews = () => {
               <p className="text-blue-100 text-lg font-medium">
                 Import and display your Google Business reviews alongside TrueTestify reviews
               </p>
+            </div>
+            <div className="mt-6 lg:mt-0 flex items-center space-x-4">
+              <button
+                onClick={() => fetchGoogleReviews(true)}
+                disabled={refreshing}
+                className="p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-colors"
+                title="Refresh Google reviews"
+              >
+                <ArrowPathIcon className={`w-6 h-6 text-white ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+              {connectionStatus?.connected && (
+                <button
+                  onClick={() => setShowSubmitModal(true)}
+                  className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-colors text-white font-medium"
+                >
+                  Submit Google Review
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -203,10 +229,11 @@ const GoogleReviews = () => {
             </h2>
             {googleReviews.length > 0 && (
               <button
-                onClick={fetchGoogleReviews}
-                className="flex items-center px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                onClick={() => fetchGoogleReviews(true)}
+                disabled={refreshing}
+                className="flex items-center px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
               >
-                <ArrowPathIcon className="w-4 h-4 mr-2" />
+                <ArrowPathIcon className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </button>
             )}
@@ -292,6 +319,38 @@ const GoogleReviews = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Submit Google Review Modal */}
+        {showSubmitModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Submit Review to Google
+              </h3>
+              <p className="text-gray-600 mb-6">
+                This will redirect you to your Google Business Profile where customers can leave reviews directly.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowSubmitModal(false)}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${connectionStatus?.placeId || 'YOUR_PLACE_ID'}`;
+                    window.open(googleReviewUrl, '_blank');
+                    setShowSubmitModal(false);
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Open Google Reviews
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

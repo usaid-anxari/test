@@ -3,7 +3,7 @@ export const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:4000
 // API Paths for TrueTestify MVP - Aligned with Backend
 export const API_PATHS = {
   AUTH: {
-    LOGIN: "/api/auth/login",
+    CHECK_USER: "/users/me",
     REGISTER: "/api/auth/register",
     PROFILE: "/auth/profile",
     SYNC: "/auth/sync",
@@ -40,6 +40,7 @@ export const API_PATHS = {
   BILLING: {
     GET_PRICING_PLANS: "/api/billing/pricing-plans",
     GET_BILLING_ACCOUNT: "/api/billing/account",
+    REFRESH_BILLING_ACCOUNT: "/api/billing/refresh",
     CREATE_CHECKOUT_SESSION: "/api/billing/checkout",
     CREATE_PORTAL_SESSION: "/api/billing/portal",
     GET_STORAGE_STATUS: "/api/billing/storage/status",
