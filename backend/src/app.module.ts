@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { BusinessModule } from './business/business.module';
@@ -18,6 +18,7 @@ import { EmbedController } from './embed/embed.controller';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from './billing/billing.module';
 import { EmailModule } from './email/email.module';
+import { SubscriptionStatusMiddleware } from './common/middleware/subscription-status.middleware';
 
 
 @Module({
@@ -57,4 +58,10 @@ import { EmailModule } from './email/email.module';
   controllers: [AppController, EmbedController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(SubscriptionStatusMiddleware)
+      .forRoutes('*');
+  }
+}

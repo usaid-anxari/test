@@ -109,6 +109,22 @@ export class AnalyticsController {
     );
   }
 
+  @Post('track')
+  async trackWidgetEvent(
+    @Body() trackEventDto: TrackEventDto,
+    @Request() req,
+  ) {
+    const userAgent = req.headers['user-agent'];
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    
+    return this.analyticsService.trackEvent(
+      trackEventDto.businessId,
+      trackEventDto,
+      userAgent,
+      ipAddress,
+    );
+  }
+
   private getDateRange(query: AnalyticsQueryDto): { startDate: Date; endDate: Date } {
     const endDate = query.endDate ? new Date(query.endDate) : new Date();
     const startDate = query.startDate ? new Date(query.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

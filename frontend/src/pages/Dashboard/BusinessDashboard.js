@@ -1,19 +1,20 @@
-import { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import ReviewCard from "../../components/ReviewCard";
 import axiosInstance from "../../service/axiosInstanse";
 import { API_PATHS } from "../../service/apiPaths";
-import { AuthContext } from "../../context/AuthContext";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useAuth0 } from "@auth0/auth0-react";
+import SubscriptionBanner from "../../components/SubscriptionBanner";
+import useSubscription from "../../hooks/useSubscription";
 
 const BusinessDashboard = () => {
   const { isAuthenticated } = useAuth0();
-  const navigate = useNavigate();
-
+  const subscription = useSubscription();
+  console.log({ subscription }); // Debug log
+  
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +22,6 @@ const BusinessDashboard = () => {
   const [filter, setFilter] = useState("all");
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState("");
-  console.log(business);
   
   // Default theme values
   const DEFAULT_PRIMARY = "#f97316";
@@ -172,13 +172,11 @@ const BusinessDashboard = () => {
   );
 
   // Filter reviews
-  console.log("Reviews State:", reviews); // Debug log
   const filteredReviews = Array.isArray(reviews)
     ? filter === "all"
       ? reviews
       : reviews.filter((review) => review.status === filter)
     : [];
-  console.log("Filtered Reviews:", filteredReviews); // Debug log
 
   // Render review layouts
   const renderLayout = () => {
@@ -431,6 +429,16 @@ const BusinessDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          {/* Subscription Banner */}
+          <div className="p-6 pb-0">
+            <SubscriptionBanner
+              subscriptionStatus={subscription.status}
+              tier={subscription.tier}
+              storageUsage={subscription.storageUsage}
+              trialActive={subscription.trialActive}
+              trialDaysLeft={subscription.trialDaysLeft}
+            />
+          </div>
           {/* Executive Profile Section */}
           <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-8 border-b border-gray-100">
             {loading ? (

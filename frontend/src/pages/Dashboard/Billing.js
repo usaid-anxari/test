@@ -1,5 +1,4 @@
-import { useContext, useMemo, useState, useEffect } from "react";
-
+import {  useState, useEffect, useCallback } from "react";
 import axiosInstance from "../../service/axiosInstanse";
 import { API_PATHS } from "../../service/apiPaths";
 import toast from "react-hot-toast";
@@ -18,34 +17,16 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth0 } from "@auth0/auth0-react";
+import useSubscription from "../../hooks/useSubscription"
 
-const InvoiceList = () => {
-  const invoices = JSON.parse(localStorage.getItem("invoices") || "[]");
-
-  const downloadInvoice = (invoice) => {
-    const content = `
-INVOICE
-Invoice ID: ${invoice.id}
-Date: ${new Date(invoice.date).toLocaleDateString()}
-Plan: ${invoice.plan}
-Amount: $${invoice.amount} ${invoice.currency}
-Customer: ${invoice.name}
-Email: ${invoice.email}
-
-Thank you for your business!
-TrueTestify
-    `.trim();
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `invoice-${invoice.id}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("Invoice downloaded successfully!");
+const InvoiceList = ({ invoices, onDownload }) => {
+  const downloadInvoice = async (invoice) => {
+    try {
+      await onDownload(invoice.id);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download invoice');
+    }
   };
 
   if (invoices.length === 0) {
@@ -84,7 +65,7 @@ TrueTestify
                 <DocumentTextIcon className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h4 className="font-bold text-gray-800">{invoice.id}</h4>
+                <h4 className="font-bold text-gray-800">{invoice.invoiceNumber}</h4>
                 <p className="text-sm text-gray-500">
                   {new Date(invoice.date).toLocaleDateString()}
                 </p>
@@ -93,22 +74,27 @@ TrueTestify
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 flex-1 lg:mx-8">
               <div className="text-center lg:text-left">
-                <div className="text-sm text-gray-500">Plan</div>
+                <div className="text-sm text-gray-500">Description</div>
                 <div className="font-semibold text-gray-800">
-                  {invoice.plan}
+                  {invoice.description}
                 </div>
               </div>
               <div className="text-center lg:text-left">
                 <div className="text-sm text-gray-500">Amount</div>
                 <div className="font-semibold text-gray-800">
-                  ${invoice.amount} {invoice.currency}
+                  ${invoice.amount.toFixed(2)}
                 </div>
               </div>
               <div className="text-center lg:text-left col-span-2 lg:col-span-1">
                 <div className="text-sm text-gray-500">Status</div>
-                <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                  invoice.status === 'succeeded' ? 'bg-green-100 text-green-800' :
+                  invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
                   <CheckCircleIcon className="w-4 h-4 mr-1" />
-                  Paid
+                  {invoice.status === 'succeeded' ? 'Paid' : 
+                   invoice.status === 'pending' ? 'Pending' : 'Failed'}
                 </div>
               </div>
             </div>
@@ -129,156 +115,137 @@ TrueTestify
 
 const Billing = () => {
   const navigate = useNavigate();
+  const subscription = useSubscription();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth0();
   const paymentStatus = searchParams.get('status') || searchParams.get('payment');
   const paymentReason = searchParams.get('reason');
   const sessionId = searchParams.get('session_id');
-  const [billingAccount, setBillingAccount] = useState(null);
   const [pricingPlans, setPricingPlans] = useState([]);
-  const [storageStatus, setStorageStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    cardNumber: "",
-    expMonth: "",
-    expYear: "",
-    cvc: "",
-    address: "",
-    city: "",
-    country: "",
-  });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  
+  // Extract data from subscription hook
+  const billingAccount = {
+    planName: subscription?.tier || "free",
+    planPrice: subscription?.tier === 'starter' ? 19 : 
+               subscription?.tier === 'professional' ? 49 : 
+               subscription?.tier === 'enterprise' ? 99 : 0,
+    status: subscription?.status || "active",
+    storageLimitGb: parseFloat(subscription?.storageUsage?.split('/')[1] || '1'),
+    storageUsageGb: parseFloat(subscription?.storageUsage?.split('/')[0] || '0'),
+    isTrialActive: subscription?.trialActive || false,
+    daysUntilTrialEnd: subscription?.trialDaysLeft || 0,
+    trialEndsAt: new Date(Date.now() + (subscription?.trialDaysLeft || 0) * 24 * 60 * 60 * 1000)
+  };
+  
+  const storageStatus = {
+    storageUsageGb: parseFloat(subscription?.storageUsage?.split('/')[0] || '0'),
+    storageLimitGb: parseFloat(subscription?.storageUsage?.split('/')[1] || '1'),
+    storageUsagePercentage: subscription?.storagePercentage || 0,
+    isExceeded: subscription?.storagePercentage > 100
+  };
+  
+  const [invoices, setInvoices] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  
+  // Fetch real invoices from API
+  const fetchInvoices = useCallback(async () => {
+    try {
+      const response = await axiosInstance.get(API_PATHS.BILLING.GET_INVOICES || '/api/billing/invoices');
+      setInvoices(response.data.invoices || []);
+    } catch (error) {
+      console.error('Failed to fetch invoices:', error);
+      setInvoices([]);
+    }
+  }, []);
+  const loading = subscription?.loading || false;
+  console.log({storageStatus});
+  console.log({billingAccount});
+  console.log({subscription});
+  console.log({pricingPlans});
+  console.log({invoices});
 
   // Handle payment success/failure
   useEffect(() => {
     if (paymentStatus === 'success' && sessionId) {
       toast.success('Payment successful! Your subscription has been activated.');
-      // Refresh billing data to show updated plan
       setTimeout(() => {
-        fetchBillingData(true);
-        // Clear URL parameters after data refresh
-        setTimeout(() => {
-          navigate('/dashboard/billing', { replace: true });
-        }, 500);
-      }, 500);
+        navigate('/dashboard/billing', { replace: true });
+      }, 1000);
     } else if (paymentStatus === 'cancelled') {
       toast.error('Payment was cancelled. You can try again anytime.');
-      // Clear URL parameters
       navigate('/dashboard/billing', { replace: true });
     }
   }, [paymentStatus, sessionId, navigate]);
 
-  // Fetch billing data
-  const fetchBillingData = async (showRefreshToast = false) => {
+  // Refresh pricing plans only
+  const refreshData = useCallback(async () => {
+    setRefreshing(true);
     try {
-      if (showRefreshToast) setRefreshing(true);
-      setLoading(!showRefreshToast);
-
-        // Fetch billing account
-        try {
-          const billingResponse = await axiosInstance.get(
-            showRefreshToast ? API_PATHS.BILLING.REFRESH_BILLING_ACCOUNT : API_PATHS.BILLING.GET_BILLING_ACCOUNT
-          );
-          const data = billingResponse.data;
-          setBillingAccount({
-            planName: data.pricingTier || "FREE",
-            planPrice: data.monthlyPriceCents ? data.monthlyPriceCents / 100 : 0,
-            status: data.billingStatus || "active",
-            storageLimitGb: data.storageLimitGb || 1,
-            storageUsageGb: data.storageUsageGb || 0,
-            isTrialActive: data.isTrialActive,
-            daysUntilTrialEnd: data.daysUntilTrialEnd,
-            trialEndsAt: data.trialEndsAt
-          });
-        } catch (billingError) {
-          console.log("No billing account found:", billingError);
-          // Set default billing account for free tier
-          setBillingAccount({
-            planName: "FREE",
-            planPrice: 0,
-            status: "trialing",
-            storageLimitGb: 1,
-            storageUsageGb: 0,
-            isTrialActive: true,
-            daysUntilTrialEnd: 14
-          });
-        }
-
-        // Fetch pricing plans
-        try {
-          const plansResponse = await axiosInstance.get(
-            API_PATHS.BILLING.GET_PRICING_PLANS
-          );
-          console.log("plansResponse:", JSON.stringify(plansResponse.data));
-          
-          setPricingPlans(plansResponse.data.map(plan => ({
-            id: plan.tier.toLowerCase(),
-            name: plan.name,
-            tier: plan.tier,
-            price: plan.monthlyPriceCents / 100,
-            storageLimit: plan.storageLimitGb,
-            features: plan.features,
-            stripePriceId: plan.stripePriceId,
-            isPopular: plan.isPopular,
-            description: plan.description
-          })));
-        } catch (plansError) {
-          console.log("Pricing plans not available:", plansError);
-          // Set default plans
-          setPricingPlans([
-            { id: "free", name: "Free", tier: "FREE", price: 0, storageLimit: 1, features: ["1GB storage"] },
-            { id: "starter", name: "Starter", tier: "STARTER", price: 19, storageLimit: 10, features: ["10GB storage"], isPopular: true },
-            { id: "professional", name: "Professional", tier: "PROFESSIONAL", price: 49, storageLimit: 50, features: ["50GB storage"] },
-            { id: "enterprise", name: "Enterprise", tier: "ENTERPRISE", price: 99, storageLimit: 200, features: ["200GB storage"] },
-          ]);
-        }
-
-        // Fetch storage status
-        try {
-          const storageResponse = await axiosInstance.get(
-            API_PATHS.BILLING.GET_STORAGE_STATUS
-          );
-          console.log("storageResponse:", JSON.stringify(storageResponse.data));
-          
-          setStorageStatus(storageResponse.data);
-        } catch (storageError) {
-          console.log("Storage status not available:", storageError);
-          setStorageStatus({
-            storageUsageGb: 0.1,
-            storageLimitGb: billingAccount?.storageLimitGb || 1,
-            usagePercentage: 10,
-            isExceeded: false,
-            canUpload: true
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching billing data:", error);
-        toast.error("Failed to load billing information");
-      } finally {
-        setLoading(false);
-        if (showRefreshToast) {
-          setRefreshing(false);
-          toast.success("Billing data refreshed!");
-        }
-      }
-    };
-
-  // Fetch billing data
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchBillingData();
+      const plansResponse = await axiosInstance.get(API_PATHS.BILLING.GET_PRICING_PLANS);
+      const plansData = plansResponse.data.map(plan => ({
+        id: plan.tier.toLowerCase(),
+        name: plan.name,
+        tier: plan.tier,
+        price: plan.monthlyPriceCents / 100,
+        storageLimit: plan.storageLimitGb,
+        features: plan.features,
+        stripePriceId: plan.stripePriceId,
+        isPopular: plan.isPopular,
+        description: plan.description
+      }));
+      setPricingPlans(plansData);
+      await fetchInvoices();
+      toast.success('Data refreshed!');
+    } catch (error) {
+      // Set default plans if API fails
+      const defaultPlans = [
+        { id: "free", name: "Free", tier: "FREE", price: 0, storageLimit: 1, features: ["1GB storage"] },
+        { id: "starter", name: "Starter", tier: "STARTER", price: 19, storageLimit: 10, features: ["10GB storage"], isPopular: true },
+        { id: "professional", name: "Professional", tier: "PROFESSIONAL", price: 49, storageLimit: 50, features: ["50GB storage"] },
+        { id: "enterprise", name: "Enterprise", tier: "ENTERPRISE", price: 99, storageLimit: 200, features: ["200GB storage"] },
+      ];
+      setPricingPlans(defaultPlans);
+    } finally {
+      setRefreshing(false);
     }
-  }, [isAuthenticated]);
+  }, [fetchInvoices]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+  // Download invoice PDF from API
+  const downloadInvoice = async (invoiceId) => {
+    try {
+      const response = await axiosInstance.get(
+        `/api/billing/invoices/${invoiceId}/download`,
+        { responseType: 'blob' }
+      );
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Invoice PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error('Failed to download invoice');
+    }
   };
 
+  // Initialize pricing plans and invoices on mount
+  useEffect(() => {
+    if (isAuthenticated && !loading && !dataLoaded) {
+      refreshData();
+      setDataLoaded(true);
+    }
+  }, [isAuthenticated, loading, dataLoaded, refreshData]);
+
+  // Loading
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 flex items-center justify-center">
@@ -290,8 +257,10 @@ const Billing = () => {
     );
   }
   
-  const isCardValid = true;
+  // Handle plan selection and checkout
   const handlePlanSelect = async (plan) => {
+    console.log('🎯 Plan selected:', plan);
+    
     if (plan.tier === 'FREE') {
       toast.error('Free plan is already active');
       return;
@@ -299,8 +268,10 @@ const Billing = () => {
 
     setIsProcessing(true);
     toast.loading('Creating checkout session...');
+    console.log('💳 Starting checkout process for:', plan.tier);
 
     try {
+      console.log('📡 Sending checkout request to:', API_PATHS.BILLING.CREATE_CHECKOUT_SESSION);
       const checkoutResponse = await axiosInstance.post(
         API_PATHS.BILLING.CREATE_CHECKOUT_SESSION,
         {
@@ -310,16 +281,31 @@ const Billing = () => {
         }
       );
 
+      console.log('✅ Checkout response:', checkoutResponse.data);
       toast.dismiss();
       
       if (checkoutResponse.data.checkoutUrl) {
+        console.log('🔄 Redirecting to:', checkoutResponse.data.checkoutUrl);
+        
+        // Check if it's a development success URL (immediate redirect)
+        if (checkoutResponse.data.checkoutUrl.includes('payment=success')) {
+          console.log('🚀 Development mode - immediate success');
+          toast.success('Payment successful! Plan updated.');
+          // Force refresh billing data and invoices
+          setTimeout(() => {
+            setDataLoaded(false); // This will trigger useEffect to reload data
+          }, 500);
+          return;
+        }
+        
         window.location.href = checkoutResponse.data.checkoutUrl;
         return;
       }
 
       toast.error('Failed to create checkout session');
     } catch (error) {
-      console.error('Checkout error:', error);
+      console.error('❌ Checkout error:', error);
+      console.error('Error response:', error.response?.data);
       toast.dismiss();
       toast.error(error.response?.data?.message || 'Failed to start checkout process');
     } finally {
@@ -327,46 +313,6 @@ const Billing = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!selectedPlan) {
-      toast.error("Please select a plan first");
-      return;
-    }
-    
-    if (!isCardValid) {
-      toast.error("Please fill in all required fields correctly");
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      // Create checkout session with Stripe
-      const checkoutResponse = await axiosInstance.post(
-        API_PATHS.BILLING.CREATE_CHECKOUT_SESSION,
-        {
-          pricingTier: selectedPlan.tier,
-          successUrl: window.location.origin + "/billing?payment=success",
-          cancelUrl: window.location.origin + "/billing?payment=cancelled",
-        }
-      );
-
-      // Redirect to Stripe checkout
-      if (checkoutResponse.data.checkoutUrl) {
-        window.location.href = checkoutResponse.data.checkoutUrl;
-        return;
-      }
-
-      toast.error("Failed to create checkout session");
-    } catch (error) {
-      console.error('Checkout error:', error);
-      toast.error(error.response?.data?.message || "Payment failed. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
@@ -384,10 +330,10 @@ const Billing = () => {
             </div>
             <div className="mt-6 lg:mt-0 flex items-center space-x-4">
               <button
-                onClick={() => fetchBillingData(true)}
+                onClick={refreshData}
                 disabled={refreshing}
                 className="p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-colors"
-                title="Refresh billing data"
+                title="Refresh data"
               >
                 <ArrowPathIcon className={`w-6 h-6 text-white ${refreshing ? 'animate-spin' : ''}`} />
               </button>
@@ -463,22 +409,22 @@ const Billing = () => {
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-gray-700">
-                    {storageStatus.storageUsageGb.toFixed(2)} GB of {storageStatus.storageLimitGb} GB used
+                    {storageStatus.storageUsageGb} GB of {storageStatus.storageLimitGb} GB used
                   </span>
                   <span className={`text-sm font-bold ${
                     storageStatus.isExceeded ? 'text-red-600' : 
-                    storageStatus.usagePercentage > 80 ? 'text-orange-600' : 'text-green-600'
+                    storageStatus.storageUsagePercentage > 80 ? 'text-orange-600' : 'text-green-600'
                   }`}>
-                    {storageStatus.usagePercentage.toFixed(1)}%
+                    {storageStatus.storageUsagePercentage}%
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div 
                     className={`h-3 rounded-full transition-all duration-300 ${
                       storageStatus.isExceeded ? 'bg-red-500' :
-                      storageStatus.usagePercentage > 80 ? 'bg-orange-500' : 'bg-green-500'
+                      storageStatus.storageUsagePercentage > 80 ? 'bg-orange-500' : 'bg-green-500'
                     }`}
-                    style={{ width: `${Math.min(storageStatus.usagePercentage, 100)}%` }}
+                    style={{ width: `${Math.min(storageStatus.storageUsagePercentage, 100)}%` }}
                   />
                 </div>
               </div>
@@ -624,7 +570,7 @@ const Billing = () => {
                   </svg>
                 </div>
                 <span className="text-gray-800 font-semibold">
-                  {storageStatus?.storageUsageGb?.toFixed(2) || '0.00'} GB / {billingAccount?.storageLimitGb || 1} GB
+                  {storageStatus?.storageUsageGb || '0.00'} GB / {billingAccount?.storageLimitGb || 1} GB
                 </span>
               </div>
             </div>
@@ -860,7 +806,7 @@ const Billing = () => {
           </div>
 
           <div className="p-6">
-            <InvoiceList />
+            <InvoiceList invoices={invoices} onDownload={downloadInvoice} />
           </div>
         </motion.div>
       </div>

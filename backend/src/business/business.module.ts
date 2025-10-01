@@ -12,6 +12,8 @@ import { MediaAsset } from '../review/entities/media-asset.entity';
 import { GoogleReview } from '../google/entities/google-review.entity';
 import { S3Service } from '../common/s3/s3.service';
 import { ConfigModule } from '@nestjs/config';
+import { BillingModule } from '../billing/billing.module';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @Module({
   imports: [
@@ -19,8 +21,9 @@ import { ConfigModule } from '@nestjs/config';
     forwardRef(() => UsersModule),
     forwardRef(() => AuthModule),
     ConfigModule,
+    BillingModule,
   ],
-  providers: [BusinessService, S3Service], // Add S3Service here
+  providers: [BusinessService, S3Service, SubscriptionGuard],
   controllers: [BusinessController],
   exports: [BusinessService],
 })

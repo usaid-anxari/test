@@ -12,6 +12,7 @@ import {
   Query,
   NotFoundException,
   Get,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ReviewsService } from './review.service';
@@ -21,11 +22,15 @@ import { multerOptionsMemory } from '../common/multer/memory-storage';
 import { Readable } from 'stream';
 import { ApiConsumes, ApiBody, ApiTags } from '@nestjs/swagger';
 import { MediaAsset } from './entities/media-asset.entity';
+import { BillingService } from '../billing/billing.service';
 
 @ApiTags('public-reviews')
 @Controller('api/public')
 export class ReviewsController {
-  constructor(private readonly reviewsService: ReviewsService) {}
+  constructor(
+    private readonly reviewsService: ReviewsService,
+    private readonly billingService: BillingService,
+  ) {}
 
   // Single endpoint to accept text or file + form fields.
   // Use multipart/form-data if file is included.
@@ -61,6 +66,14 @@ export class ReviewsController {
     const biz = await this.reviewsService.findBusinessBySlug(slug);
     if (!biz) {
       throw new BadRequestException('Business not found');
+    }
+
+    // 1.5) Check storage limits for file uploads
+    if (file && (body.type === 'video' || body.type === 'audio')) {
+      const isStorageExceeded = await this.billingService.isStorageExceeded(biz.id);
+      if (isStorageExceeded) {
+        throw new ForbiddenException('Storage limit exceeded. Please upgrade your plan to continue accepting reviews.');
+      }
     }
 
     // 2) Milestone 5: Check if text reviews are enabled

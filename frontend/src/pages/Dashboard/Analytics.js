@@ -13,7 +13,6 @@ import {
   PresentationChartLineIcon,
 } from "@heroicons/react/16/solid";
 import AnalyticsCard from "../../components/AnalyticsCard";
-import { MOCK_REVIEWS } from "../../assets/mockData";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import axiosInstance from "../../service/axiosInstanse";
@@ -33,6 +32,8 @@ const Analytics = () => {
   const [widgetAnalytics, setWidgetAnalytics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
+  
+  console.log(widgets);
   
   // Fetch business and analytics data
   useEffect(() => {
@@ -54,7 +55,8 @@ const Analytics = () => {
             setAnalytics(analyticsResponse?.data);            
             // Fetch widgets
             const widgetsResponse = await axiosInstance.get(API_PATHS.WIDGETS.GET_WIDGETS);
-            setWidgets(Array.isArray(widgetsResponse.data) ? widgetsResponse.data : []);
+            setWidgets(widgetsResponse?.data ? widgetsResponse?.data.widgets : []);
+            console.log("Fetched widgets:", widgetsResponse.data.widgets);
             
             // Fetch widget performance data
             const widgetsArray = Array.isArray(widgetsResponse.data) ? widgetsResponse.data : [];
@@ -106,7 +108,7 @@ const Analytics = () => {
     }
   }, [isAuthenticated]);
 
-  // Calculate metrics from actual data
+  // Use actual API data
   const data = {
     videosCollected: reviews.filter((r) => r.type === "video").length,
     audioCollected: reviews.filter((r) => r.type === "audio").length,
@@ -114,19 +116,19 @@ const Analytics = () => {
     widgetViews: analytics?.totalViews || 0,
     widgetClicks: analytics?.totalClicks || 0,
     totalSubmissions: analytics?.totalSubmissions || 0,
-    storageUsed: storageStatus?.storageUsageGb || 0,
-    storageLimit: storageStatus?.storageLimitGb || 1,
-    activeWidgets: Array.isArray(widgets) ? widgets.filter(w => w.isActive).length : 0,
+    storageUsed: analytics?.storageUsed || 0,
+    storageLimit: analytics?.storageLimit || 1,
+    activeWidgets: Array.isArray(widgets) ? widgets.filter(w => w.isActive === true).length : 0,
   };
 
-  // Mock trend data for charts (will be replaced with real data later)
+  // Generate trend data from analytics
   const trendData = {
-    reviews: [12, 19, 15, 25, 22, 30, 28],
-    views: [150, 230, 180, 320, 290, 410, 380],
-    engagement: [65, 72, 68, 78, 75, 82, 79]
+    reviews: analytics?.reviewTrend || [],
+    views: analytics?.viewTrend || [],
+    engagement: analytics?.engagementTrend || []
   };
 
-  const totalReviews = data.videosCollected + data.audioCollected + data.textCollected;
+  const totalReviews = analytics?.totalReviews || (data.videosCollected + data.audioCollected + data.textCollected);
   const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + (r.rating || 5), 0) / reviews.length).toFixed(1) : '0.0';
   const storagePercentage = data.storageLimit > 0 ? ((data.storageUsed / data.storageLimit) * 100).toFixed(1) : '0';
 
@@ -345,31 +347,30 @@ const Analytics = () => {
           {/* Widget Performance */}
           <ChartCard title="Widget Performance">
             <div className="space-y-4">
-              {widgetAnalytics.length > 0 ? (
-                widgetAnalytics.slice(0, 4).map((widget) => {
-                  const conversionRate = widget.performance?.conversionRate || 0;
+              {analytics?.widgetPerformance?.length > 0 ? (
+                analytics.widgetPerformance.slice(0, 4).map((widget) => {
                   return (
-                    <div key={widget.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div key={widget.widgetId} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                       <div className="flex items-center space-x-3">
                         <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
                           <PresentationChartLineIcon className="w-5 h-5" />
                         </div>
                         <div>
-                          <div className="font-medium text-gray-800">{widget.name}</div>
-                          <div className="text-sm text-gray-500">{widget.type} widget</div>
+                          <div className="font-medium text-gray-800">{widget.widgetName}</div>
+                          <div className="text-sm text-gray-500">{widget.widgetName.toLowerCase()} widget</div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4 text-sm">
                         <div className="text-center">
-                          <div className="font-semibold text-blue-600">{widget.performance?.views || 0}</div>
+                          <div className="font-semibold text-blue-600">{widget.views}</div>
                           <div className="text-gray-500">Views</div>
                         </div>
                         <div className="text-center">
-                          <div className="font-semibold text-green-600">{widget.performance?.clicks || 0}</div>
+                          <div className="font-semibold text-green-600">{widget.clicks}</div>
                           <div className="text-gray-500">Clicks</div>
                         </div>
                         <div className="text-center">
-                          <div className="font-semibold text-orange-600">{conversionRate.toFixed(1)}%</div>
+                          <div className="font-semibold text-orange-600">{widget.conversionRate.toFixed(1)}%</div>
                           <div className="text-gray-500">CVR</div>
                         </div>
                       </div>
@@ -446,12 +447,12 @@ const Analytics = () => {
                 <div className="text-sm opacity-90">Views per Review</div>
               </div>
               <div className={`backdrop-blur-sm rounded-xl p-4 ${
-                storageStatus?.isExceeded ? 'bg-red-500/20' : 
-                storageStatus?.usagePercentage > 80 ? 'bg-orange-500/20' : 'bg-white/10'
+                data.storageUsed > data.storageLimit ? 'bg-red-500/20' : 
+                (data.storageUsed / data.storageLimit) > 0.8 ? 'bg-orange-500/20' : 'bg-white/10'
               }`}>
                 <div className="text-2xl font-bold">{(data.storageLimit - data.storageUsed).toFixed(1)}GB</div>
                 <div className="text-sm opacity-90">
-                  {storageStatus?.isExceeded ? 'Over Limit!' : 'Storage Remaining'}
+                  {data.storageUsed > data.storageLimit ? 'Over Limit!' : 'Storage Remaining'}
                 </div>
               </div>
             </div>

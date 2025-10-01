@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, Not, IsNull } from 'typeorm';
 import { AnalyticsEvent, AnalyticsEventType } from './entities/analytics-event.entity';
 import { TrackEventDto } from './dto/track-event.dto';
 import { AnalyticsQueryDto } from './dto/analytics-query.dto';
@@ -8,6 +8,7 @@ import { DashboardStatsDto, WidgetPerformanceDto, ReviewTrendDto, TopWidgetDto }
 import { Review } from '../review/entities/review.entity';
 import { Widget } from '../widgets/entities/widget.entity';
 import { StorageService } from '../storage/storage.service';
+import { BillingService } from '../billing/billing.service';
 
 @Injectable()
 export class AnalyticsService {
@@ -19,6 +20,7 @@ export class AnalyticsService {
     @InjectRepository(Widget)
     private widgetRepository: Repository<Widget>,
     private storageService: StorageService,
+    private billingService: BillingService,
   ) {}
 
   async trackEvent(
@@ -48,7 +50,7 @@ export class AnalyticsService {
       this.getTotalReviews(businessId, startDate, endDate),
       this.getTotalEvents(businessId, AnalyticsEventType.VIEW, startDate, endDate),
       this.getTotalEvents(businessId, AnalyticsEventType.CLICK, startDate, endDate),
-      this.getTotalEvents(businessId, AnalyticsEventType.SUBMISSION, startDate, endDate),
+      this.getTotalReviews(businessId, startDate, endDate), // Use review count as submissions
       this.storageService.getUsageForBusiness(businessId),
     ]);
 
@@ -58,13 +60,43 @@ export class AnalyticsService {
       this.getTopPerformingWidgets(businessId, startDate, endDate),
     ]);
 
+    console.log('Storage info from service:', storageInfo);
+    
+    // Get actual billing info for storage limit
+    let actualStorageLimit = storageInfo?.bytesLimit || (1 * 1024 * 1024 * 1024); // Default 1GB
+    let billingTier = 'FREE';
+    
+    try {
+      const billingInfo = await this.billingService.getBillingInfo(businessId);
+      console.log('Billing info:', billingInfo);
+      
+      const storageLimits = {
+        'free': 1 * 1024 * 1024 * 1024,
+        'starter': 10 * 1024 * 1024 * 1024,
+        'professional': 50 * 1024 * 1024 * 1024,
+        'enterprise': 200 * 1024 * 1024 * 1024
+      };
+      
+      billingTier = billingInfo?.pricingTier || 'free';
+      actualStorageLimit = storageLimits[billingTier.toLowerCase()] || storageLimits['free'];
+      console.log('Billing tier:', billingTier, 'Storage limit:', actualStorageLimit);
+    } catch (error) {
+      console.log('Error getting billing info:', error.message);
+    }
+
+    const bytesUsed = storageInfo?.bytesUsed || 0;
+    const storageUsedGB = bytesUsed / (1024 * 1024 * 1024);
+    const storageLimitGB = actualStorageLimit / (1024 * 1024 * 1024);
+    
+    console.log('Bytes used:', bytesUsed, 'GB used:', storageUsedGB, 'GB limit:', storageLimitGB);
+
     return {
       totalReviews,
       totalViews,
       totalClicks,
       totalSubmissions,
-      storageUsed: Math.round((storageInfo?.bytesUsed || 0) / (1024 * 1024 * 1024) * 100) / 100, // Convert to GB
-      storageLimit: Math.round((storageInfo?.bytesLimit || 0) / (1024 * 1024 * 1024) * 100) / 100, // Convert to GB
+      storageUsed: Math.round(storageUsedGB * 1000) / 1000, // Keep 3 decimal places
+      storageLimit: Math.round(storageLimitGB * 100) / 100, // Keep 2 decimal places
       widgetPerformance,
       reviewTrends,
       topPerformingWidgets,
@@ -152,7 +184,11 @@ export class AnalyticsService {
       trendsMap.set(review.date, existing);
     });
 
-    return Array.from(trendsMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    return Array.from(trendsMap.values()).sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).toISOString() : '';
+      const dateB = b.date ? new Date(b.date).toISOString() : '';
+      return dateA.localeCompare(dateB);
+    });
   }
 
   private async getTotalReviews(businessId: string, startDate: Date, endDate: Date): Promise<number> {
@@ -170,10 +206,22 @@ export class AnalyticsService {
     startDate: Date,
     endDate: Date,
   ): Promise<number> {
+    // Map the event types to what widgets actually send
+    let actualEventType = eventType;
+    if (eventType === AnalyticsEventType.VIEW) {
+      actualEventType = AnalyticsEventType.WIDGET_VIEW;
+    } else if (eventType === AnalyticsEventType.CLICK) {
+      actualEventType = AnalyticsEventType.WIDGET_CLICK;
+    } else if (eventType === AnalyticsEventType.SUBMISSION) {
+      actualEventType = AnalyticsEventType.REVIEW_SUBMISSION;
+    }
+    
+    // Only count widget-specific events (with widgetId)
     return this.analyticsEventRepository.count({
       where: {
         businessId,
-        eventType,
+        eventType: actualEventType,
+        widgetId: Not(IsNull()),
         createdAt: Between(startDate, endDate),
       },
     });

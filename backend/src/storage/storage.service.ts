@@ -6,6 +6,8 @@ import { Review } from '../review/entities/review.entity';
 
 @Injectable()
 export class StorageService {
+  private storageLimits = new Map<string, number>(); // businessId -> limitGB
+
   constructor(
     @InjectRepository(MediaAsset)
     private readonly mediaRepo: Repository<MediaAsset>,
@@ -14,28 +16,40 @@ export class StorageService {
   ) {}
 
   async getUsageForBusiness(businessId: string) {
-    const [{ sum }] = await this.mediaRepo
-      .createQueryBuilder('m')
-      .select('COALESCE(SUM(m.size_bytes), 0)', 'sum')
-      .where('m.business_id = :bid', { bid: businessId })
-      .getRawMany();
+    // Get all media assets for this business
+    const mediaAssets = await this.mediaRepo.find({
+      where: { businessId },
+    });
+    
+    // Calculate total bytes used
+    const bytesUsed = mediaAssets.reduce((total, asset) => {
+      return total + (Number(asset.sizeBytes) || 0);
+    }, 0);
 
     const reviewCount = await this.reviewsRepo.count({
       where: { businessId },
     });
 
-    const mediaCount = await this.mediaRepo.count({
-      where: { businessId },
-    });
+    const mediaCount = mediaAssets.length;
 
-    // For now, static limit (1 GB), later can pull from plan
-    const bytesLimit = 1024 * 1024 * 1024;
+    // Get storage limit from cache or use default
+    const storageLimitGb = this.storageLimits.get(businessId) || 1; // Default to FREE tier
+    const bytesLimit = storageLimitGb * 1024 * 1024 * 1024;
 
     return {
-      bytesUsed: Number(sum) || 0,
+      bytesUsed,
       bytesLimit,
       reviewCount,
       mediaCount,
     };
+  }
+
+  async updateStorageLimit(businessId: string, limitGb: number): Promise<void> {
+    console.log(`Updating storage limit for business ${businessId}: ${limitGb}GB`);
+    this.storageLimits.set(businessId, limitGb);
+  }
+
+  getStorageLimit(businessId: string): number {
+    return this.storageLimits.get(businessId) || 1; // Default to 1GB (FREE tier)
   }
 }

@@ -16,5 +16,5 @@ export class CreateWidgetDto {
   @ApiProperty({ description: 'Widget settings', required: false })
   @IsOptional()
   @IsObject()
-  settings?: any;
+  settingsJson?: any;
 }

@@ -8,15 +8,7 @@
     "start": "node dist/main.js",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
     "migrate:run": "psql postgres://postgres:Password123@localhost:5432/masterdb-02 -f migrations/001-create-milestone1.sql",
-    "seed": "psql postgres://postgres:Password123@localhost:5432/masterdb-02 -f seeds/seed_milestone1.sql",
-    "seed:auth0": "ts-node src/seed/runSeed.ts",
-    "system:check": "node system-check.js",
-    "test:milestone1": "node test-milestone1.js",
-    "test:milestone7": "node test-milestone7.js",
-    "test:milestone8": "node test-milestone8.js",
-    "test:milestone9": "node test-milestone9.js",
-    "test:milestone10": "node test-milestone10.js",
-    "test:email-verification": "node test-email-verification.js"
+    "seed:auth0": "ts-node src/seed/runSeed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.888.0",
@@ -31,6 +23,7 @@
     "@nestjs/typeorm": "^10.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/nodemailer": "^7.0.1",
+    "@types/pdfkit": "^0.17.3",
     "auth0": "^5.0.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -45,6 +38,7 @@
     "nodemailer": "^7.0.6",
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
+    "pdfkit": "^0.17.2",
     "pg": "^8.10.0",
     "stripe": "^18.5.0",
     "swagger-ui-express": "^5.0.1",

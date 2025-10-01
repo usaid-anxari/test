@@ -7,14 +7,17 @@ import { EmbedToken } from './entities/embed-token.entity';
 import { BusinessModule } from '../business/business.module';
 import { AuthModule } from '../auth/auth.module';
 import { EmbedController } from '../embed/embed.controller';
+import { BillingModule } from '../billing/billing.module';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Widget, EmbedToken]),
     forwardRef(() => BusinessModule),
     forwardRef(() => AuthModule),
+    BillingModule,
   ],
-  providers: [WidgetsService],
+  providers: [WidgetsService, SubscriptionGuard],
   controllers: [WidgetsController, EmbedController],
   exports: [WidgetsService],
 })

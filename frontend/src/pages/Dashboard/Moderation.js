@@ -19,9 +19,11 @@ import { SpeakerWaveIcon } from "@heroicons/react/20/solid";
 import { motion } from "framer-motion";
 import PaymentPrompt from "../../components/PaymentPrompt";
 import { useAuth0 } from "@auth0/auth0-react";
+import useSubscription from "../../hooks/useSubscription";
 
 const Moderation = () => {
   const { isAuthenticated } = useAuth0();
+  const subscription = useSubscription();
   const [showPaymentPrompt, setShowPaymentPrompt] = useState(true);
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -36,12 +38,10 @@ const Moderation = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        
+        setLoading(true);      
         // First get business info
         const businessResponse = await axiosInstance.get(API_PATHS.BUSINESSES?.GET_PRIVATE_PROFILE);
         setBusiness(businessResponse.data.business);
-        
         if (businessResponse.data.business?.slug) {
           const reviewsResponse = await axiosInstance.get(
             API_PATHS.REVIEWS.GET_REVIEWS(businessResponse.data.business.slug)
@@ -96,8 +96,6 @@ const Moderation = () => {
     rejected: reviews.filter(r => r.status?.toLowerCase() === 'rejected').length,
   };
   
-  
-
 
   const updateReview = async (id, newStatus) => {
     if (!business?.slug) {
@@ -168,7 +166,7 @@ const Moderation = () => {
 
       <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
         {/* Payment Prompt for Free Users */}
-        {showPaymentPrompt && (
+        {showPaymentPrompt && subscription.tier === "free" && (
           <PaymentPrompt onDismiss={() => setShowPaymentPrompt(false)} />
         )}
         

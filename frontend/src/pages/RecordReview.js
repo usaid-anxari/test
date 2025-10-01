@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useContext, useEffect, useRef, useState } from "react";
 import {
   ArrowRightIcon,
@@ -14,10 +14,9 @@ import axiosInstance from "../service/axiosInstanse";
 import { API_PATHS } from "../service/apiPaths";
 
 const RecordReview = () => {
-  const { getInitialData, user } = useContext(AuthContext);
+  const {  tenant } = useContext(AuthContext);
   const { businessName: paramBusinessName } = useParams();
-  const businessName = user?.business?.slug || paramBusinessName;
-  console.log(businessName);
+  const businessName = tenant?.slug || paramBusinessName;
 
   const MAX_DURATION_SECONDS = 60;
   const [hasConsented, setHasConsented] = useState(false);
@@ -37,7 +36,6 @@ const RecordReview = () => {
   const [businessSettings, setBusinessSettings] = useState(null);
   const [allowTextReviews, setAllowTextReviews] = useState(false);
   const [allowGoogleReviews, setAllowGoogleReviews] = useState(false);
-  const navigate = useNavigate();
 
   // State for MediaRecorder
   const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -82,8 +80,6 @@ const RecordReview = () => {
       fetchBusinessSettings();
     }
   }, [businessName]);
-
-
 
   const cleanupActiveMedia = () => {
     try {

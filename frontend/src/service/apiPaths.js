@@ -38,13 +38,13 @@ export const API_PATHS = {
     TRACK_EVENT: "/api/analytics/events",
   },
   BILLING: {
-    GET_PRICING_PLANS: "/api/billing/pricing-plans",
-    GET_BILLING_ACCOUNT: "/api/billing/account",
-    REFRESH_BILLING_ACCOUNT: "/api/billing/refresh",
+    GET_PRICING_PLANS: "/api/billing/plans",
+    GET_BILLING_ACCOUNT: "/api/billing/info",
     CREATE_CHECKOUT_SESSION: "/api/billing/checkout",
     CREATE_PORTAL_SESSION: "/api/billing/portal",
-    GET_STORAGE_STATUS: "/api/billing/storage/status",
-    CHECK_FEATURE_ACCESS: (feature) => `/api/billing/features/${feature}/access`,
+    GET_STORAGE_STATUS: "/api/billing/status",
+    GET_INVOICES: "/api/billing/invoices",
+    DOWNLOAD_INVOICE: (invoiceId) => `/api/billing/invoices/${invoiceId}/download`,
   },
   EMAIL: {
     GET_PREFERENCES: "/api/email/preferences",

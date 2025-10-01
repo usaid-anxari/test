@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -42,9 +42,15 @@ export class BillingService {
         pricingTier: PricingTier.FREE,
         storageLimitGb: 1.0,
         monthlyPriceCents: 0,
-        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days trial
+        trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days trial for FREE tier
       });
       billingAccount = await this.billingAccountRepository.save(billingAccount);
+      
+      // Initialize storage limit in storage service
+      await this.storageService.updateStorageLimit(businessId, 1.0);
+    } else {
+      // Ensure storage service has the current limit
+      await this.storageService.updateStorageLimit(businessId, billingAccount.storageLimitGb);
     }
 
     return billingAccount;
@@ -54,10 +60,19 @@ export class BillingService {
     const billingAccount = await this.getOrCreateBillingAccount(businessId);
     const storageInfo = await this.storageService.getUsageForBusiness(businessId);
 
-    const storageUsageGb = Math.round((storageInfo.bytesUsed / (1024 * 1024 * 1024)) * 100) / 100;
-    const storageUsagePercentage = billingAccount.storageLimitGb > 0 
-      ? (storageUsageGb / billingAccount.storageLimitGb) * 100 
+    console.log('Billing Service - Storage Info:', storageInfo);
+    console.log('Billing Service - Bytes Used:', storageInfo.bytesUsed);
+    console.log('Billing Service - Bytes Limit:', storageInfo.bytesLimit);
+
+    const storageUsageGb = Math.round((storageInfo.bytesUsed / (1024 * 1024 * 1024)) * 1000) / 1000; // Keep 3 decimal places
+    const actualStorageLimitGb = Math.round((storageInfo.bytesLimit / (1024 * 1024 * 1024)) * 100) / 100; // Use actual limit from storage service
+    const storageUsagePercentage = actualStorageLimitGb > 0 
+      ? Math.round((storageUsageGb / actualStorageLimitGb) * 100 * 100) / 100 // Keep 2 decimal places
       : 0;
+
+    console.log('Billing Service - Storage Usage GB:', storageUsageGb);
+    console.log('Billing Service - Storage Limit GB:', actualStorageLimitGb);
+    console.log('Billing Service - Storage Percentage:', storageUsagePercentage);
 
     const isTrialActive = billingAccount.trialEndsAt && billingAccount.trialEndsAt > new Date();
     const daysUntilTrialEnd = isTrialActive 
@@ -69,13 +84,13 @@ export class BillingService {
       businessId: billingAccount.businessId,
       billingStatus: billingAccount.billingStatus,
       pricingTier: billingAccount.pricingTier,
-      storageLimitGb: billingAccount.storageLimitGb,
+      storageLimitGb: actualStorageLimitGb, // Use actual storage limit
       monthlyPriceCents: billingAccount.monthlyPriceCents,
       trialEndsAt: billingAccount.trialEndsAt,
       currentPeriodStart: billingAccount.currentPeriodStart,
       currentPeriodEnd: billingAccount.currentPeriodEnd,
       storageUsageGb,
-      storageUsagePercentage: Math.round(storageUsagePercentage * 100) / 100,
+      storageUsagePercentage,
       isTrialActive,
       daysUntilTrialEnd,
     };
@@ -141,32 +156,82 @@ export class BillingService {
     const selectedPlan = pricingPlans.find(plan => plan.tier === createCheckoutSessionDto.pricingTier);
 
     if (!selectedPlan) {
-      throw new Error('Invalid pricing tier selected');
+      throw new BadRequestException('Invalid pricing tier selected');
     }
 
     if (selectedPlan.tier === PricingTier.FREE) {
-      throw new Error('Cannot create checkout session for free tier');
+      // Handle downgrade to free tier
+      const updatedAccount = await this.updateSubscription(
+        businessId,
+        " free_tier_downgrade_" + Date.now(),
+        PricingTier.FREE,
+        BillingStatus.ACTIVE,
+      );
+      
+      return {
+        checkoutUrl: createCheckoutSessionDto.successUrl || `${this.configService.get('FRONTEND_URL')}/dashboard/billing?payment=success`,
+        sessionId: 'free_tier_downgrade',
+      };
     }
 
-    // Development mode: Skip Stripe checkout if price IDs not configured
-    const isDevelopment = this.configService.get('NODE_ENV') === 'development';
-    if (!selectedPlan.stripePriceId) {
-      if (isDevelopment) {
-        // In development, immediately update subscription and return success URL
-        await this.updateSubscription(
+    // Development mode: Always update subscription immediately
+    const isDevelopment = this.configService.get('NODE_ENV') !== 'development';
+    console.log(`Development mode: ${isDevelopment}`);
+    console.log(`Stripe price ID: ${selectedPlan.stripePriceId}`);
+    
+    // Force development mode unless production is forced
+    if (isDevelopment) {
+      console.log(`DEVELOPMENT MODE: Processing immediate subscription update`);
+      console.log(`Business ID: ${businessId}`);
+      console.log(`Selected Plan: ${selectedPlan.tier}`);
+      console.log(`Plan Details:`, selectedPlan);
+      
+      try {
+        const updatedAccount = await this.updateSubscription(
           businessId,
           'sub_dev_mode_' + Date.now(),
           selectedPlan.tier,
           BillingStatus.ACTIVE,
         );
         
+        // Create transaction record
+        await this.recordTransaction(
+          updatedAccount.id,
+          TransactionType.PAYMENT,
+          TransactionStatus.SUCCEEDED,
+          selectedPlan.monthlyPriceCents,
+          'pi_dev_mode_' + Date.now(),
+          `${selectedPlan.name} Plan Subscription`
+        );
+        
+        console.log(`DEVELOPMENT MODE: Subscription updated successfully`);
+        console.log(`Updated Account:`, {
+          id: updatedAccount.id,
+          tier: updatedAccount.pricingTier,
+          status: updatedAccount.billingStatus,
+          price: updatedAccount.monthlyPriceCents
+        });
+        
+        const successUrl = createCheckoutSessionDto.successUrl || `${this.configService.get('FRONTEND_URL')}/dashboard/billing?payment=success&session_id=cs_test_dev_mode`;
+        console.log(`DEVELOPMENT MODE: Returning success URL: ${successUrl}`);
+        
         return {
-          checkoutUrl: createCheckoutSessionDto.successUrl || `${this.configService.get('FRONTEND_URL')}/dashboard/billing?payment=success&session_id=cs_test_dev_mode`,
+          checkoutUrl: successUrl,
           sessionId: 'cs_test_dev_mode',
         };
+      } catch (error) {
+        console.error(`DEVELOPMENT MODE: Failed to update subscription:`, error);
+        throw error;
       }
+    }
+    
+    // Production mode - require Stripe price ID
+    if (!selectedPlan.stripePriceId) {
+      console.error(`No Stripe price ID configured for ${selectedPlan.tier} tier`);
       throw new Error(`Stripe price ID not configured for ${selectedPlan.tier} tier. Please contact support.`);
     }
+    
+    console.log(`Using Stripe price ID: ${selectedPlan.stripePriceId}`);
 
     if (!selectedPlan.stripePriceId.startsWith('price_')) {
       throw new Error(`Invalid Stripe price ID format: ${selectedPlan.stripePriceId}. Expected format: price_xxx`);
@@ -234,21 +299,62 @@ export class BillingService {
     pricingTier: PricingTier,
     billingStatus: BillingStatus,
   ): Promise<BillingAccount> {
+    console.log(`UPDATING SUBSCRIPTION`);
+    console.log(`Business ID: ${businessId}`);
+    console.log(`Pricing Tier: ${pricingTier}`);
+    console.log(`Billing Status: ${billingStatus}`);
+    console.log(`Subscription ID: ${stripeSubscriptionId}`);
+    
     const billingAccount = await this.getOrCreateBillingAccount(businessId);
+    console.log(`Current billing account:`, {
+      id: billingAccount.id,
+      currentTier: billingAccount.pricingTier,
+      currentStatus: billingAccount.billingStatus
+    });
+    
     const pricingPlans = await this.getPricingPlans();
     const selectedPlan = pricingPlans.find(plan => plan.tier === pricingTier);
+    
+    if (!selectedPlan) {
+      console.error(`No plan found for tier: ${pricingTier}`);
+      throw new Error(`No plan found for tier: ${pricingTier}`);
+    }
+    
+    console.log(`Selected plan:`, selectedPlan);
 
-    if (selectedPlan) {
-      billingAccount.stripeSubscriptionId = stripeSubscriptionId;
-      billingAccount.pricingTier = pricingTier;
-      billingAccount.billingStatus = billingStatus;
-      billingAccount.storageLimitGb = selectedPlan.storageLimitGb;
-      billingAccount.monthlyPriceCents = selectedPlan.monthlyPriceCents;
-      billingAccount.currentPeriodStart = new Date();
-      billingAccount.currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    billingAccount.stripeSubscriptionId = stripeSubscriptionId;
+    billingAccount.pricingTier = pricingTier;
+    billingAccount.billingStatus = billingStatus;
+    billingAccount.storageLimitGb = selectedPlan.storageLimitGb;
+    billingAccount.monthlyPriceCents = selectedPlan.monthlyPriceCents;
+    billingAccount.currentPeriodStart = new Date();
+    
+    // Set billing period based on tier
+    if (pricingTier === PricingTier.FREE) {
+      // FREE tier gets 7 days trial, then expires
+      billingAccount.trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      billingAccount.currentPeriodEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      billingAccount.billingStatus = BillingStatus.TRIALING;
+    } else {
+      // Paid plans get 30 days billing cycle
+      billingAccount.currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      billingAccount.trialEndsAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // Far future date for paid plans
     }
 
-    return this.billingAccountRepository.save(billingAccount);
+    const savedAccount = await this.billingAccountRepository.save(billingAccount);
+    
+    // Update storage service with new limits
+    await this.storageService.updateStorageLimit(businessId, selectedPlan.storageLimitGb);
+    
+    console.log(`SUBSCRIPTION UPDATE COMPLETE`);
+    console.log(`Account ID: ${savedAccount.id}`);
+    console.log(`New Tier: ${savedAccount.pricingTier}`);
+    console.log(`New Status: ${savedAccount.billingStatus}`);
+    console.log(`New Price: $${savedAccount.monthlyPriceCents / 100}/month`);
+    console.log(`New Storage: ${savedAccount.storageLimitGb}GB`);
+    console.log(`Period: ${savedAccount.currentPeriodStart} to ${savedAccount.currentPeriodEnd}`);
+    
+    return savedAccount;
   }
 
   async recordTransaction(
@@ -286,11 +392,41 @@ export class BillingService {
       return false;
     }
 
-    // Check storage limits
-    if (feature === 'storage' && await this.isStorageExceeded(businessId)) {
-      return false;
+    // Feature-specific checks
+    switch (feature) {
+      case 'storage':
+        return !(await this.isStorageExceeded(businessId));
+      
+      case 'analytics':
+        return billingAccount.pricingTier !== PricingTier.FREE;
+      
+      case 'custom_branding':
+        return [PricingTier.PROFESSIONAL, PricingTier.ENTERPRISE].includes(billingAccount.pricingTier);
+      
+      case 'api_access':
+        return [PricingTier.PROFESSIONAL, PricingTier.ENTERPRISE].includes(billingAccount.pricingTier);
+      
+      case 'white_label':
+        return billingAccount.pricingTier === PricingTier.ENTERPRISE;
+      
+      case 'priority_support':
+        return billingAccount.pricingTier !== PricingTier.FREE;
+      
+      case 'unlimited_widgets':
+        // Free tier gets 1 widget, paid tiers get unlimited
+        return true; // Allow widget creation, limit will be checked in frontend
+      
+      default:
+        return true;
     }
+  }
 
-    return true;
+  async verifyWebhook(body: any, signature: string, webhookSecret: string): Promise<any> {
+    try {
+      return this.stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (error) {
+      console.error('Webhook signature verification failed:', error.message);
+      throw new Error('Webhook signature verification failed');
+    }
   }
 }

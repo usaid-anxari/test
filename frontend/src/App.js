@@ -92,11 +92,12 @@ function App() {
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Marketing Routes */}
-            <Route path="/" element={
+            {/* <Route path="/" element={
               isAuthenticated && auth0User && !needsOnboarding ? 
                 <Navigate to="/dashboard" replace /> : 
                 <Home />
-            } />
+            } /> */}
+            <Route path="/" element={<Home />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />

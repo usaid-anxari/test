@@ -7,12 +7,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  // Enable CORS
+  // Enable CORS - Allow all origins for widget functionality
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'],
+    origin: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+    credentials: false,
   });
 
   const swaggerConfig = new DocumentBuilder()

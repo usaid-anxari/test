@@ -9,11 +9,13 @@ import { Business } from '../business/entities/business.entity';
 import { S3Service } from '../common/s3/s3.service';
 import { ConfigModule } from '@nestjs/config';
 import { PublicReviewsController } from './public.controller';
+import { BillingModule } from '../billing/billing.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Review, MediaAsset, TranscodeJob, Business]),
     ConfigModule,
+    BillingModule,
   ],
   controllers: [ReviewsController, PublicReviewsController],
   providers: [ReviewsService, S3Service],

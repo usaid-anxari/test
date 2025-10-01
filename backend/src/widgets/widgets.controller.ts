@@ -13,6 +13,8 @@ import {
 import { ApiTags, ApiBearerAuth, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { WidgetsService } from './widgets.service';
 import { JwtAuthGuard } from '../common/jwt-auth/jwt-auth.guard';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
+import { RequireFeature, RequireStarterPlan } from '../common/decorators/subscription.decorator';
 import { BusinessService } from '../business/business.service';
 import { CreateWidgetDto } from './dto/create-widget.dto';
 
@@ -73,7 +75,7 @@ export class WidgetsController {
         name: widget.name,
         style: widget.style,
         isActive: widget.isActive,
-        settings: widget.settingsJson,
+        settingsJson: widget.settingsJson,
         createdAt: widget.createdAt,
         updatedAt: widget.updatedAt,
       })),
@@ -81,7 +83,8 @@ export class WidgetsController {
   }
 
   // Get widget embed code
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
+  @RequireStarterPlan()
   @ApiBearerAuth()
   @Get(':id/embed-code')
   @ApiResponse({ status: 200, description: 'Widget embed code' })

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><body>
+<!-- TrueTestify Widget -->
+<div id="truetestify-widget-22dc1eee-c6a0-40b5-a02c-2636dd2d09fa"></div>
+<script data-widget-id="22dc1eee-c6a0-40b5-a02c-2636dd2d09fa" data-style="grid">
+(function() {
+  var widgetId = '22dc1eee-c6a0-40b5-a02c-2636dd2d09fa';
+  var style = 'grid';
+  var targetId = 'truetestify-widget-' + widgetId;
+  
+  var container = document.getElementById(targetId);
+  if (container) {
+    fetch('http://localhost:4000/embed/' + widgetId + '?style=' + style)
+      .then(function(response) { return response.text(); })
+      .then(function(html) {
+        container.innerHTML = html;
+        
+        // Execute scripts for carousel and spotlight widgets
+        var scripts = container.querySelectorAll('script');
+        scripts.forEach(function(script) {
+          var newScript = document.createElement('script');
+          newScript.textContent = script.textContent;
+          document.head.appendChild(newScript);
+          document.head.removeChild(newScript);
+        });
+      })
+      .catch(function(error) {
+        container.innerHTML = '<p>Unable to load reviews</p>';
+      });
+  }
+})();
+</script>
+</body></html>

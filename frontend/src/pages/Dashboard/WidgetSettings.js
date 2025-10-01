@@ -20,26 +20,31 @@ import { useContext, useEffect, useState } from "react";
 import axiosInstance from "../../service/axiosInstanse";
 import { API_PATHS } from "../../service/apiPaths";
 import { motion } from "framer-motion";
+import FeatureGate from "../../components/FeatureGate";
+import UpgradeModal from "../../components/UpgradeModal";
+import useSubscription from "../../hooks/useSubscription";
 
-const WidgetSettings = () => {
+const WidgetsettingsJson = () => {
   const {
     tenant,
     user,
     hasFeature,
   } = useContext(AuthContext);
-
+  const subscription = useSubscription();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [widgets, setWidgets] = useState([]);
   const [selectedWidget, setSelectedWidget] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEmbedModal, setShowEmbedModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [widgetToDelete, setWidgetToDelete] = useState(null);
-  const  [showIfreamModal,setShowIfreamModal] = useState(false);
+  const [showIfreamModal,setShowIfreamModal] = useState(false);
   const [formData, setFormData] = useState(null);
   const [embedCode, setEmbedCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  
+  const [refreshing, setRefreshing] = useState(false);  
+    
+
   // Fetch widgets from API
   const fetchWidgets = async (showRefreshToast = false) => {
     try {
@@ -73,7 +78,7 @@ const WidgetSettings = () => {
       const widgetData = {
         name: formData.name,
         style: formData.style,
-        settings: formData.settings,
+        settingsJson: formData.settingsJson,
       };
 
       if (formData.id) {
@@ -88,6 +93,7 @@ const WidgetSettings = () => {
           widgetData
         );
         toast.success("Widget created successfully!");
+        // console.log("CREATE_WIDGET RESPONSE ", res);
       }
       fetchWidgets();
       setShowEditModal(false);
@@ -192,7 +198,7 @@ const WidgetSettings = () => {
       name: "Light",
       value: "light",
       icon: <SunIcon className="h-5 w-5" />,
-      settings: {
+      settingsJson: {
         theme: "light",
         primary: "#1e3a8a",
         secondary: "#ef7c00",
@@ -203,7 +209,7 @@ const WidgetSettings = () => {
       name: "Dark",
       value: "dark",
       icon: <MoonIcon className="h-5 w-5" />,
-      settings: {
+      settingsJson: {
         theme: "dark",
         primary: "#3b82f6",
         secondary: "#f97316",
@@ -213,7 +219,7 @@ const WidgetSettings = () => {
   ];
 
   const publicReviewBaseUrl =
-    typeof window !== "undefined" ? window.location.origin : "";
+   typeof window !== "undefined" ? window.location.origin : "";
   const businessSlug = tenant?.slug || "your-business";
   const publicRecordUrl = `${publicReviewBaseUrl}/record/${tenant?.slug}`;
   const [qrDataUrl, setQrDataUrl] = useState("");
@@ -337,10 +343,16 @@ const WidgetSettings = () => {
         >
           <button
             onClick={() => {
+              // Check widget limit for free tier
+              if (subscription.tier === 'free' && widgets.length >= 1) {
+                setShowUpgradeModal(true);
+                return;
+              }
+              
               setFormData({
                 name: "",
                 style: "carousel",
-                settings: themes[0].settings,
+                settingsJson: themes[0].settingsJson,
               });
               setShowEditModal(true);
             }}
@@ -430,7 +442,7 @@ const WidgetSettings = () => {
                             id: widget.id,
                             name: widget.name,
                             style: widget.style,
-                            settings: widget.settings
+                            settingsJson: widget.settingsJson
                           });
                           setShowEditModal(true);
                         }}
@@ -456,7 +468,7 @@ const WidgetSettings = () => {
                   <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
                     <div className="text-xs text-gray-500 mb-1">Theme</div>
                     <div className="text-sm font-semibold text-gray-700 capitalize">
-                      {widget.settings?.theme || "Light"}
+                      {widget.settingsJson?.theme || "Light"}
                     </div>
                   </div>
 
@@ -539,7 +551,7 @@ const WidgetSettings = () => {
                       Theme:
                     </span>
                     <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">
-                      {selectedWidget.settings?.theme || "Light"}
+                      {selectedWidget.settingsJson?.theme || "Light"}
                     </span>
                   </div>
                   {!hasFeature("widget_embed") && (
@@ -553,6 +565,7 @@ const WidgetSettings = () => {
                 <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 overflow-hidden">
                   {selectedWidget.isActive ? (
                     <iframe
+                      key={selectedWidget.id}
                       src={`${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}/embed/${selectedWidget.id}`}
                       width="100%"
                       height="500"
@@ -738,15 +751,15 @@ const WidgetSettings = () => {
                       onClick={() =>
                         setFormData({
                           ...formData,
-                          settings: {
-                            ...formData.settings,
-                            ...theme.settings,
+                          settingsJson: {
+                            ...formData.settingsJson,
+                            ...theme.settingsJson,
                           },
                         })
                       }
                       className={`flex items-center justify-center px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
                           ${
-                            formData?.settings?.theme === theme.value
+                            formData?.settingsJson?.theme === theme.value
                               ? "bg-gray-900 text-white border-gray-900"
                               : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                           }
@@ -770,15 +783,15 @@ const WidgetSettings = () => {
                   onClick={() =>
                     setFormData({
                       ...formData,
-                      settings: {
-                        ...formData.settings,
-                        autoplay: !formData.settings?.autoplay,
+                      settingsJson: {
+                        ...formData.settingsJson,
+                        autoplay: !formData.settingsJson?.autoplay,
                       },
                     })
                   }
                   className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-full
                       ${
-                        formData?.settings?.autoplay
+                        formData?.settingsJson?.autoplay
                           ? "bg-orange-500"
                           : "bg-gray-200"
                       }`}
@@ -787,7 +800,7 @@ const WidgetSettings = () => {
                     aria-hidden="true"
                     className={`pointer-events-none inline-block h-5 w-5 bg-white shadow transform ring-0 transition ease-in-out duration-200 rounded-full
                         ${
-                          formData?.settings?.autoplay
+                          formData?.settingsJson?.autoplay
                             ? "translate-x-5"
                             : "translate-x-0"
                         }`}
@@ -994,8 +1007,15 @@ const WidgetSettings = () => {
           </div>
         </div>
       )}
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature="unlimited_widgets"
+        widgetCount={widgets.length}
+      />
     </div>
   );
 };
 
-export default WidgetSettings;
+export default WidgetsettingsJson;

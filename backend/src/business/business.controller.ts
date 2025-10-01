@@ -22,6 +22,8 @@ import {
 } from '@nestjs/swagger';
 import { BusinessService } from './business.service';
 import { JwtAuthGuard } from '../common/jwt-auth/jwt-auth.guard';
+import { SubscriptionGuard } from '../common/guards/subscription.guard';
+import { RequireFeature, RequireProfessionalPlan } from '../common/decorators/subscription.decorator';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UsersService } from 'src/users/users.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -219,7 +221,8 @@ export class BusinessController {
   }
 
   // Update business information (excluding slug)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
+  @RequireFeature(['custom_branding'])
   @ApiBearerAuth()
   @Put('api/business/me')
   @ApiConsumes('multipart/form-data')
@@ -298,7 +301,8 @@ export class BusinessController {
   }
 
   // Milestone 5: Toggle text reviews setting
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
+  @RequireFeature(['priority_support'])
   @ApiBearerAuth()
   @Post('api/business/settings/text-reviews')
   @ApiBody({ 
