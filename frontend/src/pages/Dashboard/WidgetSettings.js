@@ -44,7 +44,8 @@ const WidgetsettingsJson = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);  
     
-
+ console.log(tenant);
+ 
   // Fetch widgets from API
   const fetchWidgets = async (showRefreshToast = false) => {
     try {

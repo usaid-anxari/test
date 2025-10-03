@@ -85,12 +85,11 @@ const Navbar = () => {
       description: "Feature your best testimonials",
     },
     {
-      name: "Wall Widget",
-      href: "/widgets/wall",
+      name: "Floating Widget",
+      href: "/widgets/floating",
       description: "Social media-style display",
     },
   ];
-console.log({widgetsLinks,servicesLinks});
 
   const handleLogout = () => {
     logout();
@@ -99,13 +98,13 @@ console.log({widgetsLinks,servicesLinks});
 
   return (
     <>
-      <nav className="w-full text-white py-2 md:py-3 z-30 relative overflow-hidden" style={{
+      <nav className="w-full text-white py-2 md:py-3 fixed top-0 left-0 right-0 z-[100] overflow-visible" style={{
         background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #ef7c00 100%)'
       }}>
         {/* Animated background overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
         <div className="absolute inset-0 bg-black/10"></div>
-        <div className="flex justify-between items-center max-w-7xl mx-auto px-4 relative z-10">
+        <div className="flex justify-between items-center max-w-7xl mx-auto px-4 relative z-10 overflow-visible">
           <Link to="/" className="flex items-center gap-3">
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -160,7 +159,7 @@ console.log({widgetsLinks,servicesLinks});
                 <div
                   onMouseEnter={() => setIsServicesDropdownOpen(true)}
                   onMouseLeave={() => setIsServicesDropdownOpen(false)}
-                  className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50"
+                  className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999]"
                 >
                   {servicesLinks.map((service) => (
                     <Link
@@ -190,7 +189,7 @@ console.log({widgetsLinks,servicesLinks});
                 <div
                   onMouseEnter={() => setIsWidgetsDropdownOpen(true)}
                   onMouseLeave={() => setIsWidgetsDropdownOpen(false)}
-                  className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50"
+                  className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-[9999]"
                 >
                   {widgetsLinks.map((widget) => (
                     <Link

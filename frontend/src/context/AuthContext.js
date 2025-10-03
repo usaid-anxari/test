@@ -70,17 +70,16 @@ const AuthProvider = ({ children }) => {
       
       if (isAuthenticated && auth0User) {
         // ✅ STEP 1: Email Verification Check
-        if (!auth0User) {
-          // Clear state only if needed
-          if (user || tenant || widgets.length > 0) {
-            setUser(null);
-            setTenant("");
-            setWidgets([]);
-            setSelectedWidget(null);
-          }          
-          setLoading(false);
-          return;
-        }
+        // if (!auth0User.email_verified) {
+        //   if (user || tenant || widgets.length > 0) {
+        //     setUser(null);
+        //     setTenant("");
+        //     setWidgets([]);
+        //     setSelectedWidget(null);
+        //   }          
+        //   setLoading(false);
+        //   return;
+        // }
 
         try {
           // ✅ STEP 2: Get token only once and cache it
@@ -89,11 +88,7 @@ const AuthProvider = ({ children }) => {
               audience: process.env.REACT_APP_AUTH0_AUDIENCE,
             },
           });
-     console.log("Auht0 Token :" + token);
-     
-          // Set token in axios instance
-         const ch =  axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
-             console.log("Ch " + ch);
+          axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
              
           // ✅ STEP 3: Set user from Auth0 (no API call needed)
           if (!user || user.sub !== auth0User.sub) {
@@ -108,20 +103,18 @@ const AuthProvider = ({ children }) => {
               setNeedsOnboarding(false);
               
               // ✅ STEP 5: Fetch widgets only after business is confirmed
-              setTimeout(() => fetchWidgets(), 100); // Defer to avoid blocking
+              setTimeout(() => fetchWidgets(), 100);
             } else {
               setNeedsOnboarding(true);
             }
           }
         } catch (error) {
           console.error('Auth initialization failed:', error);
-          // Only show error if it's a critical failure
           if (error.message?.includes('network') || error.message?.includes('timeout')) {
             toast.error('Connection issue. Please refresh the page.');
           }
         }
       } else {
-        // ✅ Clear state only when logging out
         if (user || tenant || widgets.length > 0) {
           setUser(null);
           setTenant("");
@@ -133,12 +126,9 @@ const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     
-    // Debounce auth check to prevent multiple rapid calls
-    const timeoutId = setTimeout(checkAuth, 100);
+    const timeoutId = setTimeout(checkAuth, 50);
     return () => clearTimeout(timeoutId);
-  }, [isAuthenticated, auth0User?.sub, isLoading]);
-// console.log("Auth0 User :"+ auth0User?.sub);
-console.log(tenant);
+  }, [isAuthenticated, auth0User?.sub, auth0User?.email_verified, isLoading]);
 
 
   const fetchBusinessInfo = async () => {

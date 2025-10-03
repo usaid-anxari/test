@@ -17,11 +17,11 @@ import Features from "./Features";
 import Pricing from "./Pricing";
 import Contact from "../Contact";
 import { MOCK_REVIEWS } from "../../assets/mockData";
-import ReviewCard from "../../components/ReviewCard";
+import HomeReviewCard from "../../components/HomeReviewCard";
 
 const Home = () => {
   const featuredReviews = MOCK_REVIEWS.filter(
-    (r) => r.status === "approved" && r.type !== "audio"
+    (r) => r.status === "approved" && r.type === "video"
   ).slice(0, 3);
 
   return (
@@ -267,7 +267,7 @@ const Home = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {featuredReviews.map((review) => (
-                <ReviewCard key={review.id} review={review} isPreview={true} />
+                <HomeReviewCard key={review.id} review={review} />
               ))}
             </div>
             <div className="text-center">

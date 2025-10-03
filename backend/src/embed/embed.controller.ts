@@ -237,15 +237,17 @@ export class EmbedController {
           `;
         } else if (review.type === 'text') {
           mediaContent = `
-              <div class="tt-review-card">${review.bodyText ? `<p>${review.bodyText}</p>` : ''}</div>
-      
+            <div class="tt-text-highlight">
+              <div class="tt-quote-icon">💬</div>
+              ${review.bodyText ? `<p>${review.bodyText}</p>` : ''}
+            </div>
           `;
         }
 
         const typeColors = {
           video: primary,
           audio: secondary,
-          text: secondary,
+          text: '#10b981',
           google: '#4285f4',
         };
 
@@ -450,15 +452,16 @@ export class EmbedController {
           `;
         } else if (review.type === 'text') {
           mediaContent = `
-<div class="tt-review-card">${review.bodyText ? `<p>${review.bodyText}</p>` : ''}</div>
-            
+            <div class="tt-text-highlight">
+              ${review.bodyText ? `<p>${review.bodyText}</p>` : ''}
+            </div>
           `;
         }
 
         const typeColors = {
           video: primary,
           audio: secondary,
-          text: '#87d93f',
+          text: '#10b981',
           google: '#4285f4',
         };
 
@@ -698,14 +701,17 @@ export class EmbedController {
           `;
         } else if (review.type === 'text') {
           mediaContent = `
-<div class="tt-review-card">${review.bodyText ? `<p>${review.bodyText}</p>` : ''}</div>
+            <div class="tt-text-highlight">
+              <div class="tt-quote-icon">💬</div>
+              ${review.bodyText ? `<p>${review.bodyText}</p>` : ''}
+            </div>
           `;
         }
 
         const typeColors = {
           video: primary,
           audio: secondary,
-          text: secondary,
+          text: '#10b981',
           google: '#4285f4',
         };
 
@@ -776,7 +782,7 @@ export class EmbedController {
         .tt-prev-btn { top: 50%; left: 24px; transform: translateY(-50%); }
         .tt-next-btn { top: 50%; right: 24px; transform: translateY(-50%); }
         .tt-nav-dots { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 16px; z-index: 10; }
-        .tt-dot { width: 16px; height: 16px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; transition: all 0.4s ease; backdrop-filter: blur(12px); }
+        .tt-dot { width: 16px; height: 16px; border-radius: 50%; background: ${isDark ? 'rgba(255,255,255,0.3)' : 'rgb(40 83 139 / 30%)'}; cursor: pointer; transition: all 0.4s ease; backdrop-filter: blur(12px); }
         .tt-dot:hover { transform: scale(1.4); }
         .tt-dot.active { background: ${primary}; box-shadow: 0 0 32px ${primary}80; }
         .tt-powered { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); font-size: 12px; color: ${isDark ? '#94a3b8' : '#94a3b8'}; z-index: 10; }

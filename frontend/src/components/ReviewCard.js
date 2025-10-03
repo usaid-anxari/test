@@ -13,23 +13,6 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
   const [mediaError, setMediaError] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
    
-  // Debug state changes
-  useEffect(() => {
-    console.log("ReviewCard: isPopupOpen changed to", isPopupOpen, "at", new Date().toISOString());
-  }, [isPopupOpen]);
-
-  // Debug window focus/blur
-  useEffect(() => {
-    const handleFocus = () => new Date().toISOString();
-    const handleBlur = () => new Date().toISOString();
-    window.addEventListener("focus", handleFocus);
-    window.addEventListener("blur", handleBlur);
-    return () => {
-      window.removeEventListener("focus", handleFocus);
-      window.removeEventListener("blur", handleBlur);
-    };
-  }, []);
-
   // Determine media URL and type
   const reviewUrl = review.media && review.media.length > 0 ? review.media[0].s3Key : null;
    
@@ -42,6 +25,7 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
     rating = 0,
     reviewerName = "Anonymous",
     publishedAt,
+    submittedAt
   } = review;
 
   // Determine media type
@@ -52,7 +36,7 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
 
   // Final media URL
   const s3BaseUrl = process.env.REACT_APP_S3_BASE_URL;
-  const finalMediaUrl = reviewUrl ? `${s3BaseUrl}${reviewUrl}` : null;
+  const finalMediaUrl = reviewUrl ? `${s3BaseUrl}/${reviewUrl}` : null;
   
   // Theme classes
   const isDark = theme === "dark";
@@ -63,8 +47,10 @@ const ReviewCard = ({ review, theme, primaryColor = "#ef7c00" }) => {
   const mutedColor = isDark ? "text-gray-400" : "text-gray-500";
 
   // Format date
-  const formattedDate = publishedAt ? format(new Date(publishedAt), "MMM d, yyyy") : "Unknown date";
+  const formattedDate = publishedAt ? format(new Date(publishedAt), "MMM d, yyyy") : format(new Date(submittedAt), "MMM d, yyyy") || "Unknown date";
 
+    console.log({formattedDate});
+    
   // Render stars for rating
   const renderStars = (rating) => (
     <div className="flex">

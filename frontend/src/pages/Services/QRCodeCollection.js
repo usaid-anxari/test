@@ -140,14 +140,16 @@ const QRCodeCollection = () => {
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Sample QR Code</h3>
                   {/* QR Code Visualization */}
                   <div className="inline-block p-4 bg-white border-2 border-gray-300 rounded-lg mb-4">
-                    <div className="grid grid-cols-21 gap-0.5">
+                    <div className="w-48 h-48 mx-auto bg-white border border-gray-200 p-2">
                       {qrPattern.map((row, i) => (
-                        row.map((cell, j) => (
-                          <div
-                            key={`${i}-${j}`}
-                            className={`w-2 h-2 ${cell ? 'bg-black' : 'bg-white'}`}
-                          />
-                        ))
+                        <div key={i} className="flex">
+                          {row.map((cell, j) => (
+                            <div
+                              key={`${i}-${j}`}
+                              className={`w-2 h-2 ${cell ? 'bg-black' : 'bg-white'}`}
+                            />
+                          ))}
+                        </div>
                       ))}
                     </div>
                   </div>

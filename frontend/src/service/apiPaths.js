@@ -46,16 +46,6 @@ export const API_PATHS = {
     GET_INVOICES: "/api/billing/invoices",
     DOWNLOAD_INVOICE: (invoiceId) => `/api/billing/invoices/${invoiceId}/download`,
   },
-  EMAIL: {
-    GET_PREFERENCES: "/api/email/preferences",
-    UPDATE_PREFERENCES: "/api/email/preferences",
-    UNSUBSCRIBE: (token) => `/api/email/unsubscribe/${token}`,
-  },
-  GOOGLE: {
-    CONNECT: "/api/google/connect",
-    GET_STATUS: "/api/google/status",
-    IMPORT_REVIEWS: "/api/google/import-reviews",
-    GET_REVIEWS: "/api/google/reviews",
-    DISCONNECT: "/api/google/disconnect",
-  },
+  // EMAIL: Removed - using Auth0 email verification
+  // GOOGLE: Removed - not needed for MVP
 };

@@ -1,4 +1,4 @@
-import {  useState, useEffect, useCallback } from "react";
+import {  useState, useEffect, useCallback, useMemo } from "react";
 import axiosInstance from "../../service/axiosInstanse";
 import { API_PATHS } from "../../service/apiPaths";
 import toast from "react-hot-toast";
@@ -125,8 +125,8 @@ const Billing = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Extract data from subscription hook
-  const billingAccount = {
+  // Extract data from subscription hook - memoized to prevent re-renders
+  const billingAccount = useMemo(() => ({
     planName: subscription?.tier || "free",
     planPrice: subscription?.tier === 'starter' ? 19 : 
                subscription?.tier === 'professional' ? 49 : 
@@ -137,14 +137,14 @@ const Billing = () => {
     isTrialActive: subscription?.trialActive || false,
     daysUntilTrialEnd: subscription?.trialDaysLeft || 0,
     trialEndsAt: new Date(Date.now() + (subscription?.trialDaysLeft || 0) * 24 * 60 * 60 * 1000)
-  };
+  }), [subscription]);
   
-  const storageStatus = {
+  const storageStatus = useMemo(() => ({
     storageUsageGb: parseFloat(subscription?.storageUsage?.split('/')[0] || '0'),
     storageLimitGb: parseFloat(subscription?.storageUsage?.split('/')[1] || '1'),
     storageUsagePercentage: subscription?.storagePercentage || 0,
     isExceeded: subscription?.storagePercentage > 100
-  };
+  }), [subscription]);
   
   const [invoices, setInvoices] = useState([]);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -160,11 +160,6 @@ const Billing = () => {
     }
   }, []);
   const loading = subscription?.loading || false;
-  console.log({storageStatus});
-  console.log({billingAccount});
-  console.log({subscription});
-  console.log({pricingPlans});
-  console.log({invoices});
 
   // Handle payment success/failure
   useEffect(() => {
@@ -210,7 +205,7 @@ const Billing = () => {
     } finally {
       setRefreshing(false);
     }
-  }, [fetchInvoices]);
+  }, []); // Removed fetchInvoices dependency
 
   // Download invoice PDF from API
   const downloadInvoice = async (invoiceId) => {
@@ -243,7 +238,7 @@ const Billing = () => {
       refreshData();
       setDataLoaded(true);
     }
-  }, [isAuthenticated, loading, dataLoaded, refreshData]);
+  }, [isAuthenticated, loading, dataLoaded]); // Removed refreshData dependency
 
   // Loading
   if (loading) {

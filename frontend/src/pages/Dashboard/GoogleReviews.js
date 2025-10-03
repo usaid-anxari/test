@@ -13,6 +13,7 @@ import { AuthContext } from '../../context/AuthContext';
 import axiosInstance from '../../service/axiosInstanse';
 import { API_PATHS } from '../../service/apiPaths';
 import toast from 'react-hot-toast';
+import { MOCK_GOOGLE_REVIEWS } from '../../assets/mockData';
 
 const GoogleReviews = () => {
   const { user } = useContext(AuthContext);
@@ -27,35 +28,28 @@ const GoogleReviews = () => {
 
   // Fetch connection status and reviews on component mount
   useEffect(() => {
-    fetchConnectionStatus();
-    fetchGoogleReviews();
+    // Use mock data for presentation
+    setConnectionStatus({ connected: true, connectedAt: new Date().toISOString(), locationId: 'demo-location-123' });
+    setGoogleReviews(MOCK_GOOGLE_REVIEWS);
+    setLoading(false);
   }, []);
 
   const fetchConnectionStatus = async () => {
-    try {
-      const response = await axiosInstance.get(API_PATHS.GOOGLE.GET_STATUS);
-      setConnectionStatus(response.data);
-    } catch (error) {
-      console.error('Error fetching Google connection status:', error);
-      setConnectionStatus({ connected: false });
-    } finally {
-      setLoading(false);
-    }
+    // Mock implementation for presentation
+    setConnectionStatus({ connected: true, connectedAt: new Date().toISOString(), locationId: 'demo-location-123' });
+    setLoading(false);
   };
 
   const fetchGoogleReviews = async (showRefreshToast = false) => {
-    try {
-      if (showRefreshToast) setRefreshing(true);
-      const response = await axiosInstance.get(API_PATHS.GOOGLE.GET_REVIEWS);
-      setGoogleReviews(response.data.reviews || []);
+    // Mock implementation for presentation
+    if (showRefreshToast) setRefreshing(true);
+    
+    // Simulate API delay
+    setTimeout(() => {
+      setGoogleReviews(MOCK_GOOGLE_REVIEWS);
       if (showRefreshToast) toast.success('Google reviews refreshed!');
-    } catch (error) {
-      console.error('Error fetching Google reviews:', error);
-      setGoogleReviews([]);
-      if (showRefreshToast) toast.error('Failed to refresh reviews');
-    } finally {
       if (showRefreshToast) setRefreshing(false);
-    }
+    }, 1000);
   };
 
   const handleConnect = () => {
@@ -72,28 +66,20 @@ const GoogleReviews = () => {
 
   const handleImportReviews = async () => {
     setImporting(true);
-    try {
-      const response = await axiosInstance.post(API_PATHS.GOOGLE.IMPORT_REVIEWS);
-      toast.success(`Imported ${response.data.reviewsImported} Google reviews!`);
-      await fetchGoogleReviews();
-    } catch (error) {
-      console.error('Error importing reviews:', error);
-      toast.error('Failed to import Google reviews');
-    } finally {
+    
+    // Mock implementation for presentation
+    setTimeout(() => {
+      setGoogleReviews(MOCK_GOOGLE_REVIEWS);
+      toast.success(`Imported ${MOCK_GOOGLE_REVIEWS.length} Google reviews!`);
       setImporting(false);
-    }
+    }, 2000);
   };
 
   const handleDisconnect = async () => {
-    try {
-      await axiosInstance.delete(API_PATHS.GOOGLE.DISCONNECT);
-      toast.success('Google Business Profile disconnected');
-      setConnectionStatus({ connected: false });
-      setGoogleReviews([]);
-    } catch (error) {
-      console.error('Error disconnecting Google:', error);
-      toast.error('Failed to disconnect Google Business Profile');
-    }
+    // Mock implementation for presentation
+    toast.success('Google Business Profile disconnected');
+    setConnectionStatus({ connected: false });
+    setGoogleReviews([]);
   };
 
   if (loading) {
@@ -259,7 +245,7 @@ const GoogleReviews = () => {
                           ))}
                         </div>
                         <span className="text-sm text-gray-500">
-                          {new Date(review.reviewedAt).toLocaleDateString()}
+                          {new Date(review.publishedAt).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -267,7 +253,7 @@ const GoogleReviews = () => {
                       Google
                     </div>
                   </div>
-                  <p className="text-gray-700 leading-relaxed">{review.text}</p>
+                  <p className="text-gray-700 leading-relaxed">{review.bodyText}</p>
                 </div>
               ))}
             </div>

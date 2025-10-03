@@ -39,15 +39,10 @@ const Moderation = () => {
     const fetchData = async () => {
       try {
         setLoading(true);      
-        // First get business info
+        // Get business info with reviews included
         const businessResponse = await axiosInstance.get(API_PATHS.BUSINESSES?.GET_PRIVATE_PROFILE);
-        setBusiness(businessResponse.data.business);
-        if (businessResponse.data.business?.slug) {
-          const reviewsResponse = await axiosInstance.get(
-            API_PATHS.REVIEWS.GET_REVIEWS(businessResponse.data.business.slug)
-          );
-          setReviews(reviewsResponse.data.reviews || []);
-        }
+        setBusiness(businessResponse.data?.business);
+        setReviews(businessResponse.data?.reviews || []);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to load reviews");
@@ -102,6 +97,9 @@ const Moderation = () => {
       toast.error("Business information not loaded");
       return;
     }
+    
+    console.log('Updating review with business slug:', business.slug);
+    console.log('API URL:', API_PATHS.REVIEWS.UPDATE_REVIEW_STATUS(business.slug, id));
     
     try {
       await axiosInstance.post(
@@ -172,60 +170,85 @@ const Moderation = () => {
         
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
           {/* Filters and Search */}
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center space-x-2">
-                  <FunnelIcon className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm font-semibold text-gray-700">Filter:</span>
+          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-8 border-b border-gray-100">
+            <div className="space-y-6">
+              {/* Filter Buttons Row */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center space-x-2">
+                    <FunnelIcon className="w-5 h-5 text-blue-600" />
+                    <span className="text-lg font-bold text-gray-800">Filter Reviews</span>
+                  </div>
                 </div>
+                
+                {/* Search and Sort Row */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  {/* Search */}
+                  <div className="relative min-w-[280px]">
+                    <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search by title, reviewer, or content..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 text-sm"
+                    />
+                  </div>
+                  
+                  {/* Sort */}
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm font-medium text-sm min-w-[160px]"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="rating-high">Highest Rating</option>
+                    <option value="rating-low">Lowest Rating</option>
+                  </select>
+                </div>
+              </div>
+              
+              {/* Filter Buttons */}
+              <div className="flex flex-wrap items-center gap-3">
                 {['all', 'pending', 'approved', 'rejected'].map((status) => {
                   const count = status === 'all' ? stats.total : stats[status];
+                  const isActive = filter === status;
+                  
                   return (
                     <button
                       key={status}
                       onClick={() => setFilter(status)}
-                      className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                        filter === status
-                          ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-lg transform scale-105'
-                          : 'bg-white text-gray-600 hover:bg-gray-50 hover:scale-105 border border-gray-200'
+                      className={`inline-flex items-center px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-xl scale-105'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200 hover:border-blue-300'
                       }`}
                     >
-                      {status === 'all' ? 'All Reviews' : status.charAt(0).toUpperCase() + status.slice(1)}
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                        filter === status ? 'bg-white/20' : 'bg-gray-100'
+                      {/* Status Icon */}
+                      {status === 'all' && (
+                        <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {status === 'pending' && <ClockIcon className="w-4 h-4 mr-2" />}
+                      {status === 'approved' && <CheckCircleIcon className="w-4 h-4 mr-2" />}
+                      {status === 'rejected' && <XCircleIcon className="w-4 h-4 mr-2" />}
+                      
+                      {/* Status Text */}
+                      <span>{status === 'all' ? 'All Reviews' : status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                      
+                      {/* Count Badge */}
+                      <span className={`ml-3 px-3 py-1 rounded-full text-xs font-bold ${
+                        isActive 
+                          ? 'bg-white/25 text-white' 
+                          : 'bg-gray-100 text-gray-600'
                       }`}>
                         {count}
                       </span>
                     </button>
                   );
                 })}
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                {/* Search */}
-                <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search reviews..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                  />
-                </div>
-                
-                {/* Sort */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="rating-high">Highest Rating</option>
-                  <option value="rating-low">Lowest Rating</option>
-                </select>
               </div>
             </div>
           </div>

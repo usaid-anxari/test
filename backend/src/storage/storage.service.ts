@@ -16,24 +16,24 @@ export class StorageService {
   ) {}
 
   async getUsageForBusiness(businessId: string) {
-    // Get all media assets for this business
-    const mediaAssets = await this.mediaRepo.find({
-      where: { businessId },
-    });
-    
-    // Calculate total bytes used
-    const bytesUsed = mediaAssets.reduce((total, asset) => {
-      return total + (Number(asset.sizeBytes) || 0);
-    }, 0);
+    // Use aggregation query for better performance
+    const result = await this.mediaRepo
+      .createQueryBuilder('media')
+      .select('SUM(CAST(media.sizeBytes AS BIGINT))', 'totalBytes')
+      .addSelect('COUNT(*)', 'mediaCount')
+      .where('media.businessId = :businessId', { businessId })
+      .getRawOne();
 
+    const bytesUsed = Number(result?.totalBytes) || 0;
+    const mediaCount = Number(result?.mediaCount) || 0;
+
+    // Quick count query for reviews
     const reviewCount = await this.reviewsRepo.count({
       where: { businessId },
     });
 
-    const mediaCount = mediaAssets.length;
-
     // Get storage limit from cache or use default
-    const storageLimitGb = this.storageLimits.get(businessId) || 1; // Default to FREE tier
+    const storageLimitGb = this.storageLimits.get(businessId) || 1;
     const bytesLimit = storageLimitGb * 1024 * 1024 * 1024;
 
     return {

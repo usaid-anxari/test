@@ -108,6 +108,13 @@ export class BusinessService {
     return businessUser?.business || null;
   }
 
+  async hasExistingBusiness(userId: string): Promise<boolean> {
+    const count = await this.businessUserRepo.count({
+      where: { userId }
+    });
+    return count > 0;
+  }
+
   async getBusinessesForUser(userId: string): Promise<Business[]> {
     const relationships = await this.businessUserRepo.find({
       where: { userId },
@@ -147,15 +154,18 @@ export class BusinessService {
     // Get approved reviews with media assets, prioritized: video → audio → text
     const queryBuilder = this.reviewRepo
       .createQueryBuilder('r')
-      .leftJoinAndSelect('r.mediaAssets', 'm')
+      .select([
+        'r.id', 'r.type', 'r.title', 'r.bodyText', 'r.rating', 
+        'r.reviewerName', 'r.publishedAt'
+      ])
+      .leftJoin('r.mediaAssets', 'm')
+      .addSelect(['m.id', 'm.assetType', 'm.s3Key', 'm.durationSec'])
       .where('r.businessId = :businessId', { businessId: business.id })
       .andWhere('r.status = :status', { status: 'approved' });
     
-    // Milestone 5: Filter text reviews if disabled
-    const textEnabled = business.settingsJson?.textReviewsEnabled ?? true;
-    if (!textEnabled) {
-      queryBuilder.andWhere('r.type != :textType', { textType: 'text' });
-    }
+    // Note: Text reviews are always enabled for widgets to ensure content availability
+    // Business setting textReviewsEnabled only affects the review submission form
+    // Widgets should show all approved reviews regardless of this setting
     
     const reviews = await queryBuilder
       .orderBy(
@@ -235,7 +245,12 @@ export class BusinessService {
   async getAllReviewsForBusiness(businessId: string) {
     const reviews = await this.reviewRepo
       .createQueryBuilder('r')
-      .leftJoinAndSelect('r.mediaAssets', 'm')
+      .select([
+        'r.id', 'r.type', 'r.status', 'r.title', 'r.bodyText', 'r.rating',
+        'r.reviewerName', 'r.submittedAt', 'r.publishedAt'
+      ])
+      .leftJoin('r.mediaAssets', 'm')
+      .addSelect(['m.id', 'm.assetType', 'm.s3Key', 'm.durationSec', 'm.sizeBytes'])
       .where('r.businessId = :businessId', { businessId })
       .orderBy('r.submittedAt', 'DESC')
       .getMany();

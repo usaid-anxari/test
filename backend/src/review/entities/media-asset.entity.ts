@@ -12,6 +12,7 @@ import { Review } from './review.entity';
 
 @Entity({ name: 'media_assets' })
 @Index('ix_media_assets_business_id_review_id', ['businessId', 'reviewId'])
+@Index('ix_media_assets_business_id', ['businessId'])
 export class MediaAsset {
   @PrimaryGeneratedColumn('uuid')
   id: string;

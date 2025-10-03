@@ -20,11 +20,23 @@ import AdminSettings from "./pages/Dashboard/AdminSettings";
 const Home = lazy(() => import("./pages/Home/Home"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const About = lazy(() => import("./pages/About"));
+const Blog = lazy(() => import("./pages/Blog"));
 const Contact = lazy(() => import("./pages/Contact"));
+const FloatingWidget = lazy(() => import("./pages/Widgets/FloatingWidget"));
+const GridWidget = lazy(() => import("./pages/Widgets/GridWidget"));
+const CarouselWidget = lazy(() => import("./pages/Widgets/CarouselWidget"));
+const SpotlightWidget = lazy(() => import("./pages/Widgets/SpotlightWidget"));
+const AudioReviews = lazy(() => import("./pages/Services/AudioReviews"));
+const QRCodeCollection = lazy(() => import("./pages/Services/QRCodeCollection"));
+const TextReviews = lazy(() => import("./pages/Services/TextReviews"));
+const VideoReviews = lazy(() => import("./pages/Services/VideoReviews"));
+
+const Integrations = lazy(() => import("./pages/Integrations"));
 const Support = lazy(() => import("./pages/Support"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Features = lazy(() => import("./components/Features"));
+const Document = lazy(() => import("./pages/Document"));
 
 // Auth Components
 const Auth0Login = lazy(() => import("./pages/Auth0Login"));
@@ -88,24 +100,29 @@ function App() {
       {isPublicRoute && <Navbar />}
 
       {/* Main content area */}
-      <main className={`flex-1 w-full ${isPublicRoute ? "max-w-7xl mx-auto p-4 mt-5 pb-32" : ""}`}>
+      <main className={`flex-1 w-full ${isPublicRoute ? "max-w-7xl mx-auto p-4 pt-20 pb-32" : ""}`}>
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             {/* Public Marketing Routes */}
-            {/* <Route path="/" element={
-              isAuthenticated && auth0User && !needsOnboarding ? 
-                <Navigate to="/dashboard" replace /> : 
-                <Home />
-            } /> */}
             <Route path="/" element={<Home />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/about" element={<About />} />
+            <Route path="/docs" element={<Document />} />
+            <Route path="/blog" element={<Blog />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/integrations" element={<Integrations />} />
             <Route path="/support" element={<Support />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/features" element={<Features />} />
-
+            <Route path="/widgets/floating" element={<FloatingWidget />} />
+            <Route path="/widgets/grid" element={<GridWidget />} />
+            <Route path="/widgets/carousel" element={<CarouselWidget />} />
+            <Route path="/widgets/spotlight" element={<SpotlightWidget />} />
+            <Route path="/services/audio-reviews" element={<AudioReviews />} />
+            <Route path="/services/qr-collection" element={<QRCodeCollection />} />
+            <Route path="/services/text-reviews" element={<TextReviews />} />
+            <Route path="/services/video-reviews" element={<VideoReviews />} />
             {/* Auth Routes */}
             <Route path="/auth0-login" element={<Auth0Login />} />
             <Route path="/auth0-signup" element={<Auth0Signup />} />

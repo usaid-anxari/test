@@ -13,6 +13,7 @@ import { Business } from './business.entity';
 
 @Entity({ name: 'business_users' })
 @Index('ix_business_users_business_id_user_id', ['businessId', 'userId'])
+@Index('ix_business_users_user_id_default', ['userId', 'isDefault'])
 export class BusinessUser {
   @PrimaryGeneratedColumn('uuid')
   id: string;

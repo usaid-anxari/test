@@ -11,20 +11,22 @@ export const EVENT_TYPES = {
   REVIEW_SUBMISSION: 'review_submission'
 };
 
-// Track analytics events
-export const trackEvent = async (businessId, eventType, widgetId = null, eventData = {}) => {
-  try {
-    await axiosInstance.post(API_PATHS.ANALYTICS.TRACK_EVENT, {
-      businessId,
-      eventType,
-      widgetId,
-      eventData,
-      referrerUrl: window.location.href
-    });
-  } catch (error) {
-    console.log('Analytics tracking failed:', error);
-    // Fail silently to not disrupt user experience
-  }
+// Track analytics events (non-blocking)
+export const trackEvent = (businessId, eventType, widgetId = null, eventData = {}) => {
+  // Use setTimeout to make it non-blocking
+  setTimeout(async () => {
+    try {
+      await axiosInstance.post(API_PATHS.ANALYTICS.TRACK_EVENT, {
+        businessId,
+        eventType,
+        widgetId,
+        eventData,
+        referrerUrl: window.location.href
+      });
+    } catch (error) {
+      // Fail silently to not disrupt user experience
+    }
+  }, 0);
 };
 
 // Track widget view

@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 
 const SubscriptionBanner = ({ subscriptionStatus, tier, storageUsage, trialActive, trialDaysLeft }) => {
   const navigate = useNavigate();
-  console.log({ subscriptionStatus, tier, storageUsage, trialActive, trialDaysLeft });
   
   // Don't show banner for active paid subscriptions
   if (subscriptionStatus === 'active' && tier !== 'free') {

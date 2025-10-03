@@ -3,28 +3,10 @@ import axiosInstance from '../service/axiosInstanse';
 import { API_PATHS } from '../service/apiPaths';
 
 export const useFeatureAccess = (feature) => {
-  const [hasAccess, setHasAccess] = useState(true);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAccess = async () => {
-      try {
-        const response = await axiosInstance.get(
-          API_PATHS.BILLING.CHECK_FEATURE_ACCESS(feature)
-        );
-        setHasAccess(response.data.hasAccess);
-      } catch (error) {
-        console.log(`Feature access check failed for ${feature}:`, error);
-        setHasAccess(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (feature) {
-      checkAccess();
-    }
-  }, [feature]);
+  // Simplified - feature access is handled by billing service on backend
+  // Frontend assumes access unless explicitly blocked
+  const [hasAccess] = useState(true);
+  const [loading] = useState(false);
 
   return { hasAccess, loading };
 };

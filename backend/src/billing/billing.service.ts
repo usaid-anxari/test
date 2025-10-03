@@ -12,6 +12,8 @@ import { StorageService } from '../storage/storage.service';
 @Injectable()
 export class BillingService {
   private stripe: Stripe;
+  private billingCache = new Map<string, { data: any; timestamp: number }>();
+  private readonly CACHE_TTL = 30000; // 30 seconds cache
 
   constructor(
     @InjectRepository(BillingAccount)
@@ -57,12 +59,16 @@ export class BillingService {
   }
 
   async getBillingInfo(businessId: string): Promise<BillingInfoDto> {
+    // Check cache first
+    const cached = this.billingCache.get(businessId);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data;
+    }
+
     const billingAccount = await this.getOrCreateBillingAccount(businessId);
     const storageInfo = await this.storageService.getUsageForBusiness(businessId);
 
-    console.log('Billing Service - Storage Info:', storageInfo);
-    console.log('Billing Service - Bytes Used:', storageInfo.bytesUsed);
-    console.log('Billing Service - Bytes Limit:', storageInfo.bytesLimit);
+    // Storage info logging removed for performance
 
     const storageUsageGb = Math.round((storageInfo.bytesUsed / (1024 * 1024 * 1024)) * 1000) / 1000; // Keep 3 decimal places
     const actualStorageLimitGb = Math.round((storageInfo.bytesLimit / (1024 * 1024 * 1024)) * 100) / 100; // Use actual limit from storage service
@@ -70,21 +76,19 @@ export class BillingService {
       ? Math.round((storageUsageGb / actualStorageLimitGb) * 100 * 100) / 100 // Keep 2 decimal places
       : 0;
 
-    console.log('Billing Service - Storage Usage GB:', storageUsageGb);
-    console.log('Billing Service - Storage Limit GB:', actualStorageLimitGb);
-    console.log('Billing Service - Storage Percentage:', storageUsagePercentage);
+    // Storage calculations completed
 
     const isTrialActive = billingAccount.trialEndsAt && billingAccount.trialEndsAt > new Date();
     const daysUntilTrialEnd = isTrialActive 
       ? Math.ceil((billingAccount.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
       : 0;
 
-    return {
+    const result = {
       id: billingAccount.id,
       businessId: billingAccount.businessId,
       billingStatus: billingAccount.billingStatus,
       pricingTier: billingAccount.pricingTier,
-      storageLimitGb: actualStorageLimitGb, // Use actual storage limit
+      storageLimitGb: actualStorageLimitGb,
       monthlyPriceCents: billingAccount.monthlyPriceCents,
       trialEndsAt: billingAccount.trialEndsAt,
       currentPeriodStart: billingAccount.currentPeriodStart,
@@ -94,6 +98,14 @@ export class BillingService {
       isTrialActive,
       daysUntilTrialEnd,
     };
+
+    // Cache the result
+    this.billingCache.set(businessId, {
+      data: result,
+      timestamp: Date.now()
+    });
+
+    return result;
   }
 
   async getPricingPlans(): Promise<PricingPlanDto[]> {
@@ -175,16 +187,10 @@ export class BillingService {
     }
 
     // Development mode: Always update subscription immediately
-    const isDevelopment = this.configService.get('NODE_ENV') !== 'development';
-    console.log(`Development mode: ${isDevelopment}`);
-    console.log(`Stripe price ID: ${selectedPlan.stripePriceId}`);
+    const isDevelopment = this.configService.get('NODE_ENV') === 'production';
     
     // Force development mode unless production is forced
     if (isDevelopment) {
-      console.log(`DEVELOPMENT MODE: Processing immediate subscription update`);
-      console.log(`Business ID: ${businessId}`);
-      console.log(`Selected Plan: ${selectedPlan.tier}`);
-      console.log(`Plan Details:`, selectedPlan);
       
       try {
         const updatedAccount = await this.updateSubscription(
@@ -204,34 +210,21 @@ export class BillingService {
           `${selectedPlan.name} Plan Subscription`
         );
         
-        console.log(`DEVELOPMENT MODE: Subscription updated successfully`);
-        console.log(`Updated Account:`, {
-          id: updatedAccount.id,
-          tier: updatedAccount.pricingTier,
-          status: updatedAccount.billingStatus,
-          price: updatedAccount.monthlyPriceCents
-        });
-        
         const successUrl = createCheckoutSessionDto.successUrl || `${this.configService.get('FRONTEND_URL')}/dashboard/billing?payment=success&session_id=cs_test_dev_mode`;
-        console.log(`DEVELOPMENT MODE: Returning success URL: ${successUrl}`);
         
         return {
           checkoutUrl: successUrl,
           sessionId: 'cs_test_dev_mode',
         };
       } catch (error) {
-        console.error(`DEVELOPMENT MODE: Failed to update subscription:`, error);
         throw error;
       }
     }
     
     // Production mode - require Stripe price ID
     if (!selectedPlan.stripePriceId) {
-      console.error(`No Stripe price ID configured for ${selectedPlan.tier} tier`);
       throw new Error(`Stripe price ID not configured for ${selectedPlan.tier} tier. Please contact support.`);
     }
-    
-    console.log(`Using Stripe price ID: ${selectedPlan.stripePriceId}`);
 
     if (!selectedPlan.stripePriceId.startsWith('price_')) {
       throw new Error(`Invalid Stripe price ID format: ${selectedPlan.stripePriceId}. Expected format: price_xxx`);
@@ -299,28 +292,13 @@ export class BillingService {
     pricingTier: PricingTier,
     billingStatus: BillingStatus,
   ): Promise<BillingAccount> {
-    console.log(`UPDATING SUBSCRIPTION`);
-    console.log(`Business ID: ${businessId}`);
-    console.log(`Pricing Tier: ${pricingTier}`);
-    console.log(`Billing Status: ${billingStatus}`);
-    console.log(`Subscription ID: ${stripeSubscriptionId}`);
-    
     const billingAccount = await this.getOrCreateBillingAccount(businessId);
-    console.log(`Current billing account:`, {
-      id: billingAccount.id,
-      currentTier: billingAccount.pricingTier,
-      currentStatus: billingAccount.billingStatus
-    });
-    
     const pricingPlans = await this.getPricingPlans();
     const selectedPlan = pricingPlans.find(plan => plan.tier === pricingTier);
     
     if (!selectedPlan) {
-      console.error(`No plan found for tier: ${pricingTier}`);
       throw new Error(`No plan found for tier: ${pricingTier}`);
     }
-    
-    console.log(`Selected plan:`, selectedPlan);
 
     billingAccount.stripeSubscriptionId = stripeSubscriptionId;
     billingAccount.pricingTier = pricingTier;
@@ -345,14 +323,6 @@ export class BillingService {
     
     // Update storage service with new limits
     await this.storageService.updateStorageLimit(businessId, selectedPlan.storageLimitGb);
-    
-    console.log(`SUBSCRIPTION UPDATE COMPLETE`);
-    console.log(`Account ID: ${savedAccount.id}`);
-    console.log(`New Tier: ${savedAccount.pricingTier}`);
-    console.log(`New Status: ${savedAccount.billingStatus}`);
-    console.log(`New Price: $${savedAccount.monthlyPriceCents / 100}/month`);
-    console.log(`New Storage: ${savedAccount.storageLimitGb}GB`);
-    console.log(`Period: ${savedAccount.currentPeriodStart} to ${savedAccount.currentPeriodEnd}`);
     
     return savedAccount;
   }

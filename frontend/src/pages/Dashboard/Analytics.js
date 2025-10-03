@@ -33,8 +33,6 @@ const Analytics = () => {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
   
-  console.log(widgets);
-  
   // Fetch business and analytics data
   useEffect(() => {
     const fetchData = async () => {
@@ -56,7 +54,7 @@ const Analytics = () => {
             // Fetch widgets
             const widgetsResponse = await axiosInstance.get(API_PATHS.WIDGETS.GET_WIDGETS);
             setWidgets(widgetsResponse?.data ? widgetsResponse?.data.widgets : []);
-            console.log("Fetched widgets:", widgetsResponse.data.widgets);
+            // Widgets fetched successfully
             
             // Fetch widget performance data
             const widgetsArray = Array.isArray(widgetsResponse.data) ? widgetsResponse.data : [];

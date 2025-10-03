@@ -103,19 +103,29 @@ export class BusinessController {
     @Body() body: CreateBusinessDto,
   ) {
     try {
+      const userId = req.userEntity.id;
+      const user = await this.usersService.findById(userId);
+      if (!user) {
+        throw new BadRequestException('User not found in system.');
+      }
+
+      // Check if user already has a business (one business per user)
+      const hasExisting = await this.bizService.hasExistingBusiness(userId);
+      if (hasExisting) {
+        throw new BadRequestException('User already has a business. Only one business per user is allowed.');
+      }
+
+      // Validate email matches Auth0 email
+      if (body.contactEmail && body.contactEmail !== user.email) {
+        throw new BadRequestException('Contact email must match your account email.');
+      }
+
       const slug = (body.slug || body.name).toLowerCase().replace(/\s+/g, '-');
 
       // Check slug uniqueness
       const existing = await this.bizService.findBySlug(slug);
       if (existing) {
         throw new BadRequestException('Slug already taken, choose another.');
-      }
-
-      // Get current user
-      const userId = req.userEntity.id;
-      const user = await this.usersService.findById(userId);
-      if (!user) {
-        throw new BadRequestException('User not found in system.');
       }
 
       // Handle logo upload (file OR URL)

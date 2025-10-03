@@ -10,14 +10,12 @@ import {
   EyeIcon,
   ChartBarIcon,
   DevicePhoneMobileIcon,
-  PhotoIcon,
-  HeartIcon,
-  ChatBubbleLeftIcon,
+  ChatBubbleBottomCenterTextIcon,
+  CursorArrowRaysIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/solid";
 
-
-
-const WallWidget = () => {
+const FloatingWidget = () => {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [filter, setFilter] = useState("all");
 
@@ -108,41 +106,41 @@ const WallWidget = () => {
 
   const features = [
     {
-      icon: <PhotoIcon className="h-8 w-8" />,
-      title: "Social Wall",
-      description: "Display testimonials in a social media-style wall format."
+      icon: <ChatBubbleBottomCenterTextIcon className="h-8 w-8" />,
+      title: "Always Visible",
+      description: "Floating bubble stays visible as users scroll through your site."
     },
     {
-      icon: <EyeIcon className="h-8 w-8" />,
-      title: "Visual Appeal",
-      description: "Create an engaging, scrollable wall of customer testimonials."
+      icon: <CursorArrowRaysIcon className="h-8 w-8" />,
+      title: "High Engagement",
+      description: "Catches attention with subtle animations and hover effects."
     },
     {
       icon: <DevicePhoneMobileIcon className="h-8 w-8" />,
-      title: "Mobile Optimized",
-      description: "Perfect scrolling experience on all devices and screen sizes."
+      title: "Mobile Friendly",
+      description: "Responsive design that works perfectly on all screen sizes."
     },
     {
-      icon: <ChartBarIcon className="h-8 w-8" />,
-      title: "Engagement Tracking",
-      description: "Monitor likes, comments, and interactions on each testimonial."
+      icon: <SparklesIcon className="h-8 w-8" />,
+      title: "Customizable",
+      description: "Match your brand colors and choose the perfect position."
     }
   ];
 
   const benefits = [
-    "Showcase all testimonials in an engaging social media format",
-    "Perfect for testimonial pages and social proof sections",
-    "Encourages user interaction and engagement",
-    "Professional appearance that builds community",
-    "Easy to browse and discover customer stories",
-    "Optimized for both desktop and mobile viewing"
+    "Maximum visibility with always-on-screen presence",
+    "Perfect for highlighting your best testimonial",
+    "Non-intrusive design that doesn't block content",
+    "Increases trust and credibility across all pages",
+    "Easy one-click setup with customizable positioning",
+    "Subtle animations that draw attention without being annoying"
   ];
 
   const stats = [
-    { number: "45%", label: "Higher engagement than traditional layouts" },
-    { number: "∞", label: "Unlimited testimonials display" },
+    { number: "65%", label: "Higher visibility than static testimonials" },
+    { number: "1", label: "Featured testimonial always visible" },
     { number: "100%", label: "Mobile responsive" },
-    { number: "24/7", label: "Auto-updating content" }
+    { number: "24/7", label: "Continuous social proof" }
   ];
 
   const formatDate = (dateString) => {
@@ -162,11 +160,11 @@ const WallWidget = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
-                Wall Widget
+                Floating Widget
               </h1>
               <p className="text-xl md:text-2xl text-violet-100 mb-8 leading-relaxed">
-                Create a social media-style wall of testimonials. Display all your customer 
-                feedback in an engaging, scrollable format that encourages interaction and discovery.
+                Add a floating testimonial bubble that stays visible as users scroll. Perfect for 
+                showcasing your best review with maximum visibility and engagement.
               </p>
               <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
                 <Link
@@ -188,73 +186,42 @@ const WallWidget = () => {
               <div className="bg-white rounded-2xl p-8 shadow-2xl text-gray-900">
                 <h3 className="text-lg font-bold mb-6 text-center">Live Demo</h3>
                 
-                {/* Filter Tabs */}
-                <div className="flex justify-center gap-2 mb-6">
-                  {[
-                    { id: "all", label: "All", count: testimonials.length },
-                    { id: "text", label: "Text", count: testimonials.filter(t => t.type === "text").length },
-                    { id: "video", label: "Video", count: testimonials.filter(t => t.type === "video").length },
-                    { id: "audio", label: "Audio", count: testimonials.filter(t => t.type === "audio").length }
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setFilter(tab.id)}
-                      className={`px-3 py-1 rounded-full text-sm font-semibold transition-all duration-200 ${
-                        filter === tab.id
-                          ? "bg-violet-600 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {tab.label} ({tab.count})
-                    </button>
-                  ))}
-                </div>
-                
-                {/* Wall Demo */}
-                <div className="max-h-96 overflow-y-auto space-y-4">
-                  {filteredTestimonials.map((testimonial) => (
-                    <div key={testimonial.id} className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
-                      <div className="flex items-start gap-3">
-                        <img
-                          src={testimonial.image}
-                          alt={testimonial.name}
-                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                          onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/48x48/6B7280/FFFFFF?text=" + testimonial.name.charAt(0);
-                          }}
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="font-semibold text-gray-900">{testimonial.name}</div>
-                            <div className="text-sm text-gray-500">•</div>
-                            <div className="text-sm text-gray-500">{formatDate(testimonial.date)}</div>
-                          </div>
-                          <div className="text-sm text-gray-600 mb-2">{testimonial.position} at {testimonial.company}</div>
-                          <div className="flex items-center gap-1 mb-3">
-                            {Array.from({ length: testimonial.rating }).map((_, i) => (
-                              <StarIcon key={i} className="h-4 w-4 text-yellow-400" />
-                            ))}
-                            <span className="text-sm text-gray-500 ml-1">{testimonial.rating}.0</span>
-                          </div>
-                          <p className="text-gray-800 mb-3 italic">"{testimonial.content}"</p>
-                          <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <button className="flex items-center gap-1 hover:text-violet-600 transition-colors">
-                              <HeartIcon className="h-4 w-4" />
-                              <span>{testimonial.likes}</span>
-                            </button>
-                            <button className="flex items-center gap-1 hover:text-violet-600 transition-colors">
-                              <ChatBubbleLeftIcon className="h-4 w-4" />
-                              <span>{testimonial.comments}</span>
-                            </button>
-                            <div className="flex items-center gap-1">
-                              <PhotoIcon className="h-4 w-4" />
-                              <span className="capitalize">{testimonial.type}</span>
-                            </div>
-                          </div>
+                {/* Floating Widget Demo */}
+                <div className="relative bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-6 min-h-[300px]">
+                  <div className="text-center text-gray-500 mb-4">
+                    <p className="text-sm">Your website content goes here...</p>
+                    <div className="space-y-2 mt-4">
+                      <div className="h-3 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                      <div className="h-3 bg-gray-200 rounded w-2/3 mx-auto"></div>
+                    </div>
+                  </div>
+                  
+                  {/* Floating Bubble */}
+                  <div className="absolute bottom-6 right-6 bg-white rounded-2xl shadow-2xl p-4 max-w-xs border border-gray-100 hover:shadow-3xl transition-all duration-300 hover:scale-105">
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-500 rounded-full animate-pulse"></div>
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={testimonials[0].image}
+                        alt={testimonials[0].name}
+                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1 mb-2">
+                          {Array.from({ length: testimonials[0].rating }).map((_, i) => (
+                            <StarIcon key={i} className="h-3 w-3 text-yellow-400" />
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-800 mb-2 italic">
+                          "{testimonials[0].content.substring(0, 60)}..."
+                        </p>
+                        <div className="text-xs text-gray-600">
+                          <div className="font-semibold">{testimonials[0].name}</div>
+                          <div>{testimonials[0].position}</div>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
                 
                 {/* Auto-play Toggle */}
@@ -292,7 +259,7 @@ const WallWidget = () => {
 
         {/* Features Section */}
         <div className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Why Choose Wall Widget?</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Why Choose Floating Widget?</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <div key={index} className="bg-white rounded-xl shadow-lg p-6 text-center hover:shadow-xl transition-shadow duration-300">
@@ -309,7 +276,7 @@ const WallWidget = () => {
         {/* Benefits Section */}
         <div className="mb-16">
           <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Benefits of Wall Widget</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Benefits of Floating Widget</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {benefits.map((benefit, index) => (
                 <div key={index} className="flex items-start gap-3">
@@ -326,19 +293,19 @@ const WallWidget = () => {
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Perfect For</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-              <div className="text-4xl mb-4">📱</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Social Proof Pages</h3>
-              <p className="text-gray-600 text-sm">Create dedicated pages showcasing all customer testimonials in a social format.</p>
+              <div className="text-4xl mb-4">🏠</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Homepage</h3>
+              <p className="text-gray-600 text-sm">Add persistent social proof that follows visitors as they browse your site.</p>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-              <div className="text-4xl mb-4">🏢</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Company Websites</h3>
-              <p className="text-gray-600 text-sm">Display testimonials in an engaging wall format on your main website.</p>
+              <div className="text-4xl mb-4">🛍️</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">E-commerce</h3>
+              <p className="text-gray-600 text-sm">Build trust throughout the shopping experience with floating testimonials.</p>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-              <div className="text-4xl mb-4">🎯</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Landing Pages</h3>
-              <p className="text-gray-600 text-sm">Add a testimonial wall to increase social proof and conversions.</p>
+              <div className="text-4xl mb-4">📄</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Service Pages</h3>
+              <p className="text-gray-600 text-sm">Showcase relevant testimonials on specific service or product pages.</p>
             </div>
           </div>
         </div>
@@ -351,36 +318,36 @@ const WallWidget = () => {
               <div className="bg-violet-100 text-violet-600 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <CogIcon className="h-8 w-8" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Design & Layout</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Position & Style</h3>
               <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Custom colors and themes</li>
-                <li>• Card layout options</li>
-                <li>• Typography customization</li>
-                <li>• Spacing and padding control</li>
+                <li>• Corner positioning options</li>
+                <li>• Custom colors and branding</li>
+                <li>• Size and shape customization</li>
+                <li>• Animation preferences</li>
               </ul>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-6 text-center">
               <div className="bg-violet-100 text-violet-600 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <PlayIcon className="h-8 w-8" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Content & Filtering</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Content & Display</h3>
               <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Content type filtering</li>
-                <li>• Date range selection</li>
-                <li>• Rating-based filtering</li>
-                <li>• Search functionality</li>
+                <li>• Featured testimonial selection</li>
+                <li>• Auto-rotation options</li>
+                <li>• Show/hide on specific pages</li>
+                <li>• Mobile responsiveness</li>
               </ul>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-6 text-center">
               <div className="bg-violet-100 text-violet-600 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <ChartBarIcon className="h-8 w-8" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Interaction & Analytics</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Behavior & Analytics</h3>
               <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Like and comment features</li>
-                <li>• Engagement tracking</li>
-                <li>• Click-through analytics</li>
-                <li>• Social sharing options</li>
+                <li>• Click-through tracking</li>
+                <li>• Visibility analytics</li>
+                <li>• Conversion measurement</li>
+                <li>• A/B testing support</li>
               </ul>
             </div>
           </div>
@@ -388,9 +355,9 @@ const WallWidget = () => {
 
         {/* CTA Section */}
         <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-2xl p-8 md:p-12 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Ready to Build Your Testimonial Wall?</h2>
+          <h2 className="text-3xl font-bold mb-4">Ready to Add a Floating Widget?</h2>
           <p className="text-xl text-violet-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of businesses already using wall widgets to showcase their testimonials in an engaging social format.
+            Join thousands of businesses using floating widgets to maintain constant social proof across their entire website.
           </p>
           <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
             <Link
@@ -412,4 +379,4 @@ const WallWidget = () => {
   );
 };
 
-export default WallWidget;
+export default FloatingWidget;

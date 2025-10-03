@@ -18,15 +18,12 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-
-    console.log("authHeader :" + authHeader);
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('Missing or invalid Authorization header');
     }
     
     const token = authHeader.split(' ')[1];
-    console.log("token :" + token );
     
     try {
       const cached = this.profileCache.get(token);
@@ -47,7 +44,8 @@ export class JwtAuthGuard implements CanActivate {
         timestamp: now
       });
       
-      if (this.profileCache.size > 100) {
+      // Clean cache less frequently for better performance
+      if (this.profileCache.size > 200) {
         this.cleanCache();
       }
       

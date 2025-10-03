@@ -16,6 +16,8 @@ export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'hidden';
 
 @Entity({ name: 'reviews' })
 @Index('ix_reviews_business_id_status', ['businessId', 'status'])
+@Index('ix_reviews_published_at', ['publishedAt'])
+@Index('ix_reviews_submitted_at', ['submittedAt'])
 export class Review {
   @PrimaryGeneratedColumn('uuid')
   id: string;
