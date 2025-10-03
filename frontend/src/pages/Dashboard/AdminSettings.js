@@ -14,7 +14,8 @@ import {
 } from "@heroicons/react/24/outline";
 
 const AdminSettings = () => {
-  const { getInitialData, hasFeature, tenant, refreshBusinessInfo } = useContext(AuthContext);
+  const { hasFeature, tenant, refreshBusinessInfo } =
+    useContext(AuthContext);
   const [allowTextReviews, setAllowTextReviews] = useState(true);
   const [allowGoogleReviews, setAllowGoogleReviews] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -31,15 +32,15 @@ const AdminSettings = () => {
 
   const handleToggle = async () => {
     if (loading) return;
-    
+
     setLoading(true);
     try {
       const newSetting = !allowTextReviews;
-      
+
       await axiosInstance.post(API_PATHS.BUSINESSES.TOGGLE_TEXT_REVIEWS, {
-        enabled: newSetting
+        enabled: newSetting,
       });
-      
+
       setAllowTextReviews(newSetting);
       await refreshBusinessInfo(); // Refresh business data
       toast.success(
@@ -55,25 +56,28 @@ const AdminSettings = () => {
 
   const handleToggleGoogleReviews = async () => {
     if (loading) return;
-    
+
     setLoading(true);
     try {
       const newSetting = !allowGoogleReviews;
-      
-      await axiosInstance.put(API_PATHS.BUSINESSES.UPDATE_PRIVATE_PROFILE, {
-        settingsJson: {
-          ...tenant?.settingsJson,
-          googleReviewsEnabled: newSetting
+
+ await axiosInstance.post(
+        API_PATHS.BUSINESSES.TOGGLE_GOOGLE_REVIEWS,
+        {
+          enabled: newSetting,
         }
-      });
-      
+      );
+
       setAllowGoogleReviews(newSetting);
       await refreshBusinessInfo();
       toast.success(
         `Google reviews are now ${newSetting ? "enabled" : "disabled"}.`
       );
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to update Google reviews setting.");
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to update Google reviews setting."
+      );
       console.error("Error toggling Google reviews:", error);
     } finally {
       setLoading(false);
@@ -105,11 +109,15 @@ const AdminSettings = () => {
             </div>
             <div className="mt-6 lg:mt-0 grid grid-cols-2 gap-4">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold">{allowTextReviews ? '✓' : '✗'}</div>
+                <div className="text-2xl font-bold">
+                  {allowTextReviews ? "✓" : "✗"}
+                </div>
                 <div className="text-sm text-blue-100">Text Reviews</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold">{allowGoogleReviews ? '✓' : '✗'}</div>
+                <div className="text-2xl font-bold">
+                  {allowGoogleReviews ? "✓" : "✗"}
+                </div>
                 <div className="text-sm text-blue-100">Google Reviews</div>
               </div>
             </div>
@@ -118,7 +126,6 @@ const AdminSettings = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
-
         {/* Review Settings */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -130,9 +137,11 @@ const AdminSettings = () => {
               <DocumentTextIcon className="w-8 h-8 mr-3 text-blue-600" />
               Review Configuration
             </h2>
-            <p className="text-gray-600">Configure what types of reviews customers can submit</p>
+            <p className="text-gray-600">
+              Configure what types of reviews customers can submit
+            </p>
           </div>
-          
+
           <div className="p-6 space-y-6">
             {/* Text Reviews Toggle */}
             <div className="bg-gray-50 rounded-2xl p-6">
@@ -146,7 +155,8 @@ const AdminSettings = () => {
                       Text Reviews
                     </h3>
                     <p className="text-gray-600">
-                      Allow customers to submit written reviews in addition to video and audio testimonials
+                      Allow customers to submit written reviews in addition to
+                      video and audio testimonials
                     </p>
                     {!hasFeature("advanced_moderation") && (
                       <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-orange-100 text-orange-800">
@@ -157,16 +167,20 @@ const AdminSettings = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className={`text-sm font-semibold ${
-                    allowTextReviews ? 'text-green-600' : 'text-gray-500'
-                  }`}>
-                    {allowTextReviews ? 'Enabled' : 'Disabled'}
+                  <div
+                    className={`text-sm font-semibold ${
+                      allowTextReviews ? "text-green-600" : "text-gray-500"
+                    }`}
+                  >
+                    {allowTextReviews ? "Enabled" : "Disabled"}
                   </div>
                   <button
                     onClick={handleToggle}
                     disabled={!hasFeature("advanced_moderation") || loading}
                     className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      allowTextReviews ? "bg-gradient-to-r from-green-500 to-green-600" : "bg-gray-300"
+                      allowTextReviews
+                        ? "bg-gradient-to-r from-green-500 to-green-600"
+                        : "bg-gray-300"
                     } ${
                       !hasFeature("advanced_moderation") || loading
                         ? "opacity-50 cursor-not-allowed"
@@ -201,7 +215,8 @@ const AdminSettings = () => {
                       Google Reviews Integration
                     </h3>
                     <p className="text-gray-600">
-                      Show Google review submission option on the record review page to encourage customers to also leave Google reviews
+                      Show Google review submission option on the record review
+                      page to encourage customers to also leave Google reviews
                     </p>
                     {!hasFeature("advanced_moderation") && (
                       <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-orange-100 text-orange-800">
@@ -212,16 +227,20 @@ const AdminSettings = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className={`text-sm font-semibold ${
-                    allowGoogleReviews ? 'text-blue-600' : 'text-gray-500'
-                  }`}>
-                    {allowGoogleReviews ? 'Enabled' : 'Disabled'}
+                  <div
+                    className={`text-sm font-semibold ${
+                      allowGoogleReviews ? "text-blue-600" : "text-gray-500"
+                    }`}
+                  >
+                    {allowGoogleReviews ? "Enabled" : "Disabled"}
                   </div>
                   <button
                     onClick={handleToggleGoogleReviews}
                     disabled={!hasFeature("advanced_moderation") || loading}
                     className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      allowGoogleReviews ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gray-300"
+                      allowGoogleReviews
+                        ? "bg-gradient-to-r from-blue-500 to-blue-600"
+                        : "bg-gray-300"
                     } ${
                       !hasFeature("advanced_moderation") || loading
                         ? "opacity-50 cursor-not-allowed"
@@ -246,8 +265,6 @@ const AdminSettings = () => {
           </div>
         </motion.div>
 
-
-
         {/* Privacy & Compliance */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -259,9 +276,11 @@ const AdminSettings = () => {
               <ShieldCheckIcon className="w-8 h-8 mr-3 text-blue-600" />
               Privacy & Compliance
             </h2>
-            <p className="text-gray-600">Configure privacy settings and legal compliance requirements</p>
+            <p className="text-gray-600">
+              Configure privacy settings and legal compliance requirements
+            </p>
           </div>
-          
+
           <div className="p-6">
             <div className="bg-gray-50 rounded-2xl p-6">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -274,20 +293,26 @@ const AdminSettings = () => {
                       Consent Requirement
                     </h3>
                     <p className="text-gray-600 mb-3">
-                      Require customers to provide explicit consent before submitting reviews. This helps ensure GDPR and CCPA compliance.
+                      Require customers to provide explicit consent before
+                      submitting reviews. This helps ensure GDPR and CCPA
+                      compliance.
                     </p>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-700">
-                        <strong>Recommended:</strong> Keep this enabled to protect your business and comply with privacy regulations.
+                        <strong>Recommended:</strong> Keep this enabled to
+                        protect your business and comply with privacy
+                        regulations.
                       </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className={`text-sm font-semibold ${
-                    showConsent ? 'text-purple-600' : 'text-gray-500'
-                  }`}>
-                    {showConsent ? 'Required' : 'Optional'}
+                  <div
+                    className={`text-sm font-semibold ${
+                      showConsent ? "text-purple-600" : "text-gray-500"
+                    }`}
+                  >
+                    {showConsent ? "Required" : "Optional"}
                   </div>
                   <button
                     onClick={() => {
@@ -295,7 +320,9 @@ const AdminSettings = () => {
                       saveConsent();
                     }}
                     className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 hover:shadow-lg ${
-                      showConsent ? "bg-gradient-to-r from-purple-500 to-purple-600" : "bg-gray-300"
+                      showConsent
+                        ? "bg-gradient-to-r from-purple-500 to-purple-600"
+                        : "bg-gray-300"
                     }`}
                   >
                     <span

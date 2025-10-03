@@ -15,6 +15,7 @@ export const API_PATHS = {
     GET_PUBLIC_PROFILE: (slug) => `/business/${slug}`,
     CREATE_BUSINESS: "/api/business",
     TOGGLE_TEXT_REVIEWS: "/api/business/settings/text-reviews",
+    TOGGLE_GOOGLE_REVIEWS: "/api/business/settings/google-reviews",
   },
   REVIEWS: {
     GET_PUBLIC_REVIEWS: (slug) => `/public/${slug}/reviews`,

@@ -34,6 +34,48 @@ export class Business {
   @Column({ name: 'contact_email', nullable: true })
   contactEmail: string;
 
+  @Column({ name: 'phone', nullable: true })
+  phone: string;
+
+  @Column({ name: 'description', type: 'text', nullable: true })
+  description: string;
+
+  @Column({ name: 'address', nullable: true })
+  address: string;
+
+  @Column({ name: 'city', nullable: true })
+  city: string;
+
+  @Column({ name: 'state', nullable: true })
+  state: string;
+
+  @Column({ name: 'country', nullable: true })
+  country: string;
+
+  @Column({ name: 'postal_code', nullable: true })
+  postalCode: string;
+
+  @Column({ name: 'industry', nullable: true })
+  industry: string;
+
+  @Column({ name: 'company_size', nullable: true })
+  companySize: string;
+
+  @Column({ name: 'founded_year', nullable: true })
+  foundedYear: number;
+
+  @Column({ name: 'banner_url', nullable: true })
+  bannerUrl: string;
+
+  @Column({ name: 'business_hours', type: 'json', nullable: true })
+  businessHours: any;
+
+  @Column({ name: 'social_links', type: 'json', nullable: true })
+  socialLinks: any;
+
+  @Column({ name: 'is_verified', default: false })
+  isVerified: boolean;
+
   @Column({ name: 'settings_json', type: 'json', nullable: true })
   settingsJson: any;
 

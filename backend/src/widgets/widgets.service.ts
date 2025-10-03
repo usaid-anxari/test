@@ -35,6 +35,7 @@ export class WidgetsService {
       businessId,
       name: dto.name,
       style: dto.style,
+      reviewTypes: dto.reviewTypes || ['video', 'audio', 'text'],
       settingsJson: settingsJson || this.getDefaultSettings(dto.style),
       isActive: true,
     });
@@ -83,6 +84,7 @@ export class WidgetsService {
 
     if (updates.name) widget.name = updates.name;
     if (updates.style) widget.style = updates.style;
+    if (updates.reviewTypes) widget.reviewTypes = updates.reviewTypes;
     if (updates.settingsJson) {
       // Parse settings if it's a string
       let settings = updates.settingsJson;
@@ -120,17 +122,21 @@ export class WidgetsService {
   async generateEmbedCode(businessId: string, widgetId: string) {
     const widget = await this.getWidget(businessId, widgetId);
     
+    const reviewTypesParam = widget.reviewTypes ? widget.reviewTypes.join(',') : 'video,audio,text';
+    
     const embedCode = `<!-- TrueTestify Widget -->
 <div id="truetestify-widget-${widget.id}"></div>
-<script data-widget-id="${widget.id}" data-style="${widget.style}">
+<script data-widget-id="${widget.id}" data-style="${widget.style}" data-review-types="${reviewTypesParam}">
 (function() {
   var widgetId = '${widget.id}';
   var style = '${widget.style}';
+  var reviewTypes = '${reviewTypesParam}';
   var targetId = 'truetestify-widget-' + widgetId;
   
   var container = document.getElementById(targetId);
   if (container) {
-    fetch('${this.configService.get('BACKEND_URL')}/embed/' + widgetId + '?style=' + style)
+    var url = '${this.configService.get('BACKEND_URL')}/embed/' + widgetId + '?style=' + style + '&reviewTypes=' + reviewTypes;
+    fetch(url)
       .then(function(response) { return response.text(); })
       .then(function(html) {
         container.innerHTML = html;

@@ -179,6 +179,9 @@ export class BusinessService {
       .addOrderBy('r.publishedAt', 'DESC')
       .getMany();
 
+    this.logger.log(`Found ${reviews.length} approved reviews for business ${business.slug}`);
+    this.logger.log(`Review types: ${reviews.map(r => r.type).join(', ')}`);
+
     // Return S3 keys only (frontend will handle URL generation)
     const reviewsWithMedia = reviews.map((review) => {
       const media = (review.mediaAssets || []).map((asset) => ({
@@ -217,26 +220,45 @@ export class BusinessService {
       media: [],
     }));
 
+    const allReviews = [...reviewsWithMedia, ...googleReviewsFormatted];
+    this.logger.log(`Total reviews returned: ${allReviews.length}`);
+    
     return {
       business: {
         id: business.id,
         name: business.name,
         slug: business.slug,
-        logoUrl: business.logoUrl,
-        brandColor: business.brandColor,
+        description: business.description,
+        industry: business.industry,
         website: business.website,
         contactEmail: business.contactEmail,
+        phone: business.phone,
+        address: business.address,
+        city: business.city,
+        state: business.state,
+        country: business.country,
+        postalCode: business.postalCode,
+        companySize: business.companySize,
+        foundedYear: business.foundedYear,
+        logoUrl: business.logoUrl,
+        bannerUrl: business.bannerUrl,
+        brandColor: business.brandColor,
+        businessHours: business.businessHours,
+        socialLinks: business.socialLinks,
+        isVerified: business.isVerified,
         textReviewsEnabled: business.settingsJson?.textReviewsEnabled ?? true,
         googleReviewsEnabled: business.settingsJson?.googleReviewsEnabled ?? false,
         googlePlaceId: business.settingsJson?.googlePlaceId || null,
+        createdAt: business.createdAt,
       },
-      reviews: [...reviewsWithMedia, ...googleReviewsFormatted],
+      reviews: allReviews,
       stats: {
-        totalReviews: reviewsWithMedia.length + googleReviewsFormatted.length,
+        totalReviews: allReviews.length,
         videoReviews: reviewsWithMedia.filter(r => r.type === 'video').length,
         audioReviews: reviewsWithMedia.filter(r => r.type === 'audio').length,
         textReviews: reviewsWithMedia.filter(r => r.type === 'text').length,
         googleReviews: googleReviewsFormatted.length,
+        averageRating: this.calculateAverageRating(allReviews),
       },
     };
   }
@@ -297,12 +319,36 @@ export class BusinessService {
     return this.businessRepo.save(business);
   }
 
-  private generateSlug(name: string): string {
-    return name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+  private calculateAverageRating(reviews: any[]): number {
+    if (reviews.length === 0) return 0;
+    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+    return Math.round((sum / reviews.length) * 10) / 10;
+  }
+
+  // Auto-verify business when profile is complete
+  async checkAndAutoVerify(businessId: string): Promise<void> {
+    const business = await this.findById(businessId);
+    if (!business || business.isVerified) return;
+
+    // Required fields for verification
+    const requiredFields = [
+      business.name,
+      business.description,
+      business.industry,
+      business.website,
+      business.contactEmail,
+      business.phone,
+      business.address,
+      business.city,
+      business.country
+    ];
+
+    // Check if all required fields are filled
+    const isComplete = requiredFields.every(field => field && field.trim().length > 0);
+    
+    if (isComplete) {
+      await this.businessRepo.update(businessId, { isVerified: true });
+      this.logger.log(`Business ${businessId} auto-verified - profile complete`);
+    }
   }
 }

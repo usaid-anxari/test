@@ -22,6 +22,9 @@ export class Widget {
   @Column({ name: 'name' })
   name: string;
 
+  @Column({ name: 'review_types', type: 'json', nullable: true })
+  reviewTypes: ('video' | 'audio' | 'text')[];
+
   @Column({ name: 'settings_json', type: 'json', nullable: true })
   settingsJson: any;
 

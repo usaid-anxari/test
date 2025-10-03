@@ -74,11 +74,19 @@ const WidgetsettingsJson = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate review types
+    if (!formData.reviewTypes || formData.reviewTypes.length === 0) {
+      toast.error("Please select at least one review type");
+      return;
+    }
+    
     setLoading(true);
     try {
       const widgetData = {
         name: formData.name,
         style: formData.style,
+        reviewTypes: formData.reviewTypes,
         settingsJson: formData.settingsJson,
       };
 
@@ -353,6 +361,7 @@ const WidgetsettingsJson = () => {
               setFormData({
                 name: "",
                 style: "carousel",
+                reviewTypes: ["video", "audio", "text"],
                 settingsJson: themes[0].settingsJson,
               });
               setShowEditModal(true);
@@ -420,6 +429,30 @@ const WidgetsettingsJson = () => {
                           {widget.isActive ? "Active" : "Inactive"}
                         </span>
                       </div>
+                      <div className="flex items-center space-x-1 mt-1">
+                        {(() => {
+                          let displayTypes = widget.reviewTypes || ["video", "audio", "text"];
+                          
+                          // Override for special widget types
+                          if (widget.style === 'floating') {
+                            displayTypes = ['text'];
+                          } else if (widget.style === 'spotlight') {
+                            displayTypes = (widget.reviewTypes || ['video', 'audio']).filter(type => ['video', 'audio'].includes(type));
+                          }
+                          
+                          const typeConfig = {
+                            video: { icon: "🎥", color: "text-orange-600" },
+                            audio: { icon: "🎵", color: "text-purple-600" },
+                            text: { icon: "💬", color: "text-green-600" }
+                          };
+                          
+                          return displayTypes.map((type) => (
+                            <span key={type} className={`text-xs ${typeConfig[type]?.color}`} title={`${type} reviews`}>
+                              {typeConfig[type]?.icon}
+                            </span>
+                          ));
+                        })()}
+                      </div>
                     </div>
                     
                     {/* Action buttons in top right */}
@@ -443,6 +476,7 @@ const WidgetsettingsJson = () => {
                             id: widget.id,
                             name: widget.name,
                             style: widget.style,
+                            reviewTypes: widget.reviewTypes || ["video", "audio", "text"],
                             settingsJson: widget.settingsJson
                           });
                           setShowEditModal(true);
@@ -554,6 +588,34 @@ const WidgetsettingsJson = () => {
                     <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">
                       {selectedWidget.settingsJson?.theme || "Light"}
                     </span>
+                    <span className="text-sm font-semibold text-gray-700">
+                      Types:
+                    </span>
+                    <div className="flex items-center space-x-1">
+                      {(() => {
+                        let displayTypes = selectedWidget.reviewTypes || ["video", "audio", "text"];
+                        
+                        // Override for special widget types
+                        if (selectedWidget.style === 'floating') {
+                          displayTypes = ['text'];
+                        } else if (selectedWidget.style === 'spotlight') {
+                          displayTypes = (selectedWidget.reviewTypes || ['video', 'audio']).filter(type => ['video', 'audio'].includes(type));
+                        }
+                        
+                        const typeConfig = {
+                          video: { icon: "🎥", label: "Video", bg: "bg-orange-100", text: "text-orange-700" },
+                          audio: { icon: "🎵", label: "Audio", bg: "bg-purple-100", text: "text-purple-700" },
+                          text: { icon: "💬", label: "Text", bg: "bg-green-100", text: "text-green-700" }
+                        };
+                        
+                        return displayTypes.map((type) => (
+                          <span key={type} className={`${typeConfig[type]?.bg} ${typeConfig[type]?.text} px-2 py-1 rounded-full text-xs font-semibold flex items-center`}>
+                            <span className="mr-1">{typeConfig[type]?.icon}</span>
+                            {typeConfig[type]?.label}
+                          </span>
+                        ));
+                      })()}
+                    </div>
                   </div>
                   {!hasFeature("widget_embed") && (
                     <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2">
@@ -567,7 +629,7 @@ const WidgetsettingsJson = () => {
                   {selectedWidget.isActive ? (
                     <iframe
                       key={selectedWidget.id}
-                      src={`${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}/embed/${selectedWidget.id}`}
+                      src={`${process.env.REACT_APP_BASE_URL || 'http://localhost:4000'}/embed/${selectedWidget.id}?reviewTypes=${(selectedWidget.reviewTypes || ['video', 'audio', 'text']).join(',')}`}
                       width="100%"
                       height="500"
                       frameBorder="0"
@@ -690,13 +752,27 @@ const WidgetsettingsJson = () => {
       {/* --- Modal for Creating/Editing a Widget --- */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
-          <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
-            <h4 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-              {formData?.id ? "Edit Widget" : "Create New Widget"}
-            </h4>
-            <form onSubmit={handleFormSubmit}>
-              <div className="mb-5">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="text-2xl font-bold text-gray-800">
+                {formData?.id ? "Edit Widget" : "Create New Widget"}
+              </h4>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditModal(false);
+                  setFormData(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleFormSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Widget Name
                 </label>
                 <input
@@ -705,29 +781,34 @@ const WidgetsettingsJson = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  className="block w-full border border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                   placeholder="e.g., Homepage Carousel"
                   required
                 />
               </div>
-              <div className="mb-5">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
                   Widget Layout
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {layouts.map((layout) => (
                     <button
                       type="button"
                       key={layout.value}
-                      onClick={() =>
-                        setFormData({ ...formData, style: layout.value })
-                      }
+                      onClick={() => {
+                        const newFormData = { ...formData, style: layout.value };
+                        // Auto-adjust review types for spotlight (remove text)
+                        if (layout.value === 'spotlight') {
+                          newFormData.reviewTypes = (formData?.reviewTypes || ['video', 'audio', 'text']).filter(type => type !== 'text');
+                        }
+                        setFormData(newFormData);
+                      }}
                       disabled={!hasFeature(layout.feature)}
-                      className={`px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
+                      className={`px-4 py-4 w-full font-semibold text-sm transition-colors rounded-lg border-2 relative
                           ${
                             formData?.style === layout.value
-                              ? "bg-gray-900 text-white border-gray-900"
-                              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                           } ${
                         !hasFeature(layout.feature)
                           ? "opacity-50 cursor-not-allowed"
@@ -736,15 +817,18 @@ const WidgetsettingsJson = () => {
                         `}
                     >
                       {layout.name}
+                      {formData?.style === layout.value && (
+                        <CheckCircleIcon className="w-4 h-4 absolute top-1 right-1" />
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="mb-5">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
                   Widget Theme
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {themes.map((theme) => (
                     <button
                       type="button"
@@ -758,72 +842,199 @@ const WidgetsettingsJson = () => {
                           },
                         })
                       }
-                      className={`flex items-center justify-center px-4 py-3 w-full font-semibold text-sm transition-colors rounded-lg border-2
+                      className={`flex items-center justify-center px-4 py-4 w-full font-semibold text-sm transition-colors rounded-lg border-2 relative
                           ${
                             formData?.settingsJson?.theme === theme.value
                               ? "bg-gray-900 text-white border-gray-900"
-                              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                           }
                         `}
                     >
                       {theme.icon}
                       <span className="ml-2">{theme.name}</span>
+                      {formData?.settingsJson?.theme === theme.value && (
+                        <CheckCircleIcon className="w-4 h-4 absolute top-1 right-1" />
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg mb-6">
-                <label
-                  htmlFor="autoplay-toggle"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Autoplay Videos
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Review Types to Display
                 </label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      settingsJson: {
-                        ...formData.settingsJson,
-                        autoplay: !formData.settingsJson?.autoplay,
-                      },
-                    })
-                  }
-                  className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-full
-                      ${
-                        formData?.settingsJson?.autoplay
-                          ? "bg-orange-500"
-                          : "bg-gray-200"
-                      }`}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 bg-white shadow transform ring-0 transition ease-in-out duration-200 rounded-full
-                        ${
-                          formData?.settingsJson?.autoplay
-                            ? "translate-x-5"
-                            : "translate-x-0"
-                        }`}
-                  ></span>
-                </button>
+                {formData?.style === 'floating' ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-center mb-2">
+                      <span className="text-2xl mr-3">💬</span>
+                      <div>
+                        <h4 className="font-semibold text-yellow-800">Text Reviews Only</h4>
+                        <p className="text-sm text-yellow-700">Floating widgets automatically display only text reviews for optimal performance.</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : formData?.style === 'spotlight' ? (
+                  <>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center mb-2">
+                        <span className="text-2xl mr-3">🎥</span>
+                        <span className="text-2xl mr-3">🎵</span>
+                        <div>
+                          <h4 className="font-semibold text-blue-800">Video & Audio Only</h4>
+                          <p className="text-sm text-blue-700">Spotlight widgets showcase video and audio reviews for maximum visual impact.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { type: "video", label: "Video Reviews", icon: "🎥", bgColor: "bg-orange-100", textColor: "text-orange-700", borderColor: "border-orange-300" },
+                        { type: "audio", label: "Audio Reviews", icon: "🎵", bgColor: "bg-purple-100", textColor: "text-purple-700", borderColor: "border-purple-300" }
+                      ].map((reviewType) => {
+                        const isSelected = formData?.reviewTypes?.includes(reviewType.type);
+                        return (
+                          <button
+                            type="button"
+                            key={reviewType.type}
+                            onClick={() => {
+                              const currentTypes = formData?.reviewTypes || [];
+                              let newTypes;
+                              if (isSelected) {
+                                newTypes = currentTypes.filter(t => t !== reviewType.type);
+                              } else {
+                                newTypes = [...currentTypes, reviewType.type];
+                              }
+                              setFormData({ ...formData, reviewTypes: newTypes });
+                            }}
+                            className={`flex flex-col items-center justify-center p-4 w-full font-semibold text-sm transition-all duration-200 rounded-lg border-2 relative ${
+                              isSelected
+                                ? `${reviewType.bgColor} ${reviewType.textColor} ${reviewType.borderColor} scale-105`
+                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:scale-102"
+                            }`}
+                          >
+                            <span className="text-2xl mb-2">{reviewType.icon}</span>
+                            <span className="text-center">{reviewType.label}</span>
+                            {isSelected && (
+                              <CheckCircleIcon className="w-5 h-5 absolute top-2 right-2" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-3 bg-blue-50 p-3 rounded-lg">
+                      💡 Choose video, audio, or both for your spotlight widget.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-3 gap-4">
+                      {[
+                        { type: "video", label: "Video Reviews", icon: "🎥", bgColor: "bg-orange-100", textColor: "text-orange-700", borderColor: "border-orange-300" },
+                        { type: "audio", label: "Audio Reviews", icon: "🎵", bgColor: "bg-purple-100", textColor: "text-purple-700", borderColor: "border-purple-300" },
+                        { type: "text", label: "Text Reviews", icon: "💬", bgColor: "bg-green-100", textColor: "text-green-700", borderColor: "border-green-300" }
+                      ].map((reviewType) => {
+                        const isSelected = formData?.reviewTypes?.includes(reviewType.type);
+                        const isDisabled = formData?.style === 'spotlight' && reviewType.type === 'text';
+                        return (
+                          <button
+                            type="button"
+                            key={reviewType.type}
+                            disabled={isDisabled}
+                            onClick={() => {
+                              if (isDisabled) return;
+                              const currentTypes = formData?.reviewTypes || [];
+                              let newTypes;
+                              if (isSelected) {
+                                newTypes = currentTypes.filter(t => t !== reviewType.type);
+                              } else {
+                                newTypes = [...currentTypes, reviewType.type];
+                              }
+                              setFormData({ ...formData, reviewTypes: newTypes });
+                            }}
+                            className={`flex flex-col items-center justify-center p-4 w-full font-semibold text-sm transition-all duration-200 rounded-lg border-2 relative ${
+                              isDisabled
+                                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50"
+                                : isSelected
+                                ? `${reviewType.bgColor} ${reviewType.textColor} ${reviewType.borderColor} scale-105`
+                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:scale-102"
+                            }`}
+                          >
+                            <span className="text-2xl mb-2">{reviewType.icon}</span>
+                            <span className="text-center">{reviewType.label}</span>
+                            {isSelected && (
+                              <CheckCircleIcon className="w-5 h-5 absolute top-2 right-2" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-3 bg-blue-50 p-3 rounded-lg">
+                      💡 Select which types of reviews to display in this widget. Users can filter between selected types.
+                    </p>
+                  </>
+                )}
+              </div>
+              <div className="lg:col-span-2">
+                <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">
+                        Autoplay Videos & Audio
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Automatically play media when widget loads (muted for videos)
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          settingsJson: {
+                            ...formData.settingsJson,
+                            autoplay: !formData.settingsJson?.autoplay,
+                          },
+                        })
+                      }
+                      className={`relative inline-flex flex-shrink-0 h-7 w-12 border-2 border-transparent cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-full
+                          ${
+                            formData?.settingsJson?.autoplay
+                              ? "bg-orange-500"
+                              : "bg-gray-300"
+                          }`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`pointer-events-none inline-block h-6 w-6 bg-white shadow transform ring-0 transition ease-in-out duration-200 rounded-full
+                            ${
+                              formData?.settingsJson?.autoplay
+                                ? "translate-x-5"
+                                : "translate-x-0"
+                            }`}
+                      ></span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="lg:col-span-2 flex justify-end space-x-4 pt-6 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditModal(false);
                     setFormData(null);
                   }}
-                  className="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                  className="px-6 py-3 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 text-sm font-semibold text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
+                  disabled={loading}
+                  className="px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-orange-500 rounded-lg hover:from-blue-700 hover:to-orange-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
+                  {loading && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  )}
                   {formData?.id ? "Save Changes" : "Create Widget"}
                 </button>
               </div>

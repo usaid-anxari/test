@@ -23,13 +23,13 @@ import {
 import { BusinessService } from './business.service';
 import { JwtAuthGuard } from '../common/jwt-auth/jwt-auth.guard';
 import { SubscriptionGuard } from '../common/guards/subscription.guard';
-import { RequireFeature, RequireProfessionalPlan } from '../common/decorators/subscription.decorator';
+import { RequireEnterprisePlan, RequireFeature, RequireProfessionalPlan } from '../common/decorators/subscription.decorator';
 import { CreateBusinessDto } from './dto/create-business.dto';
+import { UpdateBusinessDto } from './dto/update-business.dto';
 import { UsersService } from 'src/users/users.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { S3Service } from '../common/s3/s3.service';
-import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
 
 @ApiTags('Business')
@@ -38,7 +38,6 @@ export class BusinessController {
   private readonly logger = new Logger(BusinessController.name);
   
   constructor(
-    private readonly configService: ConfigService,
     private readonly bizService: BusinessService,
     private readonly usersService: UsersService,
     private readonly s3Service: S3Service, // Add S3Service
@@ -80,6 +79,84 @@ export class BusinessController {
   @ApiBearerAuth()
   @Post('api/business')
   @ApiConsumes('multipart/form-data')
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Business created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Business created successfully' },
+        business: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'My Business' },
+            slug: { type: 'string', example: 'my-business' },
+            description: { type: 'string', example: 'Business description' },
+            industry: { type: 'string', example: 'Technology' },
+            website: { type: 'string', example: 'https://mybusiness.com' },
+            contactEmail: { type: 'string', example: 'contact@mybusiness.com' },
+            phone: { type: 'string', example: '+1234567890' },
+            address: { type: 'string', example: '123 Main St' },
+            city: { type: 'string', example: 'New York' },
+            state: { type: 'string', example: 'NY' },
+            country: { type: 'string', example: 'USA' },
+            postalCode: { type: 'string', example: '10001' },
+            companySize: { type: 'string', example: '1-10 employees' },
+            foundedYear: { type: 'number', example: 2020 },
+            logoUrl: { type: 'string', example: 'https://s3.amazonaws.com/logo.png' },
+            bannerUrl: { type: 'string', example: 'https://s3.amazonaws.com/banner.png' },
+            brandColor: { type: 'string', example: '#ef7c00' },
+            businessHours: { type: 'object' },
+            socialLinks: { type: 'object' },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - validation failed or slug already exists' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid JWT token' })
+  @ApiBody({
+    description: 'Business creation data with optional logo file',
+    schema: {
+      type: 'object',
+      properties: {
+        logoFile: {
+          type: 'string',
+          format: 'binary',
+          description: 'Logo image file (max 5MB)'
+        },
+        slug: { type: 'string', example: 'my-business', description: 'Unique URL slug' },
+        name: { type: 'string', example: 'My Business', description: 'Business name' },
+        description: { type: 'string', example: 'We provide excellent services', description: 'Business description' },
+        industry: { type: 'string', example: 'Technology', description: 'Business industry' },
+        website: { type: 'string', example: 'https://mybusiness.com', description: 'Business website' },
+        contactEmail: { type: 'string', example: 'contact@mybusiness.com', description: 'Contact email' },
+        phone: { type: 'string', example: '+1234567890', description: 'Phone number' },
+        address: { type: 'string', example: '123 Main St', description: 'Street address' },
+        city: { type: 'string', example: 'New York', description: 'City' },
+        state: { type: 'string', example: 'NY', description: 'State/Province' },
+        country: { type: 'string', example: 'USA', description: 'Country' },
+        postalCode: { type: 'string', example: '10001', description: 'Postal/ZIP code' },
+        companySize: { type: 'string', example: '1-10 employees', description: 'Company size' },
+        foundedYear: { type: 'number', example: 2020, description: 'Year founded' },
+        brandColor: { type: 'string', example: '#ef7c00', description: 'Brand color (hex)' },
+        bannerUrl: { type: 'string', example: 'https://example.com/banner.jpg', description: 'Banner image URL' },
+        businessHours: { 
+          type: 'object', 
+          example: { monday: '9:00-17:00', tuesday: '9:00-17:00' },
+          description: 'Business operating hours'
+        },
+        socialLinks: { 
+          type: 'object', 
+          example: { facebook: 'https://facebook.com/mybusiness', twitter: 'https://twitter.com/mybusiness' },
+          description: 'Social media links'
+        }
+      },
+      required: ['slug', 'name']
+    }
+  })
   @UseInterceptors(
     FileInterceptor('logoFile', {
       storage: memoryStorage(), // Use memory storage instead of multer-s3
@@ -96,7 +173,6 @@ export class BusinessController {
       },
     }),
   )
-  @ApiBody({ type: CreateBusinessDto })
   async createBusiness(
     @Req() req,
     @UploadedFile() file: Express.Multer.File,
@@ -154,16 +230,32 @@ export class BusinessController {
         this.logger.log(`Logo uploaded to S3: ${s3Key}`);
       }
 
-      // Create business
+      // Create business with comprehensive info
       const biz = await this.bizService.create({
         name: body.name,
         slug,
-        logoUrl,
-        brandColor: body.brandColor,
+        description: body.description,
+        industry: body.industry,
         website: body.website,
         contactEmail: body.contactEmail,
+        phone: body.phone,
+        address: body.address,
+        city: body.city,
+        state: body.state,
+        country: body.country,
+        postalCode: body.postalCode,
+        companySize: body.companySize,
+        foundedYear: body.foundedYear,
+        logoUrl,
+        bannerUrl: body.bannerUrl,
+        brandColor: body.brandColor || '#ef7c00',
+        businessHours: body.businessHours,
+        socialLinks: body.socialLinks,
         settingsJson: body.settingsJson || { textReviewsEnabled: true },
       });
+
+      // Auto-verify if profile is complete
+      await this.bizService.checkAndAutoVerify(biz.id);
 
       // Attach owner & activate user
       await this.bizService.addOwner(biz.id, user.id, true);
@@ -171,18 +263,12 @@ export class BusinessController {
 
       this.logger.log(`Business created: ${biz.id} by user: ${user.id}`);
 
+      // Get final business with verification status
+      const finalBusiness = await this.bizService.findById(biz.id);
+      
       return { 
         message: 'Business created successfully', 
-        business: {
-          id: biz.id,
-          name: biz.name,
-          slug: biz.slug,
-          logoUrl: biz.logoUrl,
-          brandColor: biz.brandColor,
-          website: biz.website,
-          contactEmail: biz.contactEmail,
-          createdAt:biz.createdAt
-        }
+        business: finalBusiness
       };
     } catch (err) {
       this.logger.error('Failed to create business', err);
@@ -231,11 +317,65 @@ export class BusinessController {
   }
 
   // Update business information (excluding slug)
-  @UseGuards(JwtAuthGuard, SubscriptionGuard)
-  @RequireFeature(['custom_branding'])
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Put('api/business/me')
   @ApiConsumes('multipart/form-data')
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Business updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Business updated successfully' },
+        business: {
+          type: 'object',
+          description: 'Updated business object with all fields'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid JWT token' })
+  @ApiResponse({ status: 404, description: 'Business not found' })
+  @ApiBody({
+    description: 'Business update data with optional logo file (slug cannot be updated)',
+    schema: {
+      type: 'object',
+      properties: {
+        logo: {
+          type: 'string',
+          format: 'binary',
+          description: 'Logo image file (max 5MB)'
+        },
+        name: { type: 'string', example: 'Updated Business Name', description: 'Business name' },
+        description: { type: 'string', example: 'Updated business description', description: 'Business description' },
+        industry: { type: 'string', example: 'Updated Industry', description: 'Business industry' },
+        website: { type: 'string', example: 'https://updated-website.com', description: 'Business website' },
+        contactEmail: { type: 'string', example: 'updated@business.com', description: 'Contact email' },
+        phone: { type: 'string', example: '+1987654321', description: 'Phone number' },
+        address: { type: 'string', example: '456 Updated St', description: 'Street address' },
+        city: { type: 'string', example: 'Updated City', description: 'City' },
+        state: { type: 'string', example: 'CA', description: 'State/Province' },
+        country: { type: 'string', example: 'USA', description: 'Country' },
+        postalCode: { type: 'string', example: '90210', description: 'Postal/ZIP code' },
+        companySize: { type: 'string', example: '11-50 employees', description: 'Company size' },
+        foundedYear: { type: 'number', example: 2019, description: 'Year founded' },
+        brandColor: { type: 'string', example: '#3b82f6', description: 'Brand color (hex)' },
+        bannerUrl: { type: 'string', example: 'https://example.com/new-banner.jpg', description: 'Banner image URL' },
+        businessHours: { 
+          type: 'object', 
+          example: { monday: '8:00-18:00', tuesday: '8:00-18:00' },
+          description: 'Business operating hours'
+        },
+        socialLinks: { 
+          type: 'object', 
+          example: { facebook: 'https://facebook.com/updated', linkedin: 'https://linkedin.com/company/updated' },
+          description: 'Social media links'
+        }
+      }
+    }
+  })
   @UseInterceptors(
     FileInterceptor('logo', {
       storage: memoryStorage(),
@@ -254,7 +394,7 @@ export class BusinessController {
   async updateMyBusiness(
     @Req() req,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { name?: string; website?: string; brandColor?: string; contactEmail?: string; settingsJson?: any },
+    @Body() body: UpdateBusinessDto,
   ) {
     const userId = req.userEntity.id;
     const business = await this.bizService.findDefaultForUser(userId);
@@ -265,12 +405,24 @@ export class BusinessController {
 
     const updateData: any = {};
     
-    // Update allowed fields
+    // Update all allowed fields (excluding slug)
     if (body.name) updateData.name = body.name;
+    if (body.description) updateData.description = body.description;
+    if (body.industry) updateData.industry = body.industry;
     if (body.website) updateData.website = body.website;
-    if (body.brandColor) updateData.brandColor = body.brandColor;
     if (body.contactEmail) updateData.contactEmail = body.contactEmail;
-    if (body.settingsJson) updateData.settingsJson = body.settingsJson;
+    if (body.phone) updateData.phone = body.phone;
+    if (body.address) updateData.address = body.address;
+    if (body.city) updateData.city = body.city;
+    if (body.state) updateData.state = body.state;
+    if (body.country) updateData.country = body.country;
+    if (body.postalCode) updateData.postalCode = body.postalCode;
+    if (body.companySize) updateData.companySize = body.companySize;
+    if (body.foundedYear) updateData.foundedYear = body.foundedYear;
+    if (body.brandColor) updateData.brandColor = body.brandColor;
+    if (body.businessHours) updateData.businessHours = body.businessHours;
+    if (body.socialLinks) updateData.socialLinks = body.socialLinks;
+    if (body.bannerUrl) updateData.bannerUrl = body.bannerUrl;
 
     // Handle logo upload if provided
     if (file) {
@@ -292,25 +444,22 @@ export class BusinessController {
       this.logger.log(`Logo updated for business: ${business.id}`);
     }
 
-    // Update business
+    // Update business (slug is intentionally excluded from updateData)
     const updatedBusiness = await this.bizService.updateBusiness(business.id, updateData);
+    
+    // Auto-verify business if profile is complete
+    await this.bizService.checkAndAutoVerify(updatedBusiness.id);
+    
+    // Get updated business with verification status
+    const finalBusiness = await this.bizService.findById(updatedBusiness.id);
     
     return {
       message: 'Business updated successfully',
-      business: {
-        id: updatedBusiness.id,
-        name: updatedBusiness.name,
-        slug: updatedBusiness.slug,
-        logoUrl: updatedBusiness.logoUrl,
-        brandColor: updatedBusiness.brandColor,
-        website: updatedBusiness.website,
-        contactEmail: updatedBusiness.contactEmail,
-        settingsJson: updatedBusiness.settingsJson,
-      }
+      business: finalBusiness
     };
   }
 
-  // Milestone 5: Toggle text reviews setting
+  //  Toggle text reviews setting
   @UseGuards(JwtAuthGuard, SubscriptionGuard)
   @RequireFeature(['priority_support'])
   @ApiBearerAuth()
@@ -331,7 +480,7 @@ export class BusinessController {
       throw new NotFoundException('Business not found');
     }
     
-    const updatedBusiness = await this.bizService.updateBusinessSettings(
+    await this.bizService.updateBusinessSettings(
       business.id,
       userId,
       { textReviewsEnabled: body.enabled }
@@ -340,6 +489,40 @@ export class BusinessController {
     return {
       message: `Text reviews ${body.enabled ? 'enabled' : 'disabled'}`,
       textReviewsEnabled: body.enabled
+    };
+  }
+
+  //  Toggle Google reviews setting
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
+  @RequireFeature(['priority_support'])
+  @RequireProfessionalPlan()
+  @ApiBearerAuth()
+  @Post('api/business/settings/google-reviews')
+  @ApiBody({ 
+    schema: { 
+      type: 'object', 
+      properties: { 
+        enabled: { type: 'boolean' } 
+      } 
+    } 
+  })
+  async toggleGoogleReviews(@Req() req, @Body() body: { enabled: boolean }) {
+    const userId = req.userEntity.id;
+    const business = await this.bizService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    
+     await this.bizService.updateBusinessSettings(
+      business.id,
+      userId,
+      { googleReviewsEnabled: body.enabled }
+    );
+    
+    return {
+      message: `Google reviews ${body.enabled ? 'enabled' : 'disabled'}`,
+      googleReviewsEnabled: body.enabled
     };
   }
 }

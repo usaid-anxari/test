@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsObject } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsObject, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateWidgetDto {
@@ -12,6 +12,16 @@ export class CreateWidgetDto {
   })
   @IsEnum(['grid', 'carousel', 'spotlight', 'floating'])
   style: 'grid' | 'carousel' | 'spotlight' | 'floating';
+
+  @ApiProperty({ 
+    description: 'Review types to display',
+    type: [String],
+    enum: ['video', 'audio', 'text'],
+    required: false
+  })
+  @IsOptional()
+  @IsArray()
+  reviewTypes?: ('video' | 'audio' | 'text')[];
 
   @ApiProperty({ description: 'Widget settings', required: false })
   @IsOptional()

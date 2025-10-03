@@ -3,8 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import axiosInstance from "../service/axiosInstanse";
 import { API_PATHS } from "../service/apiPaths";
 import toast from "react-hot-toast";
-import { motion } from "framer-motion";
-import ReviewCard from "../components/ReviewCard";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
@@ -12,32 +10,31 @@ const PublicReviews = ({ businessSlug }) => {
   const { businessName } = useParams();
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [allReviews, setAllReviews] = useState([]);
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [layout, setLayout] = useState("GRID");
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewFilters, setReviewFilters] = useState({
+    video: true,
+    audio: true,
+    text: true,
+    google: true
+  });  
+  
 
-  // Default theme values
-  const DEFAULT_PRIMARY = "#f97316";
-  const DEFAULT_BG = "#ffffff";
-  const DEFAULT_TEXT = "#111827";
-  const DEFAULT_CARD_BG = "#ffffff";
-  const DEFAULT_MUTED_TEXT = "#6b7280";
-
+  // Fetching Data
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [businessRes, reviewsRes] = await Promise.all([
-        axiosInstance.get(API_PATHS.BUSINESSES.GET_PUBLIC_PROFILE(businessName || businessSlug)),
-        axiosInstance.get(API_PATHS.REVIEWS.GET_PUBLIC_REVIEWS(businessName || businessSlug))
-      ]);
-      setBusiness(businessRes.data.business || null);
-      setReviews(reviewsRes.data.reviews || []);
-      // Mock widgets for now - replace with actual API call
+      const response = await axiosInstance.get(API_PATHS.BUSINESSES.GET_PUBLIC_PROFILE(businessName || businessSlug));
+      setBusiness(response.data.business || null);
+      const allReviewsData = response.data.reviews || [];
+      setAllReviews(allReviewsData);
+      setReviews(allReviewsData);
       setWidgets([
         { type: 'video', active: true },
         { type: 'audio', active: true },
-        { type: 'text', active: true }
+        { type: 'text', active: response.data.business?.textReviewsEnabled ?? true }
       ]);
     } catch (error) {
       console.error("Failed to load data:", error);
@@ -47,269 +44,29 @@ const PublicReviews = ({ businessSlug }) => {
     }
   };
 
+  // Handle filter change
+  const handleFilterChange = (type) => {
+    const newFilters = {
+      ...reviewFilters,
+      [type]: !reviewFilters[type]
+    };
+    setReviewFilters(newFilters);
+    
+    // Apply filters
+    const filtered = allReviews.filter(review => {
+      return newFilters[review.type] === true;
+    });
+    setReviews(filtered);
+  };
+
+  // Get count for each review type
+  const getReviewTypeCount = (type) => {
+    return allReviews.filter(review => review.type === type).length;
+  };
+
   useEffect(() => {
-    fetchData();
+    fetchData(); // eslint-disable-next-line
   }, [businessName, businessSlug]);
-
-  // Theme setup
-  const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const themeMode = systemPrefersDark ? "dark" : "light";
-  const primaryColor = business?.brandColor || DEFAULT_PRIMARY;
-  const bgColor = themeMode === "dark" ? "#111827" : DEFAULT_BG;
-  const textColor = themeMode === "dark" ? "#f3f4f6" : DEFAULT_TEXT;
-  const cardBg = themeMode === "dark" ? "#1f2937" : DEFAULT_CARD_BG;
-  const mutedText = themeMode === "dark" ? "#9ca3af" : DEFAULT_MUTED_TEXT;
-console.log(business);
-
-  // Render logo or avatar
-  const renderLogo = () => {
-    if (loading) return <Skeleton circle width={100} height={100} />;
-    if (business?.logoUrl) {
-      return (
-        <img
-          src={business.logoUrl}
-          alt={`${business.name} logo`}
-          className="w-24 h-24 rounded-full object-cover border-4"
-          style={{ borderColor: primaryColor }}
-        />
-      );
-    }
-    return (
-      <div
-        className="w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold"
-        style={{ backgroundColor: primaryColor, color: "#ffffff" }}
-      >
-        {business?.name?.[0]?.toUpperCase() || "?"}
-      </div>
-    );
-  };
-
-  // Render skeleton loader
-  const renderProfileSkeleton = () => (
-    <div className="flex flex-col items-center space-y-4 mb-12">
-      <Skeleton circle width={100} height={100} />
-      <Skeleton width={250} height={32} />
-      <Skeleton width={150} height={20} />
-    </div>
-  );
-
-  // Render review layouts
-  const renderLayout = () => {
-    if (loading) {
-      return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, index) => (
-            <Skeleton key={index} height={250} borderRadius={16} />
-          ))}
-        </div>
-      );
-    }
-
-    if (reviews.length === 0) {
-      return (
-        <p
-          className={themeMode === "dark" ? "text-gray-400" : "text-gray-500"}
-          style={{ fontSize: "1.1rem" }}
-        >
-          No reviews available yet.
-        </p>
-      );
-    }
-
-    switch (layout) {
-      case "CAROUSEL":
-        return (
-          <div className="relative group">
-            <div className="overflow-x-auto hide-scrollbar flex space-x-6 pb-6 snap-x snap-mandatory scroll-smooth">
-              {reviews.map((review) => (
-                <motion.div
-                  key={review.id}
-                  className="min-w-[320px] max-w-[320px] snap-start flex-shrink-0"
-                  initial={{ opacity: 0, x: 60 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <ReviewCard
-                    review={review}
-                    theme={themeMode}
-                    primaryColor={primaryColor}
-                  />
-                </motion.div>
-              ))}
-            </div>
-            <div className="absolute top-1/2 -right-4 w-8 h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-md opacity-0 group-hover:opacity-90 transition-opacity flex items-center justify-center">
-              <svg
-                className="w-4 h-4 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </div>
-          </div>
-        );
-
-      case "SPOTLIGHT":
-        return (
-          <div className="space-y-8">
-            {reviews.map((review, index) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                style={{
-                  backgroundColor: index === 0 ? primaryColor : cardBg,
-                  color: index === 0 ? "#ffffff" : textColor,
-                }}
-                className={`p-6 rounded-2xl border transition-all duration-300 shadow-md ${
-                  index === 0
-                    ? "scale-105 shadow-xl"
-                    : "hover:shadow-lg hover:scale-[1.02]"
-                }`}
-              >
-                <ReviewCard
-                  review={review}
-                  theme={themeMode}
-                  primaryColor={index === 0 ? "#ffffff" : primaryColor}
-                />
-                {index === 0 && (
-                  <div
-                    style={{
-                      backgroundColor: "rgba(255,255,255,0.3)",
-                      backdropFilter: "blur(4px)",
-                    }}
-                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                    </svg>
-                    Featured
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        );
-
-      case "FLOATING_BUBBLE":
-        return (
-          <div className="relative h-[500px] sm:h-[600px]">
-            <motion.div
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 80, damping: 20 }}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <div
-                style={{
-                  backgroundColor: cardBg,
-                  color: textColor,
-                  boxShadow: `0 20px 50px -10px ${primaryColor}40`,
-                }}
-                className="max-w-sm w-full mx-4 rounded-3xl border overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-300"
-              >
-                <div
-                  style={{ backgroundColor: primaryColor }}
-                  className="h-2"
-                ></div>
-                <div className="p-8">
-                  {reviews.length > 0 ? (
-                    <ReviewCard
-                      review={reviews[0]}
-                      theme={themeMode}
-                      primaryColor={primaryColor}
-                    />
-                  ) : (
-                    <div className="text-center py-12">
-                      <svg
-                        className="w-12 h-12 mx-auto text-gray-300"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="1.5"
-                          d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                        />
-                      </svg>
-                      <p
-                        className="text-base mt-4"
-                        style={{ color: mutedText }}
-                      >
-                        No reviews yet
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="px-8 pb-6">
-                  <span
-                    style={{
-                      backgroundColor: `${primaryColor}20`,
-                      color: primaryColor,
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border border-opacity-30 border-current"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    {reviews.length}{" "}
-                    {reviews.length === 1 ? "Review" : "Reviews"}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-            <div
-              className="absolute inset-0 pointer-events-none opacity-20 blur-3xl -z-10"
-              style={{
-                background: `radial-gradient(ellipse at center, ${primaryColor}50 0%, transparent 70%)`,
-              }}
-            ></div>
-          </div>
-        );
-
-      case "GRID":
-      default:
-        return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reviews.map((review) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="relative"
-              >
-                <ReviewCard
-                  review={review}
-                  theme={themeMode}
-                  primaryColor={primaryColor}
-                />
-              </motion.div>
-            ))}
-          </div>
-        );
-    }
-  };
 
   // Render review form based on active widgets
   const renderReviewForm = () => {
@@ -318,184 +75,572 @@ console.log(business);
     const activeWidgets = widgets.filter(w => w.active);
     
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
-          <h3 className="text-2xl font-bold mb-6 text-gray-800">Leave a Review</h3>
-          
-          <div className="space-y-4">
-            {activeWidgets.map((widget) => (
-              <Link
-                key={widget.type}
-                to={`/record/${business.slug}?type=${widget.type}`}
-                className="block p-4 border-2 rounded-lg hover:shadow-md transition-all"
-                style={{ borderColor: primaryColor }}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    widget.type === 'video' ? 'bg-orange-100' :
-                    widget.type === 'audio' ? 'bg-purple-100' : 'bg-green-100'
-                  }`}>
-                    <svg className={`w-6 h-6 ${
-                      widget.type === 'video' ? 'text-orange-600' :
-                      widget.type === 'audio' ? 'text-purple-600' : 'text-green-600'
-                    }`} fill="currentColor" viewBox="0 0 20 20">
-                      {widget.type === 'video' && <path d="M8 5v10l7-5z" />}
-                      {widget.type === 'audio' && <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />}
-                      {widget.type === 'text' && <path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z" />}
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold capitalize">{widget.type} Review</h4>
-                    <p className="text-sm text-gray-600">
-                      {widget.type === 'video' && 'Record a video testimonial'}
-                      {widget.type === 'audio' && 'Record an audio message'}
-                      {widget.type === 'text' && 'Write a detailed review'}
-                    </p>
-                  </div>
+      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9999] p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
+                  </svg>
                 </div>
-              </Link>
-            ))}
+                <div>
+                  <h3 className="text-xl font-bold text-white">Write a Review</h3>
+                  <p className="text-green-100 text-sm">Share your experience with {business?.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowReviewForm(false)}
+                className="text-white hover:text-green-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
           
-          <button
-            onClick={() => setShowReviewForm(false)}
-            className="mt-6 w-full px-4 py-2 border rounded-lg hover:bg-gray-50"
-          >
-            Cancel
-          </button>
+          {/* Content */}
+          <div className="p-6">
+            <p className="text-gray-600 text-sm mb-6 text-center">
+              Choose how you'd like to share your review
+            </p>
+            
+            <div className="space-y-3">
+              {activeWidgets.map((widget) => (
+                <Link
+                  key={widget.type}
+                  to={`/record/${business?.slug}?type=${widget.type}`}
+                  className="group block p-4 border-2 border-gray-200 rounded-xl hover:border-green-300 hover:shadow-lg transition-all duration-200 hover:bg-green-50"
+                  onClick={() => setShowReviewForm(false)}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${
+                      widget.type === 'video' ? 'bg-orange-100 group-hover:bg-orange-200' :
+                      widget.type === 'audio' ? 'bg-purple-100 group-hover:bg-purple-200' : 
+                      'bg-green-100 group-hover:bg-green-200'
+                    }`}>
+                      {widget.type === 'video' && (
+                        <svg className="w-7 h-7 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                        </svg>
+                      )}
+                      {widget.type === 'audio' && (
+                        <svg className="w-7 h-7 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {widget.type === 'text' && (
+                        <svg className="w-7 h-7 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 capitalize group-hover:text-green-700 transition-colors">
+                        {widget.type} Review
+                      </h4>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {widget.type === 'video' && 'Record a video testimonial (up to 60 seconds)'}
+                        {widget.type === 'audio' && 'Record an audio message (up to 60 seconds)'}
+                        {widget.type === 'text' && 'Write a detailed text review'}
+                      </p>
+                    </div>
+                    <div className="text-gray-400 group-hover:text-green-500 transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            
+            {/* Footer */}
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                <span>Your review will be published after verification</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   };
 
+  const calculateAverageRating = () => {
+    if (allReviews.length === 0) return 0;
+    const sum = allReviews.reduce((acc, review) => acc + review.rating, 0);
+    return (sum / allReviews.length).toFixed(1);
+  };
+
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
-      {/* Premium Header Section */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
-                {business?.name || "Business Reviews"}
-              </h1>
-              <p className="text-blue-100 text-lg font-medium">
-                Customer testimonials and feedback
-              </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          
+          <div className="flex items-start space-x-6">
+            <div className="flex-shrink-0">
+              {loading ? (
+                <Skeleton width={80} height={80} borderRadius={8} />
+              ) : business?.logoUrl ? (
+                <img
+                  src={business.logoUrl}
+                  alt={business?.name}
+                  className="w-20 h-20 rounded-lg object-cover"
+                />
+              ) : (
+                <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl font-bold text-gray-500">
+                    {business?.name?.[0]?.toUpperCase() || "?"}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-6 py-3 border border-white/20">
-                <div className="text-sm text-blue-100">Total Reviews</div>
-                <div className="text-2xl font-bold">{reviews.length}</div>
-              </div>
+            
+            <div className="flex-1">
+              {loading ? (
+                <div>
+                  <Skeleton width={300} height={32} className="mb-2" />
+                  <Skeleton width={200} height={20} className="mb-2" />
+                  <Skeleton width={150} height={16} />
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                    {business?.name || "Business"} Reviews
+                  </h1>
+                  <div className="flex items-center space-x-4 mb-2">
+                    <div className="flex items-center">
+                      <span className="text-lg font-semibold mr-1">{calculateAverageRating()}</span>
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, i) => (
+                          <svg key={i} className={`w-4 h-4 ${i < Math.floor(calculateAverageRating()) ? 'fill-current' : 'text-gray-300'}`} viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-sm text-gray-600 ml-2">| {allReviews.length} reviews</span>
+                    </div>
+                {business?.isVerified && (
+                  <div className="flex items-center text-green-600">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium">Verified Company</span>
+                  </div>
+                )}
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    {business?.website && (
+                      <a
+                        href={business.website.startsWith('http') ? business.website : `https://${business.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-sm flex items-center"
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+                        </svg>
+                        {business.name}.com
+                      </a>
+                    )}
+                    <button className="text-sm text-gray-600 hover:text-gray-800">
+                      Visit this website
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <div className="flex-shrink-0">
               <button
                 onClick={() => setShowReviewForm(true)}
-                className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
               >
-                Leave Review
+                Write a review
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
-        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-          {/* Minimal Business Profile Section */}
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-8 border-b border-gray-100">
-            {loading ? (
-              renderProfileSkeleton()
-            ) : business ? (
-              <div className="flex flex-col lg:flex-row items-center lg:items-start space-y-6 lg:space-y-0 lg:space-x-8">
-                <div className="flex-shrink-0">
-                  {renderLogo()}
-                </div>
-                <div className="flex-1 text-center lg:text-left">
-                  <h1 className="text-4xl font-bold text-gray-800 mb-3">
-                    {business.name}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-4 mb-6">
-                    {business.website && (
-                      <a
-                        href={business.website.startsWith('http') ? business.website : `https://${business.website}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
-                        </svg>
-                        Visit Website
-                      </a>
-                    )}
-                    <button
-                      onClick={() => setShowReviewForm(true)}
-                      className="inline-flex items-center px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 font-semibold shadow-md hover:shadow-lg transform hover:scale-105"
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M8 5v10l7-5z" />
-                      </svg>
-                      Leave Review
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left Sidebar - Trustindex Style */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-800 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
                   </svg>
+                  Source filter
+                </h3>
+              </div>
+              
+              <div className="p-4">
+                {/* Review Type Filters */}
+                {loading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-center justify-between p-2">
+                        <div className="flex items-center flex-1">
+                          <Skeleton circle width={16} height={16} className="mr-3" />
+                          <Skeleton width={100} height={16} />
+                        </div>
+                        <Skeleton width={40} height={20} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {[
+                      { type: 'video', label: 'Video Reviews', bgColor: 'bg-orange-500' },
+                      { type: 'audio', label: 'Audio Reviews', bgColor: 'bg-purple-500' },
+                      { type: 'text', label: 'Text Reviews', bgColor: 'bg-green-500' },
+                      { type: 'google', label: 'Google Reviews', bgColor: 'bg-blue-500' }
+                    ].map(({ type, label, bgColor }) => {
+                      const count = getReviewTypeCount(type);
+                      if (count === 0) return null;
+                      
+                      return (
+                        <div key={type} className="flex items-center justify-between hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                          <label className="flex items-center cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={reviewFilters[type]}
+                              onChange={() => handleFilterChange(type)}
+                              className="sr-only"
+                            />
+                            <div className="flex items-center flex-1">
+                              <div className={`w-4 h-4 rounded-full mr-3 ${reviewFilters[type] ? bgColor : 'bg-gray-300'} flex items-center justify-center transition-all`}>
+                                {reviewFilters[type] && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="text-sm font-medium text-gray-700">{label}</span>
+                            </div>
+                          </label>
+                          <span className="text-sm text-gray-500 font-semibold bg-gray-100 px-2 py-1 rounded">{count} pcs</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+
+                
+                {/* Quick Actions */}
+                {loading ? (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex space-x-2">
+                      <Skeleton width={80} height={32} />
+                      <Skeleton width={80} height={32} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => {
+                          const allTrue = { video: true, audio: true, text: true, google: true };
+                          setReviewFilters(allTrue);
+                          setReviews(allReviews);
+                        }}
+                        className="flex-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-lg font-medium transition-colors"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={() => {
+                          const allFalse = { video: false, audio: false, text: false, google: false };
+                          setReviewFilters(allFalse);
+                          setReviews([]);
+                        }}
+                        className="flex-1 text-xs bg-gray-50 text-gray-600 hover:bg-gray-100 px-3 py-2 rounded-lg font-medium transition-colors"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              
+            </div>
+            
+            {/* Company Activity */}
+            <div className="bg-white rounded-lg border p-4 mt-4">
+              <h3 className="font-semibold mb-4">Company activity</h3>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-center">
+                      <Skeleton circle width={16} height={16} className="mr-2" />
+                      <Skeleton width={120} height={16} />
+                    </div>
+                  ))}
                 </div>
-                <p className="text-red-600 text-lg font-semibold">
-                  Business not found
-                </p>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center text-green-600">
+                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Displaying Reviews</span>
+                  </div>
+                
+                <div className="flex items-center text-blue-600">
+                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" />
+                  </svg>
+                  <span>Responding to Reviews</span>
+                </div>
+                
+                {business?.createdAt && (
+                  <div className="flex items-center text-gray-600">
+                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                    </svg>
+                    <span>Member since {new Date(business.createdAt).getFullYear()}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center text-purple-600">
+                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                  </svg>
+                  <span>Collecting Reviews</span>
+                </div>
+                
+                {allReviews.length > 0 && (
+                  <div className="flex items-center text-orange-600">
+                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
+                    </svg>
+                    <span>Latest review: {new Date(Math.max(...allReviews.map(r => new Date(r.submittedAt || r.publishedAt)))).toLocaleDateString()}</span>
+                  </div>)}
+                </div>
+              )}
+            </div>
+            
+            {/* About Section */}
+            {loading ? (
+              <div className="bg-white rounded-lg border p-4 mb-6">
+                <Skeleton width={120} height={20} className="mb-4" />
+                <Skeleton circle width={64} height={64} className="mb-4" />
+                <Skeleton count={2} height={16} className="mb-2" />
+              </div>
+            ) : business?.description && (
+              <div className="bg-white rounded-lg border p-4 mb-6">
+                <h3 className="font-semibold mb-4">About {business.name}</h3>
+                <div className="bg-orange-500 w-16 h-16 rounded mb-4 flex items-center justify-center">
+                  <span className="text-white font-bold text-xl">
+                    {business.name?.[0]?.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">{business.description}</p>
+                {business.industry && (
+                  <p className="text-sm text-gray-600">{business.industry}</p>
+                )}
+              </div>
+            )}
+            
+            {/* Contact Info */}
+            <div className="bg-white rounded-lg border p-4 mb-6">
+              <h3 className="font-semibold mb-4">Contact</h3>
+              {loading ? (
+                <div className="space-y-2">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center">
+                      <Skeleton circle width={16} height={16} className="mr-2" />
+                      <Skeleton width={150} height={16} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                {business?.contactEmail && (
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                    </svg>
+                    <span className="text-blue-600">{business.contactEmail}</span>
+                  </div>
+                )}
+                {business?.phone && (
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                    </svg>
+                    <span>{business.phone}</span>
+                  </div>
+                )}
+                {business?.website && (
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+                    </svg>
+                    <a href={business.website.startsWith('http') ? business.website : `https://${business.website}`} 
+                       target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      {business.website}
+                    </a>
+                  </div>
+                )}
+                </div>
+              )}
+            </div>
+            
+            {/* Location */}
+            {loading ? (
+              <div className="bg-white rounded-lg border p-4">
+                <Skeleton width={80} height={20} className="mb-4" />
+                <Skeleton count={2} height={16} />
+              </div>
+            ) : (business?.address || business?.city) && (
+              <div className="bg-white rounded-lg border p-4">
+                <h3 className="font-semibold mb-4">Location</h3>
+                <div className="text-sm text-gray-600">
+                  {business.address && <div>{business.address}</div>}
+                  {business.city && business.state && (
+                    <div>{business.city}, {business.state}</div>
+                  )}
+                  {business.country && <div>{business.country}</div>}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Reviews Management Section */}
-          <div className="bg-white p-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
-                  <svg className="w-8 h-8 mr-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
+          {/* Main Reviews Section */}
+          <div className="lg:col-span-3">
+            <div className="space-y-4">
+              {loading ? (
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-lg border p-6">
+                    <Skeleton height={150} />
+                  </div>
+                ))
+              ) : reviews.length > 0 ? (
+                reviews.map((review) => (
+                  <div key={review.id} className="bg-white rounded-lg border p-6">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-gray-600">
+                            {review.reviewerName?.[0]?.toUpperCase() || "?"}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-gray-900">{review.reviewerName}</h3>
+                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              review.type === 'video' ? 'bg-orange-100 text-orange-600' :
+                              review.type === 'audio' ? 'bg-purple-100 text-purple-600' :
+                              review.type === 'text' ? 'bg-green-100 text-green-600' :
+                              'bg-blue-100 text-blue-600'
+                            }`}>
+                              {review.type.charAt(0).toUpperCase() + review.type.slice(1)}
+                            </div>
+                          </div>
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        </div>
+                        
+                        <div className="text-sm text-gray-500 mb-2">
+                          {new Date(review.submittedAt || review.publishedAt).toLocaleDateString()}
+                        </div>
+                        
+                        <div className="flex text-yellow-400 mb-3">
+                          {[...Array(5)].map((_, i) => (
+                            <svg key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                        
+                        <h4 className="font-semibold text-gray-900 mb-2">{review.title}</h4>
+                        
+                        {review.bodyText && (
+                          <p className="text-gray-700 leading-relaxed">{review.bodyText}</p>
+                        )}
+                        
+                        {/* Media Display */}
+                        {review.media && review.media.length > 0 && (
+                          <div className="mt-4">
+                            {review.media.map((asset, index) => (
+                              <div key={index} className="mb-2">
+                                {asset.type === 'video' && (
+                                  <video 
+                                    controls 
+                                    className="max-w-xs rounded-lg"
+                                    src={`${process.env.REACT_APP_S3_BASE_URL}/${asset.s3Key}`}
+                                  />
+                                )}
+                                {asset.type === 'audio' && (
+                                  <audio 
+                                    controls 
+                                    className="w-full max-w-xs"
+                                    src={`${process.env.REACT_APP_S3_BASE_URL}/${asset.s3Key}`}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white rounded-lg border p-12 text-center">
+                  <svg className="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                   </svg>
-                  Customer Reviews
-                </h2>
-                <p className="text-gray-600">Authentic testimonials from our customers</p>
-              </div>
-            </div>
-
-            {/* Layout Selection */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4">Display Layout</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[
-                  { key: "GRID", label: "Grid View", icon: "⊞" },
-                  { key: "CAROUSEL", label: "Carousel", icon: "⟷" },
-                  { key: "SPOTLIGHT", label: "Spotlight", icon: "★" },
-                  { key: "FLOATING_BUBBLE", label: "Floating", icon: "○" }
-                ].map((option) => (
-                  <button
-                    key={option.key}
-                    onClick={() => setLayout(option.key)}
-                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-center ${
-                      layout === option.key
-                        ? "border-blue-500 bg-blue-50 text-blue-700 shadow-md transform scale-105"
-                        : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">{option.icon}</div>
-                    <div className="text-sm font-semibold">{option.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Reviews Display */}
-            <div className="bg-gray-50 rounded-xl p-6">
-              {renderLayout()}
+                  <p className="text-gray-500">
+                    {allReviews.length === 0 ? 'No reviews available yet.' : 'No reviews match the selected filters.'}
+                  </p>
+                  {allReviews.length === 0 ? (
+                    <button
+                      onClick={() => setShowReviewForm(true)}
+                      className="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Be the first to review
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        const allTrue = { video: true, audio: true, text: true, google: true };
+                        setReviewFilters(allTrue);
+                        setReviews(allReviews);
+                      }}
+                      className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Show All Reviews
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

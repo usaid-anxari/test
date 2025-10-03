@@ -73,6 +73,7 @@ export class EmbedController {
   async serveWidget(
     @Param('slugOrId') slugOrId: string,
     @Query('style') style: string = 'grid',
+    @Query('reviewTypes') reviewTypes: string = 'video,audio,text',
     @Res() res: Response,
   ) {
     try {
@@ -108,6 +109,36 @@ export class EmbedController {
           business.slug,
         );
         style = widget.style; // Use widget's style
+        
+        // Filter reviews by widget's reviewTypes if available
+        if (widget.reviewTypes && widget.reviewTypes.length > 0) {
+          // Floating widgets only show text reviews regardless of settings
+          if (widget.style === 'floating') {
+            profileData.reviews = profileData.reviews.filter(review => 
+              review.type === 'text'
+            );
+          } else if (widget.style === 'spotlight') {
+            // Spotlight widgets only show video and audio reviews
+            profileData.reviews = profileData.reviews.filter(review => 
+              ['video', 'audio'].includes(review.type) && widget.reviewTypes.includes(review.type)
+            );
+          } else {
+            profileData.reviews = profileData.reviews.filter(review => 
+              widget.reviewTypes.includes(review.type)
+            );
+          }
+        } else {
+          // Default widget behavior based on style
+          if (widget.style === 'floating') {
+            profileData.reviews = profileData.reviews.filter(review => 
+              review.type === 'text'
+            );
+          } else if (widget.style === 'spotlight') {
+            profileData.reviews = profileData.reviews.filter(review => 
+              ['video', 'audio'].includes(review.type)
+            );
+          }
+        }
       } else {
         // Handle as business slug
         business = await this.businessService.findBySlug(slugOrId);
@@ -118,6 +149,16 @@ export class EmbedController {
         profileData = await this.businessService.getPublicProfileWithReviews(
           slugOrId,
         );
+        
+        // Filter reviews by reviewTypes query parameter
+        const allowedTypes = reviewTypes.split(',').filter(type => 
+          ['video', 'audio', 'text'].includes(type)
+        );
+        if (allowedTypes.length > 0) {
+          profileData.reviews = profileData.reviews.filter(review => 
+            allowedTypes.includes(review.type)
+          );
+        }
       }
 
       const widgetHtml = this.generateWidgetHtml(profileData, style, widget);
@@ -159,6 +200,41 @@ export class EmbedController {
     };
 
     return widgetStyles[style] || widgetStyles.grid;
+  }
+
+  private getAvailableReviewTypes(reviews: any[]): string[] {
+    const types = new Set<string>();
+    reviews.forEach(review => {
+      if (['video', 'audio', 'text'].includes(review.type)) {
+        types.add(review.type);
+      }
+    });
+    return Array.from(types);
+  }
+
+  private generateFilterButtons(reviews: any[], primary: string): string {
+    const availableTypes = this.getAvailableReviewTypes(reviews);
+    
+    if (availableTypes.length <= 1) {
+      return ''; // Don't show filters if only one type or no reviews
+    }
+
+    const typeConfig = {
+      video: '🎥 Video',
+      audio: '🎵 Audio', 
+      text: '💬 Text'
+    };
+
+    const filterButtons = availableTypes.map(type => 
+      `<button class="tt-filter-btn" data-filter="${type}">${typeConfig[type]}</button>`
+    ).join('');
+
+    return `
+      <div class="tt-filters" style="margin-top: 16px;">
+        <button class="tt-filter-btn active" data-filter="all">All</button>
+        ${filterButtons}
+      </div>
+    `;
   }
 
   private generateGridWidget(
@@ -205,7 +281,6 @@ export class EmbedController {
     }
 
     const reviewCards = reviews
-      .slice(0, 6)
       .map((review) => {
         let mediaContent = '';
 
@@ -323,6 +398,10 @@ export class EmbedController {
         .tt-text-highlight { position: relative; background: linear-gradient(170deg, ${primary}50, ${secondary}60); border-radius: 16px; padding: 35px; margin: 20px 0; border-left: 4px solid ${primary}; }
         .tt-quote-icon { position: absolute; top: 5px; left: 10px; font-size: 24px; padding: 7px; border-radius: 50%; }
         .tt-type-badge { position: absolute; top: 15px; right: 5px; padding: 10px 18px; border-radius: 30px; font-size: 12px; font-weight: 800; text-transform: uppercase; color: white; backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+        .tt-filters { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .tt-filter-btn { padding: 8px 16px; border: 2px solid ${primary}30; background: rgba(255,255,255,0.9); color: ${primary}; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(8px); }
+        .tt-filter-btn:hover { background: ${primary}10; transform: translateY(-2px); }
+        .tt-filter-btn.active { background: ${primary}; color: white; box-shadow: 0 4px 12px ${primary}40; }
         .tt-video { background: linear-gradient(135deg, ${primary}, ${primary}cc); }
         .tt-audio { background: linear-gradient(135deg, ${secondary}, ${secondary}cc); }
         .tt-text { background: linear-gradient(135deg, ${secondary}, ${secondary}cc); }
@@ -350,7 +429,7 @@ export class EmbedController {
         // Track widget view on load
         trackEvent('widget_view', 'load');
         
-        // Add click tracking to all clickable elements
+        // Add click tracking and filter functionality
         document.addEventListener('click', function(e) {
           if (e.target.closest('.tt-review-card')) {
             trackEvent('widget_click', 'review_card');
@@ -359,11 +438,38 @@ export class EmbedController {
             trackEvent('widget_click', 'powered_by');
           }
         });
+        
+        // Filter functionality
+        setTimeout(function() {
+          var filterBtns = document.querySelectorAll('.tt-filter-btn');
+          filterBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var filter = this.getAttribute('data-filter');
+              var cards = document.querySelectorAll('.tt-review-card');
+              
+              // Update active button
+              filterBtns.forEach(function(b) { b.classList.remove('active'); });
+              this.classList.add('active');
+              
+              // Filter cards
+              cards.forEach(function(card) {
+                if (filter === 'all' || card.classList.contains('tt-' + filter)) {
+                  card.style.display = 'block';
+                } else {
+                  card.style.display = 'none';
+                }
+              });
+              
+              trackEvent('widget_click', 'filter_' + filter);
+            });
+          });
+        }, 100);
       </script>
       <div class="tt-widget">
         <div class="tt-header">
           <h3>${business.name} Reviews</h3>
           <p>Trusted by our customers worldwide</p>
+          ${this.generateFilterButtons(reviews, primary)}
         </div>
         <div class="tt-reviews-grid">
           ${reviewCards}
@@ -420,7 +526,6 @@ export class EmbedController {
     }
 
     const reviewCards = reviews
-      .slice(0, 8)
       .map((review, index) => {
         let mediaContent = '';
 
@@ -428,10 +533,19 @@ export class EmbedController {
           const videoAsset = review.media[0];
           mediaContent = `
             <div class="tt-video-container">
-              <video class="tt-video-player" controls ${autoplay ? 'autoplay muted' : ''}>
-                <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
-                Your browser does not support video.
-              </video>
+              <div class="tt-video-wrapper">
+                <video class="tt-video-player" controls ${autoplay ? 'autoplay muted' : ''} poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23374151'%3EVideo Review%3C/text%3E%3C/svg%3E">
+                  <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
+                  Your browser does not support video.
+                </video>
+                <div class="tt-video-overlay">
+                  <div class="tt-play-button">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
             </div>
           `;
         } else if (review.type === 'audio' && review.media && review.media.length > 0) {
@@ -504,13 +618,17 @@ export class EmbedController {
         .tt-header p { color: ${isDark ? '#cbd5e1' : '#64748b'}; margin: 0; font-size: 20px; font-weight: 500; position: relative; z-index: 1; }
         .tt-carousel-container { position: relative; overflow: hidden; border-radius: 32px; box-shadow: 0 24px 64px rgba(0,0,0,0.2); }
         .tt-carousel { display: flex; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-        .tt-carousel-slide { min-width: 100%; padding: 48px; background: ${isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)'}; position: relative; text-align: center; backdrop-filter: blur(12px); }
+        .tt-carousel-slide { min-width: 100%; padding: 40px 48px; background: ${isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)'}; position: relative; text-align: center; backdrop-filter: blur(12px); display: flex; flex-direction: column; justify-content: center; min-height: 500px; }
         .tt-rating { color: #fbbf24; font-size: 32px; margin-bottom: 24px; text-shadow: 0 2px 8px rgba(251, 191, 36, 0.3); filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4)); }
         .tt-carousel-slide h4 { margin: 0 0 24px 0; color: ${isDark ? '#f8fafc' : '#0f172a'}; font-size: 32px; font-weight: 800; line-height: 1.2; }
         .tt-carousel-slide p { margin: 0 0 28px 0; color: ${isDark ? '#cbd5e1' : '#475569'}; line-height: 1.7; font-size: 18px; max-width: 700px; margin-left: auto; margin-right: auto; }
         .tt-carousel-slide small { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; font-size: 16px; }
-        .tt-video-container { position: relative; width: 100%; max-width: 600px; margin: 32px auto; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-        .tt-video-player { width: 100%; height: 250px; object-fit: cover; display: block; }
+        .tt-video-container { position: relative; width: 100%; max-width: 600px; margin: 32px auto; }
+        .tt-video-wrapper { position: relative; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: linear-gradient(135deg, ${primary}10, ${secondary}10); }
+        .tt-video-player { width: 100%; height: 300px; object-fit: cover; display: block; border-radius: 24px; }
+        .tt-video-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .tt-video-wrapper:hover .tt-video-overlay { opacity: 1; }
+        .tt-play-button { width: 60px; height: 60px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
         .tt-audio-container { background: linear-gradient(135deg, ${secondary}15, ${primary}15); border-radius: 24px; padding: 32px; margin: 32px auto; max-width: 500px; border: 2px solid ${secondary}30; }
         .tt-audio-visual { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px; }
         .tt-audio-icon { font-size: 40px; }
@@ -532,6 +650,10 @@ export class EmbedController {
         .tt-nav-btn { background: linear-gradient(135deg, ${primary}, ${secondary}); color: white; border: none; padding: 16px 32px; border-radius: 16px; cursor: pointer; font-weight: 700; transition: all 0.4s ease; box-shadow: 0 8px 32px ${primary}40; font-size: 16px; }
         .tt-nav-btn:hover { transform: translateY(-4px) scale(1.05); box-shadow: 0 16px 48px ${primary}60; }
         .tt-nav-btn:disabled { background: ${isDark ? 'rgba(75, 85, 99, 0.5)' : 'rgba(209, 213, 219, 0.5)'}; cursor: not-allowed; transform: none; box-shadow: none; }
+        .tt-filters { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .tt-filter-btn { padding: 8px 16px; border: 2px solid ${primary}30; background: rgba(255,255,255,0.9); color: ${primary}; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(8px); }
+        .tt-filter-btn:hover { background: ${primary}10; transform: translateY(-2px); }
+        .tt-filter-btn.active { background: ${primary}; color: white; box-shadow: 0 4px 12px ${primary}40; }
         .tt-powered { text-align: center; margin-top: 56px; padding: 28px; background: ${isDark ? 'rgba(30, 41, 59, 0.6)' : 'rgba(248, 250, 252, 0.8)'}; border-radius: 20px; backdrop-filter: blur(12px); position: relative; z-index: 1; }
         .tt-powered a { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; font-weight: 800; font-size: 14px; }
         @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
@@ -543,6 +665,7 @@ export class EmbedController {
         <div class="tt-header">
           <h3>${business.name} Reviews</h3>
           <p>Swipe to see more reviews</p>
+          ${this.generateFilterButtons(reviews, primary)}
         </div>
         <div class="tt-carousel-container">
           <div class="tt-carousel" id="ttCarousel">
@@ -617,6 +740,40 @@ export class EmbedController {
                 ttPrevSlide();
               });
             }
+            
+            // Filter functionality for carousel
+            var filterBtns = document.querySelectorAll('.tt-filter-btn');
+            filterBtns.forEach(function(btn) {
+              btn.addEventListener('click', function() {
+                var filter = this.getAttribute('data-filter');
+                var slides = document.querySelectorAll('.tt-carousel-slide');
+                
+                // Update active button
+                filterBtns.forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                
+                // Filter slides and update carousel
+                var visibleSlides = [];
+                slides.forEach(function(slide, index) {
+                  if (filter === 'all' || slide.classList.contains('tt-' + filter)) {
+                    slide.style.display = 'flex';
+                    visibleSlides.push(index);
+                  } else {
+                    slide.style.display = 'none';
+                  }
+                });
+                
+                // Reset to first visible slide
+                if (visibleSlides.length > 0) {
+                  currentSlide = 0;
+                  totalSlides = visibleSlides.length;
+                  updateCarousel();
+                }
+                
+                trackEvent('widget_click', 'filter_' + filter);
+              });
+            });
+            
             updateCarousel();
           }, 100);
         })();
@@ -668,7 +825,7 @@ export class EmbedController {
       </html>`;
     }
 
-    const reviewsToShow = reviews.slice(0, 5);
+    const reviewsToShow = reviews;
 
     const reviewItems = reviewsToShow
       .map((review, index) => {

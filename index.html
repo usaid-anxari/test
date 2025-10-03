@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html>
   <body>
-<div id="truetestify-widget-2c213998-fb93-41a3-86ef-1758ef85e6dc"></div>
-<script data-widget-id="2c213998-fb93-41a3-86ef-1758ef85e6dc" data-style="carousel">
+<!-- TrueTestify Widget -->
+<div id="truetestify-widget-df310dd6-76a3-4319-a332-d2dc6fe6b0e1"></div>
+<script data-widget-id="df310dd6-76a3-4319-a332-d2dc6fe6b0e1" data-style="floating" data-review-types="video,audio,text">
 (function() {
-  var widgetId = '2c213998-fb93-41a3-86ef-1758ef85e6dc';
-  var style = 'carousel';
+  var widgetId = 'df310dd6-76a3-4319-a332-d2dc6fe6b0e1';
+  var style = 'floating';
+  var reviewTypes = 'video,audio,text';
   var targetId = 'truetestify-widget-' + widgetId;
   
   var container = document.getElementById(targetId);
   if (container) {
-    fetch('http://localhost:4000/embed/' + widgetId + '?style=' + style)
+    var url = 'http://localhost:4000/embed/' + widgetId + '?style=' + style + '&reviewTypes=' + reviewTypes;
+    fetch(url)
       .then(function(response) { return response.text(); })
       .then(function(html) {
         container.innerHTML = html;
@@ -29,6 +32,6 @@
       });
   }
 })();
-</script> 
+</script>
 
 </body></html>
