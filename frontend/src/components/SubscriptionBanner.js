@@ -4,21 +4,28 @@ const SubscriptionBanner = ({ subscriptionStatus, tier, storageUsage, trialActiv
   const navigate = useNavigate();
   
   // Don't show banner for active paid subscriptions
-  if (subscriptionStatus === 'active' && tier !== 'free') {
+  if (subscriptionStatus === 'ACTIVE' && tier !== 'FREE') {
     return null;
   }
 
   // Don't show upgrade prompt if user has paid plan (even if trialing)
-  if (tier !== 'free' && subscriptionStatus !== 'past_due' && subscriptionStatus !== 'canceled') {
+  if (tier !== 'FREE' && subscriptionStatus !== 'PAST_DUE' && subscriptionStatus !== 'CANCELED') {
     return null;
   }
 
-  // Parse storage usage
-  const [used, limit] = storageUsage ? storageUsage.split('/').map(Number) : [0, 1];
-  const storagePercentage = limit > 0 ? (used / limit) * 100 : 0;
+  // Parse storage usage - handle both string format and direct numbers
+  let used = 0, limit = 1, storagePercentage = 0;
+  if (typeof storageUsage === 'string') {
+    [used, limit] = storageUsage.split('/').map(Number);
+    storagePercentage = limit > 0 ? (used / limit) * 100 : 0;
+  } else if (typeof storageUsage === 'object' && storageUsage) {
+    used = storageUsage.used || 0;
+    limit = storageUsage.limit || 1;
+    storagePercentage = storageUsage.percentage || 0;
+  }
 
   const getBannerConfig = () => {
-    if (subscriptionStatus === 'past_due') {
+    if (subscriptionStatus === 'PAST_DUE') {
       return {
         type: 'error',
         title: 'Payment Required',
@@ -30,7 +37,7 @@ const SubscriptionBanner = ({ subscriptionStatus, tier, storageUsage, trialActiv
       };
     }
 
-    if (subscriptionStatus === 'canceled') {
+    if (subscriptionStatus === 'CANCELED') {
       return {
         type: 'error',
         title: 'Subscription Canceled',
@@ -66,7 +73,7 @@ const SubscriptionBanner = ({ subscriptionStatus, tier, storageUsage, trialActiv
       };
     }
 
-    if (tier === 'free') {
+    if (tier === 'FREE') {
       return {
         type: 'info',
         title: 'Free Plan',

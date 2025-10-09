@@ -9,6 +9,7 @@ import {
   UserIcon,
   XMarkIcon,
   StarIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/16/solid";
 import { Link } from "react-router-dom";
 import NavLink from "./NavLink";
@@ -118,6 +119,14 @@ const Sidebar = ({ setIsSidebarOpen }) => {
                 to="/dashboard/google-reviews"
                 icon={<StarIcon className="h-5 w-5" />}
                 label="Google Reviews"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            </li>
+            <li>
+              <NavLink
+                to="/dashboard/compliance"
+                icon={<ShieldCheckIcon className="h-5 w-5" />}
+                label="Privacy & Compliance"
                 onClick={() => setIsSidebarOpen(false)}
               />
             </li>

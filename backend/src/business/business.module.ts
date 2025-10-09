@@ -9,6 +9,7 @@ import { AuthModule } from '../auth/auth.module';
 import { User } from '../users/entities/user.entity';
 import { Review } from '../review/entities/review.entity';
 import { MediaAsset } from '../review/entities/media-asset.entity';
+import { ConsentLog } from '../review/entities/consent-log.entity';
 import { GoogleReview } from '../google/entities/google-review.entity';
 import { S3Service } from '../common/s3/s3.service';
 import { ConfigModule } from '@nestjs/config';
@@ -17,7 +18,7 @@ import { SubscriptionGuard } from '../common/guards/subscription.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Business, BusinessUser, User, Review, MediaAsset, GoogleReview]),
+    TypeOrmModule.forFeature([Business, BusinessUser, User, Review, MediaAsset, ConsentLog, GoogleReview]),
     forwardRef(() => UsersModule),
     forwardRef(() => AuthModule),
     ConfigModule,

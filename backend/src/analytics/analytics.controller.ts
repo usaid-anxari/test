@@ -117,12 +117,28 @@ export class AnalyticsController {
     const userAgent = req.headers['user-agent'];
     const ipAddress = req.ip || req.connection.remoteAddress;
     
-    return this.analyticsService.trackEvent(
-      trackEventDto.businessId,
-      trackEventDto,
-      userAgent,
-      ipAddress,
-    );
+    // Validate businessId is provided
+    if (!trackEventDto.businessId) {
+      console.warn('Analytics tracking skipped: missing businessId');
+      return { success: false, message: 'Missing businessId' };
+    }
+    
+    // Fire and forget - don't wait for the database save to complete
+    // This makes widget tracking much faster
+    setImmediate(() => {
+      this.analyticsService.trackEvent(
+        trackEventDto.businessId,
+        trackEventDto,
+        userAgent,
+        ipAddress,
+      ).catch(error => {
+        // Log error but don't fail the request
+        console.error('Analytics tracking error:', error);
+      });
+    });
+    
+    // Return immediately with success
+    return { success: true, message: 'Event tracked' };
   }
 
   private getDateRange(query: AnalyticsQueryDto): { startDate: Date; endDate: Date } {

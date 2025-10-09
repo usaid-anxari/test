@@ -2,9 +2,12 @@ import { Outlet } from "react-router-dom";
 import { useState } from "react";
 import { Bars3Icon } from "@heroicons/react/16/solid";
 import Sidebar from "../components/Sidebar";
+import SubscriptionBanner from "../components/SubscriptionBanner";
+import  useSubscription  from "../hooks/useSubscription";
 
 const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { subscriptionData } = useSubscription();
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -34,6 +37,19 @@ const DashboardLayout = () => {
 
         {/* Main Content */}
         <div className="flex-grow p-4 md:p-8 overflow-y-auto w-full pt-16 md:pt-8">
+          {subscriptionData && (
+            <SubscriptionBanner
+              subscriptionStatus={subscriptionData.status}
+              tier={subscriptionData.tier}
+              storageUsage={{
+                used: parseFloat(subscriptionData.storageUsage?.split('/')[0] || '0'),
+                limit: parseFloat(subscriptionData.storageUsage?.split('/')[1] || '1'),
+                percentage: subscriptionData.storagePercentage || 0
+              }}
+              trialActive={subscriptionData.trialActive}
+              trialDaysLeft={subscriptionData.trialDaysLeft}
+            />
+          )}
           <Outlet />
         </div>
       </div>

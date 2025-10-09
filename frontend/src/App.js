@@ -1,7 +1,6 @@
-import { useLocation, Navigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Route, Routes } from "react-router-dom";
-import { lazy, Suspense, useContext } from "react";
-import { AuthContext } from "./context/AuthContext";
+import { lazy, Suspense } from "react";
 import { Toaster } from "react-hot-toast";
 import { useAuth0 } from "@auth0/auth0-react";
 
@@ -10,11 +9,11 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import FloatingReviewWidget from "./components/FloatingReviewWidget";
 import EmailVerification from "./components/EmailVerification";
-import Onboarding from "./components/Onboarding";
+import ComprehensiveOnboarding from "./components/ComprehensiveOnboarding";
 import Auth0ProtectedRoute from "./components/Auth0ProtectedRoute";
 import PaymentGuard from "./components/PaymentGuard";
 import NotFound from "./pages/NotFound";
-import AdminSettings from "./pages/Dashboard/AdminSettings";
+
 
 // Lazy loaded components for better performance
 const Home = lazy(() => import("./pages/Home/Home"));
@@ -30,7 +29,6 @@ const AudioReviews = lazy(() => import("./pages/Services/AudioReviews"));
 const QRCodeCollection = lazy(() => import("./pages/Services/QRCodeCollection"));
 const TextReviews = lazy(() => import("./pages/Services/TextReviews"));
 const VideoReviews = lazy(() => import("./pages/Services/VideoReviews"));
-
 const Integrations = lazy(() => import("./pages/Integrations"));
 const Support = lazy(() => import("./pages/Support"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
@@ -41,7 +39,6 @@ const Document = lazy(() => import("./pages/Document"));
 // Auth Components
 const Auth0Login = lazy(() => import("./pages/Auth0Login"));
 const Auth0Signup = lazy(() => import("./pages/Auth0Signup"));
-const CreateBusiness = lazy(() => import("./pages/CreateBusiness"));
 
 // Public Review Components
 const PublicReviews = lazy(() => import("./pages/PublicReviews"));
@@ -50,12 +47,14 @@ const RecordReview = lazy(() => import("./pages/RecordReview"));
 // Dashboard Components
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
 const Moderation = lazy(() => import("./pages/Dashboard/Moderation"));
+const AdminSettings = lazy(import("./pages/Dashboard/AdminSettings"));
 const Analytics = lazy(() => import("./pages/Dashboard/Analytics"));
 const BusinessDashboard = lazy(() => import("./pages/Dashboard/BusinessDashboard"));
 const WidgetSettings = lazy(() => import("./pages/Dashboard/WidgetSettings"));
 const GoogleReviews = lazy(() => import("./pages/Dashboard/GoogleReviews"));
 const Account = lazy(() => import("./pages/Dashboard/Account"));
 const Billing = lazy(() => import("./pages/Dashboard/Billing"));
+const Compliance = lazy(() => import("./pages/Dashboard/Compliance"));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -65,11 +64,10 @@ const LoadingSpinner = () => (
 );
 
 function App() {
-  const { user, tenant, needsOnboarding } = useContext(AuthContext);
-  const { isAuthenticated, user: auth0User, isLoading } = useAuth0();
+
+  const {  isLoading } = useAuth0();
   const location = useLocation();
   const isDashboardRoute = location.pathname.startsWith("/dashboard");
-  const isOnboardingRoute = location.pathname === "/onboarding";
   const isCreateBusinessRoute = location.pathname === "/create-business";
   const isPublicRoute = location.pathname.startsWith("/record/") || 
                        (!location.pathname.startsWith("/dashboard") && 
@@ -88,9 +86,9 @@ function App() {
   // }
 
   // SaaS Flow: Business Setup Required (Onboarding)
-  if (isAuthenticated && auth0User && needsOnboarding && !isOnboardingRoute && !isCreateBusinessRoute) {
-    return <Onboarding />;
-  }
+  // if (isAuthenticated && auth0User && needsOnboarding && !isOnboardingRoute && !isCreateBusinessRoute) {
+  //   return <Onboarding />;
+  // }
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-gray-50">
@@ -128,8 +126,7 @@ function App() {
             <Route path="/auth0-signup" element={<Auth0Signup />} />
             
             {/* Onboarding Flow */}
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/create-business" element={<CreateBusiness />} />
+            <Route path="/create-business" element={<ComprehensiveOnboarding />} />
 
             {/* Public Review Routes */}
             <Route path="/record/:businessName" element={<RecordReview />} />
@@ -155,6 +152,7 @@ function App() {
               <Route path="account" element={<Account />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="google-reviews" element={<GoogleReviews />} />
+              <Route path="compliance" element={<Compliance />} />
             </Route>
 
             {/* 404 Route */}

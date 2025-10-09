@@ -17,7 +17,8 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth0 } from "@auth0/auth0-react";
-import useSubscription from "../../hooks/useSubscription"
+import  useSubscription  from "../../hooks/useSubscription"
+import { billingService } from "../../service/billingService"
 
 const InvoiceList = ({ invoices, onDownload }) => {
   const downloadInvoice = async (invoice) => {
@@ -115,9 +116,9 @@ const InvoiceList = ({ invoices, onDownload }) => {
 
 const Billing = () => {
   const navigate = useNavigate();
-  const subscription = useSubscription();
+  const { subscriptionData: subscription, loading: subscriptionLoading, refetch: refetchSubscription } = useSubscription();
   const [searchParams] = useSearchParams();
-  const { isAuthenticated } = useAuth0();
+  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
   const paymentStatus = searchParams.get('status') || searchParams.get('payment');
   const paymentReason = searchParams.get('reason');
   const sessionId = searchParams.get('session_id');
@@ -125,19 +126,25 @@ const Billing = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
+console.log({pricingPlans});
+console.log({subscription});
+
+
+
   // Extract data from subscription hook - memoized to prevent re-renders
   const billingAccount = useMemo(() => ({
-    planName: subscription?.tier || "free",
-    planPrice: subscription?.tier === 'starter' ? 19 : 
-               subscription?.tier === 'professional' ? 49 : 
-               subscription?.tier === 'enterprise' ? 99 : 0,
-    status: subscription?.status || "active",
+    planName: subscription?.tier || "FREE",
+    planPrice: subscription?.tier === 'STARTER' ? 19 : 
+               subscription?.tier === 'PROFESSIONAL' ? 49 : 
+               subscription?.tier === 'ENTERPRISE' ? 99 : 0,
+    status: subscription?.status || "ACTIVE",
     storageLimitGb: parseFloat(subscription?.storageUsage?.split('/')[1] || '1'),
     storageUsageGb: parseFloat(subscription?.storageUsage?.split('/')[0] || '0'),
     isTrialActive: subscription?.trialActive || false,
     daysUntilTrialEnd: subscription?.trialDaysLeft || 0,
     trialEndsAt: new Date(Date.now() + (subscription?.trialDaysLeft || 0) * 24 * 60 * 60 * 1000)
   }), [subscription]);
+  console.log({billingAccount});
   
   const storageStatus = useMemo(() => ({
     storageUsageGb: parseFloat(subscription?.storageUsage?.split('/')[0] || '0'),
@@ -159,7 +166,7 @@ const Billing = () => {
       setInvoices([]);
     }
   }, []);
-  const loading = subscription?.loading || false;
+  const loading = subscriptionLoading;
 
   // Handle payment success/failure
   useEffect(() => {
@@ -178,8 +185,9 @@ const Billing = () => {
   const refreshData = useCallback(async () => {
     setRefreshing(true);
     try {
-      const plansResponse = await axiosInstance.get(API_PATHS.BILLING.GET_PRICING_PLANS);
-      const plansData = plansResponse.data.map(plan => ({
+      const token = await getAccessTokenSilently();
+      const plansData = await billingService.getPricingPlans(token);
+      const formattedPlans = plansData.map(plan => ({
         id: plan.tier.toLowerCase(),
         name: plan.name,
         tier: plan.tier,
@@ -190,8 +198,9 @@ const Billing = () => {
         isPopular: plan.isPopular,
         description: plan.description
       }));
-      setPricingPlans(plansData);
+      setPricingPlans(formattedPlans);
       await fetchInvoices();
+      await refetchSubscription();
       toast.success('Data refreshed!');
     } catch (error) {
       // Set default plans if API fails
@@ -205,7 +214,7 @@ const Billing = () => {
     } finally {
       setRefreshing(false);
     }
-  }, []); // Removed fetchInvoices dependency
+  }, [getAccessTokenSilently, fetchInvoices, refetchSubscription]);
 
   // Download invoice PDF from API
   const downloadInvoice = async (invoiceId) => {
@@ -267,23 +276,22 @@ const Billing = () => {
 
     try {
       console.log('📡 Sending checkout request to:', API_PATHS.BILLING.CREATE_CHECKOUT_SESSION);
-      const checkoutResponse = await axiosInstance.post(
-        API_PATHS.BILLING.CREATE_CHECKOUT_SESSION,
-        {
-          pricingTier: plan.tier,
-          successUrl: window.location.origin + "/dashboard/billing?payment=success",
-          cancelUrl: window.location.origin + "/dashboard/billing?payment=cancelled",
-        }
+      const token = await getAccessTokenSilently();
+      const checkoutResponse = await billingService.createCheckoutSession(
+        token,
+        plan.tier.toUpperCase(),
+        window.location.origin + "/dashboard/billing?payment=success",
+        window.location.origin + "/dashboard/billing?payment=cancelled"
       );
 
-      console.log('✅ Checkout response:', checkoutResponse.data);
+      console.log('✅ Checkout response:', checkoutResponse);
       toast.dismiss();
       
-      if (checkoutResponse.data.checkoutUrl) {
-        console.log('🔄 Redirecting to:', checkoutResponse.data.checkoutUrl);
+      if (checkoutResponse.checkoutUrl) {
+        console.log('🔄 Redirecting to:', checkoutResponse.checkoutUrl);
         
         // Check if it's a development success URL (immediate redirect)
-        if (checkoutResponse.data.checkoutUrl.includes('payment=success')) {
+        if (checkoutResponse.checkoutUrl.includes('payment=success')) {
           console.log('🚀 Development mode - immediate success');
           toast.success('Payment successful! Plan updated.');
           // Force refresh billing data and invoices
@@ -293,7 +301,7 @@ const Billing = () => {
           return;
         }
         
-        window.location.href = checkoutResponse.data.checkoutUrl;
+        window.location.href = checkoutResponse.checkoutUrl;
         return;
       }
 
@@ -584,11 +592,10 @@ const Billing = () => {
                 <button
                   onClick={async () => {
                     try {
-                      const portalResponse = await axiosInstance.post(
-                        API_PATHS.BILLING.CREATE_PORTAL_SESSION
-                      );
-                      if (portalResponse.data.portalUrl) {
-                        window.open(portalResponse.data.portalUrl, '_blank');
+                      const token = await getAccessTokenSilently();
+                      const portalResponse = await billingService.createPortalSession(token);
+                      if (portalResponse.portalUrl) {
+                        window.open(portalResponse.portalUrl, '_blank');
                       }
                     } catch (error) {
                       console.error('Portal error:', error);

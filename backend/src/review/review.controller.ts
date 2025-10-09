@@ -13,6 +13,7 @@ import {
   NotFoundException,
   Get,
   ForbiddenException,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ReviewsService } from './review.service';
@@ -61,6 +62,7 @@ export class ReviewsController {
     @Param('slug') slug: string,
     @Body() body: CreateReviewDto,
     @UploadedFile() file?: Express.Multer.File,
+    @Req() req?: any,
   ) {
     // 1) find business by slug (tenant resolver)
     const biz = await this.reviewsService.findBusinessBySlug(slug);
@@ -92,8 +94,10 @@ export class ReviewsController {
       throw new BadRequestException('Do not upload files for text reviews');
     }
 
-    // 4) create review row
-    const review = await this.reviewsService.createReviewForBusiness(biz, body);
+    // 4) create review row with consent logging
+    const ip = req?.ip || req?.connection?.remoteAddress || 'unknown';
+    const userAgent = req?.get('User-Agent') || 'unknown';
+    const review = await this.reviewsService.createReviewForBusiness(biz, body, ip, userAgent);
 
     // 5) if file present -> upload & attach
     let mediaAsset: MediaAsset | null = null;

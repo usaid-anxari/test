@@ -3,7 +3,8 @@ import {
   S3Client, 
   PutObjectCommand, 
   GetObjectCommand,
-  HeadObjectCommand 
+  HeadObjectCommand,
+  DeleteObjectCommand 
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
@@ -98,5 +99,21 @@ export class S3Service {
     const timestamp = Date.now();
     const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
     return `businesses/${businessId}/reviews/${reviewId}/${timestamp}-${safeFilename}`;
+  }
+
+  // Delete file from S3 (for right-to-delete compliance)
+  async deleteFile(key: string): Promise<void> {
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      });
+      
+      await this.client.send(command);
+      this.logger.log(`File deleted from S3: ${key}`);
+    } catch (err) {
+      this.logger.error(`Failed to delete S3 file: ${key}`, err);
+      throw new InternalServerErrorException('Failed to delete file from S3');
+    }
   }
 }

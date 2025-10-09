@@ -12,6 +12,7 @@ import {
   UploadedFile,
   UseInterceptors,
   Logger,
+  Delete,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -180,28 +181,30 @@ export class BusinessController {
   ) {
     try {
       const userId = req.userEntity.id;
-      const user = await this.usersService.findById(userId);
+      const slug = (body.slug || body.name).toLowerCase().replace(/\s+/g, '-');
+
+      // Parallel validation checks
+      const [user, hasExisting, existing] = await Promise.all([
+        this.usersService.findById(userId),
+        this.bizService.hasExistingBusiness(userId),
+        this.bizService.findBySlug(slug)
+      ]);
+
       if (!user) {
         throw new BadRequestException('User not found in system.');
       }
 
-      // Check if user already has a business (one business per user)
-      const hasExisting = await this.bizService.hasExistingBusiness(userId);
       if (hasExisting) {
         throw new BadRequestException('User already has a business. Only one business per user is allowed.');
+      }
+
+      if (existing) {
+        throw new BadRequestException('Slug already taken, choose another.');
       }
 
       // Validate email matches Auth0 email
       if (body.contactEmail && body.contactEmail !== user.email) {
         throw new BadRequestException('Contact email must match your account email.');
-      }
-
-      const slug = (body.slug || body.name).toLowerCase().replace(/\s+/g, '-');
-
-      // Check slug uniqueness
-      const existing = await this.bizService.findBySlug(slug);
-      if (existing) {
-        throw new BadRequestException('Slug already taken, choose another.');
       }
 
       // Handle logo upload (file OR URL)
@@ -281,15 +284,54 @@ export class BusinessController {
     }
   }
 
+  // Right-to-delete endpoint (Milestone 9 - GDPR compliance)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Delete('api/reviews/:id/delete-permanently')
+  @ApiResponse({ status: 200, description: 'Review permanently deleted for compliance' })
+  @ApiResponse({ status: 404, description: 'Review not found' })
+  async deleteReviewPermanently(@Req() req, @Param('id') reviewId: string) {
+    const userId = req.userEntity.id;
+    const business = await this.bizService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    // Get client IP for logging
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    return await this.bizService.deleteReviewPermanently(business.id, reviewId, ip);
+  }
+
+  // Get consent logs (Milestone 9)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('api/compliance/consent-logs')
+  @ApiResponse({ status: 200, description: 'Consent logs retrieved' })
+  async getConsentLogs(@Req() req) {
+    const userId = req.userEntity.id;
+    const business = await this.bizService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const logs = await this.bizService.getConsentLogs(business.id);
+    return { logs };
+  }
+
   // Dashboard: return business for current user's default business with all reviews
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get('api/business/me')
   async myBusiness(@Req() req) {
     const userId = req.userEntity.id;
-    const b = await this.bizService.findDefaultForUser(userId);
     
-    if (!b) {
+    // OPTIMIZED: Single query with joins instead of separate queries
+    const businessWithReviews = await this.bizService.findDefaultForUserWithReviews(userId);
+    
+    if (!businessWithReviews) {
       return { 
         message: 'No business found. Please create one.',
         business: null,
@@ -297,23 +339,9 @@ export class BusinessController {
       };
     }
     
-    // Get all reviews for this business (not just approved)
-    const allReviews = await this.bizService.getAllReviewsForBusiness(b.id);
+    const { business, reviews } = businessWithReviews;
     
-    return { 
-      business: {
-        id: b.id,
-        name: b.name,
-        slug: b.slug,
-        logoUrl: b.logoUrl,
-        brandColor: b.brandColor,
-        website: b.website,
-        contactEmail: b.contactEmail,
-        settingsJson: b.settingsJson,
-        createdAt : b.createdAt
-      },
-      reviews: allReviews
-    };
+    return {  business, reviews    };
   }
 
   // Update business information (excluding slug)

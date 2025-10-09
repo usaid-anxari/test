@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +11,7 @@ import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
   private stripe: Stripe;
   private billingCache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_TTL = 30000; // 30 seconds cache
@@ -71,9 +72,9 @@ export class BillingService {
     // Storage info logging removed for performance
 
     const storageUsageGb = Math.round((storageInfo.bytesUsed / (1024 * 1024 * 1024)) * 1000) / 1000; // Keep 3 decimal places
-    const actualStorageLimitGb = Math.round((storageInfo.bytesLimit / (1024 * 1024 * 1024)) * 100) / 100; // Use actual limit from storage service
+    const actualStorageLimitGb = billingAccount.storageLimitGb; // Use billing account limit, not storage service limit
     const storageUsagePercentage = actualStorageLimitGb > 0 
-      ? Math.round((storageUsageGb / actualStorageLimitGb) * 100 * 100) / 100 // Keep 2 decimal places
+      ? Math.round((storageUsageGb / actualStorageLimitGb) * 100 * 10000) / 10000 // Keep 4 decimal places for small percentages
       : 0;
 
     // Storage calculations completed
@@ -163,13 +164,26 @@ export class BillingService {
     businessId: string,
     createCheckoutSessionDto: CreateCheckoutSessionDto,
   ): Promise<{ checkoutUrl: string; sessionId: string }> {
+    console.log('BillingService.createCheckoutSession called with:', {
+      businessId,
+      dto: createCheckoutSessionDto
+    });
+    
     const billingAccount = await this.getOrCreateBillingAccount(businessId);
     const pricingPlans = await this.getPricingPlans();
-    const selectedPlan = pricingPlans.find(plan => plan.tier === createCheckoutSessionDto.pricingTier);
+    console.log('Available pricing plans:', pricingPlans.map(p => p.tier));
+    console.log('Looking for tier:', createCheckoutSessionDto.pricingTier);
+    
+    const selectedPlan = pricingPlans.find(plan => 
+      plan.tier.toUpperCase() === createCheckoutSessionDto.pricingTier?.toUpperCase()
+    );
 
     if (!selectedPlan) {
-      throw new BadRequestException('Invalid pricing tier selected');
+      console.error('Plan not found. Available tiers:', pricingPlans.map(p => p.tier));
+      throw new BadRequestException(`Invalid pricing tier selected: ${createCheckoutSessionDto.pricingTier}`);
     }
+    
+    console.log('Selected plan:', selectedPlan);
 
     if (selectedPlan.tier === PricingTier.FREE) {
       // Handle downgrade to free tier
@@ -189,7 +203,7 @@ export class BillingService {
     // Development mode: Always update subscription immediately
     const isDevelopment = this.configService.get('NODE_ENV') === 'production';
     
-    // Force development mode unless production is forced
+    // Development mode - bypass Stripe for testing
     if (isDevelopment) {
       
       try {
@@ -398,5 +412,124 @@ export class BillingService {
       console.error('Webhook signature verification failed:', error.message);
       throw new Error('Webhook signature verification failed');
     }
+  }
+
+  async handleWebhookEvent(event: any): Promise<void> {
+    const { type, data } = event;
+    
+    try {
+      switch (type) {
+        case 'checkout.session.completed':
+          await this.handleCheckoutCompleted(data.object);
+          break;
+        case 'customer.subscription.updated':
+          await this.handleSubscriptionUpdated(data.object);
+          break;
+        case 'customer.subscription.deleted':
+          await this.handleSubscriptionDeleted(data.object);
+          break;
+        case 'invoice.payment_succeeded':
+          await this.handlePaymentSucceeded(data.object);
+          break;
+        case 'invoice.payment_failed':
+          await this.handlePaymentFailed(data.object);
+          break;
+        default:
+          console.log(`Unhandled webhook event: ${type}`);
+      }
+    } catch (error) {
+      console.error(`Error handling webhook event ${type}:`, error);
+      throw error;
+    }
+  }
+
+  private async handleCheckoutCompleted(session: any): Promise<void> {
+    const businessId = session.metadata?.businessId;
+    const pricingTier = session.metadata?.pricingTier;
+    
+    if (!businessId || !pricingTier) {
+      console.error('Missing metadata in checkout session:', session.id);
+      return;
+    }
+
+    await this.updateSubscription(
+      businessId,
+      session.subscription,
+      pricingTier,
+      BillingStatus.ACTIVE,
+    );
+  }
+
+  private async handleSubscriptionUpdated(subscription: any): Promise<void> {
+    const customer = await this.stripe.customers.retrieve(subscription.customer);
+    const businessId = (customer as any).metadata?.businessId;
+    
+    if (!businessId) {
+      console.error('No businessId found for customer:', subscription.customer);
+      return;
+    }
+
+    const status = subscription.status === 'active' ? BillingStatus.ACTIVE :
+                  subscription.status === 'past_due' ? BillingStatus.PAST_DUE :
+                  BillingStatus.CANCELED;
+
+    const billingAccount = await this.getOrCreateBillingAccount(businessId);
+    billingAccount.billingStatus = status;
+    billingAccount.stripeSubscriptionId = subscription.id;
+    
+    await this.billingAccountRepository.save(billingAccount);
+  }
+
+  private async handleSubscriptionDeleted(subscription: any): Promise<void> {
+    const customer = await this.stripe.customers.retrieve(subscription.customer);
+    const businessId = (customer as any).metadata?.businessId;
+    
+    if (!businessId) return;
+
+    await this.updateSubscription(
+      businessId,
+      subscription.id,
+      PricingTier.FREE,
+      BillingStatus.CANCELED,
+    );
+  }
+
+  private async handlePaymentSucceeded(invoice: any): Promise<void> {
+    const customer = await this.stripe.customers.retrieve(invoice.customer);
+    const businessId = (customer as any).metadata?.businessId;
+    
+    if (!businessId) return;
+
+    const billingAccount = await this.getOrCreateBillingAccount(businessId);
+    
+    await this.recordTransaction(
+      billingAccount.id,
+      TransactionType.PAYMENT,
+      TransactionStatus.SUCCEEDED,
+      invoice.amount_paid,
+      invoice.payment_intent,
+      `Payment for ${invoice.lines.data[0]?.description || 'subscription'}`,
+    );
+  }
+
+  private async handlePaymentFailed(invoice: any): Promise<void> {
+    const customer = await this.stripe.customers.retrieve(invoice.customer);
+    const businessId = (customer as any).metadata?.businessId;
+    
+    if (!businessId) return;
+
+    const billingAccount = await this.getOrCreateBillingAccount(businessId);
+    billingAccount.billingStatus = BillingStatus.PAST_DUE;
+    
+    await this.billingAccountRepository.save(billingAccount);
+    
+    await this.recordTransaction(
+      billingAccount.id,
+      TransactionType.PAYMENT,
+      TransactionStatus.FAILED,
+      invoice.amount_due,
+      invoice.payment_intent,
+      `Failed payment for ${invoice.lines.data[0]?.description || 'subscription'}`,
+    );
   }
 }

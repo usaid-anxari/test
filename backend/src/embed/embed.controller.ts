@@ -19,7 +19,7 @@ export class EmbedController {
     private readonly widgetsService: WidgetsService,
     private readonly businessService: BusinessService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // Serve embed.js script
   @Get('embed.js')
@@ -42,8 +42,8 @@ export class EmbedController {
       }
       
       fetch('${this.configService.get(
-        'BACKEND_URL',
-      )}/embed/' + widgetId + '?style=' + style)
+      'BACKEND_URL',
+    )}/embed/' + widgetId + '?style=' + style)
         .then(function(response) { return response.text(); })
         .then(function(html) {
           container.innerHTML = html;
@@ -109,35 +109,37 @@ export class EmbedController {
           business.slug,
         );
         style = widget.style; // Use widget's style
-        
+
         // Filter reviews by widget's reviewTypes if available
         if (widget.reviewTypes && widget.reviewTypes.length > 0) {
           // Floating widgets only show text reviews regardless of settings
           if (widget.style === 'floating') {
-            profileData.reviews = profileData.reviews.filter(review => 
+            profileData.reviews = profileData.reviews.filter(review =>
               review.type === 'text'
             );
           } else if (widget.style === 'spotlight') {
             // Spotlight widgets only show video and audio reviews
-            profileData.reviews = profileData.reviews.filter(review => 
+            profileData.reviews = profileData.reviews.filter(review =>
               ['video', 'audio'].includes(review.type) && widget.reviewTypes.includes(review.type)
             );
           } else {
-            profileData.reviews = profileData.reviews.filter(review => 
+            // Carousel and Grid widgets show ALL enabled review types
+            profileData.reviews = profileData.reviews.filter(review =>
               widget.reviewTypes.includes(review.type)
             );
           }
         } else {
-          // Default widget behavior based on style
+          // Default widget behavior based on style - NO FILTERING for carousel/grid
           if (widget.style === 'floating') {
-            profileData.reviews = profileData.reviews.filter(review => 
+            profileData.reviews = profileData.reviews.filter(review =>
               review.type === 'text'
             );
           } else if (widget.style === 'spotlight') {
-            profileData.reviews = profileData.reviews.filter(review => 
+            profileData.reviews = profileData.reviews.filter(review =>
               ['video', 'audio'].includes(review.type)
             );
           }
+          // Carousel and Grid show ALL review types by default - NO FILTERING
         }
       } else {
         // Handle as business slug
@@ -149,13 +151,13 @@ export class EmbedController {
         profileData = await this.businessService.getPublicProfileWithReviews(
           slugOrId,
         );
-        
+
         // Filter reviews by reviewTypes query parameter
-        const allowedTypes = reviewTypes.split(',').filter(type => 
+        const allowedTypes = reviewTypes.split(',').filter(type =>
           ['video', 'audio', 'text'].includes(type)
         );
         if (allowedTypes.length > 0) {
-          profileData.reviews = profileData.reviews.filter(review => 
+          profileData.reviews = profileData.reviews.filter(review =>
             allowedTypes.includes(review.type)
           );
         }
@@ -214,18 +216,18 @@ export class EmbedController {
 
   private generateFilterButtons(reviews: any[], primary: string): string {
     const availableTypes = this.getAvailableReviewTypes(reviews);
-    
+
     if (availableTypes.length <= 1) {
       return ''; // Don't show filters if only one type or no reviews
     }
 
     const typeConfig = {
       video: '🎥 Video',
-      audio: '🎵 Audio', 
+      audio: '🎵 Audio',
       text: '💬 Text'
     };
 
-    const filterButtons = availableTypes.map(type => 
+    const filterButtons = availableTypes.map(type =>
       `<button class="tt-filter-btn" data-filter="${type}">${typeConfig[type]}</button>`
     ).join('');
 
@@ -245,10 +247,9 @@ export class EmbedController {
   ): string {
     const isDark = settingsJson.theme === 'dark';
     const autoplay = settingsJson.autoplay || false;
-    const primary = settingsJson.primary || '#3b82f6';
-    const secondary = settingsJson.secondary || '#10b981';
-    const background =
-      settingsJson.background || (isDark ? '#1f2937' : '#ffffff');
+    const primary = settingsJson.primary || '#2563eb';
+    const secondary = settingsJson.secondary || '#059669';
+    const background = settingsJson.background || (isDark ? '#1f2937' : '#ffffff');
 
     if (reviews.length === 0) {
       return `
@@ -258,20 +259,21 @@ export class EmbedController {
         <meta charset="utf-8">
         <title>${business.name} Reviews</title>
         <style>
-          .tt-widget { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px; background: ${background}; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
-          .tt-no-reviews { text-align: center; padding: 60px 30px; border: 2px dashed ${primary}; border-radius: 20px; background: linear-gradient(135deg, ${primary}10, ${secondary}10); }
-          .tt-no-reviews h3 { color: ${primary}; margin-bottom: 12px; font-size: 24px; font-weight: 700; }
-          .tt-no-reviews p { color: ${
-            isDark ? '#000000' : '#000000'
-          }; margin-bottom: 20px; font-size: 16px; }
-          .tt-review-btn { background: linear-gradient(135deg, ${primary}, ${secondary}); color: white; padding: 14px 28px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s ease; box-shadow: 0 4px 16px ${primary}40; }
-          .tt-review-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px ${primary}60; }
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+          * { box-sizing: border-box; }
+          body { margin: 0; padding: 20px; background: ${isDark ? '#0f172a' : '#f8fafc'}; min-height: 100vh; font-family: 'Inter', sans-serif; }
+          .tt-widget { max-width: 1200px; margin: 0 auto; padding: 40px; background: ${background}; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; }
+          .tt-no-reviews { text-align: center; padding: 80px 40px; border: 2px dashed ${isDark ? '#4b5563' : '#d1d5db'}; border-radius: 8px; background: ${isDark ? '#374151' : '#f9fafb'}; }
+          .tt-no-reviews h3 { color: ${isDark ? '#f9fafb' : '#111827'}; margin-bottom: 16px; font-size: 24px; font-weight: 700; }
+          .tt-no-reviews p { color: ${isDark ? '#9ca3af' : '#6b7280'}; margin-bottom: 24px; font-size: 16px; }
+          .tt-review-btn { background: ${primary}; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.2s ease; }
+          .tt-review-btn:hover { background: ${primary}dd; transform: translateY(-1px); }
         </style>
       </head>
       <body>
         <div class="tt-widget">
           <div class="tt-no-reviews">
-            <h3>No Reviews Yet</h3>
+            <h3>📋 No Reviews Yet</h3>
             <p>Be the first to share your experience!</p>
             <a href="${this.configService.get("FRONTEND_URL")}/record/${business.slug}" class="tt-review-btn" target="_blank">Submit Review</a>
           </div>
@@ -281,6 +283,7 @@ export class EmbedController {
     }
 
     const reviewCards = reviews
+      .slice(0, 12) // Limit for performance
       .map((review) => {
         let mediaContent = '';
 
@@ -292,17 +295,26 @@ export class EmbedController {
                 <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
                 Your browser does not support video.
               </video>
+              <div class="tt-media-label">
+                <span class="tt-media-icon">🎬</span>
+                <span>Video Review</span>
+              </div>
             </div>
           `;
         } else if (review.type === 'audio' && review.media && review.media.length > 0) {
           const audioAsset = review.media[0];
           mediaContent = `
             <div class="tt-audio-container">
-              <div class="tt-audio-visual">
-                <div class="tt-audio-icon">🎵</div>
-                <div class="tt-audio-waves">
-                  <span></span><span></span><span></span><span></span><span></span>
-                </div>
+              <div class="tt-audio-header">
+                <span class="tt-media-icon">🎧</span>
+                <span class="tt-audio-title">Audio Review</span>
+              </div>
+              <div class="tt-audio-visualizer">
+                <div class="tt-audio-bar"></div>
+                <div class="tt-audio-bar"></div>
+                <div class="tt-audio-bar"></div>
+                <div class="tt-audio-bar"></div>
+                <div class="tt-audio-bar"></div>
               </div>
               <audio class="tt-audio-player" controls ${autoplay ? 'autoplay' : ''}>
                 <source src="${this.configService.get('AWS_DOMAIN_URL')}/${audioAsset.s3Key}" type="audio/mpeg">
@@ -312,46 +324,47 @@ export class EmbedController {
           `;
         } else if (review.type === 'text') {
           mediaContent = `
-            <div class="tt-text-highlight">
-              <div class="tt-quote-icon">💬</div>
-              ${review.bodyText ? `<p>${review.bodyText}</p>` : ''}
+            <div class="tt-text-container">
+              <div class="tt-text-header">
+                <span class="tt-media-icon">💬</span>
+                <span>Written Review</span>
+              </div>
+              <div class="tt-text-content">
+                ${review.bodyText ? `<p>"${review.bodyText}"</p>` : '<p>"Great experience with this business!"</p>'}
+              </div>
+            </div>
+          `;
+        } else if (review.type === 'google') {
+          mediaContent = `
+            <div class="tt-google-container">
+              <div class="tt-google-header">
+                <span class="tt-media-icon">⭐</span>
+                <span>Google Review</span>
+              </div>
+              <div class="tt-text-content">
+                ${review.bodyText ? `<p>"${review.bodyText}"</p>` : '<p>"Excellent service and experience!"</p>'}
+              </div>
             </div>
           `;
         }
 
-        const typeColors = {
-          video: primary,
-          audio: secondary,
-          text: '#10b981',
-          google: '#4285f4',
-        };
-
-        const typeIndicator =
-          review.type === 'google'
-            ? '<span class="tt-type-badge tt-google">Google</span>'
-            : `<span class="tt-type-badge tt-${review.type}">${
-                review.type.charAt(0).toUpperCase() + review.type.slice(1)
-              }</span>`;
-
         return `
-        <div class="tt-review-card tt-${
-          review.type
-        }" style="border-left: 4px solid ${typeColors[review.type]}">
-          ${typeIndicator}
-          <div class="tt-rating">${'★'.repeat(review.rating || 5)}${'☆'.repeat(
-          5 - (review.rating || 5),
-        )}</div>
-          <h4>${review.title || 'Great Review'}</h4>
+        <div class="tt-review-card tt-${review.type}">
+          <div class="tt-card-header">
+            <div class="tt-rating-display">
+              <div class="tt-stars">${'★'.repeat(review.rating || 5)}${'☆'.repeat(5 - (review.rating || 5))}</div>
+              <div class="tt-rating-text">${review.rating || 5}/5 stars</div>
+            </div>
+          </div>
+          <h4 class="tt-review-title">${review.title || 'Amazing Experience'}</h4>
           ${mediaContent}
-
-          <small>- ${review.reviewerName || 'Customer'}</small>
-          ${
-            review.publishedAt
-              ? `<div class="tt-date">${new Date(
-                  review.publishedAt,
-                ).toLocaleDateString()}</div>`
-              : ''
-          }
+          <div class="tt-reviewer-section">
+            <div class="tt-reviewer-avatar">${(review.reviewerName || 'Customer').charAt(0).toUpperCase()}</div>
+            <div class="tt-reviewer-info">
+              <div class="tt-reviewer-name">${review.reviewerName || 'Verified Customer'}</div>
+              <div class="tt-review-date">${review.publishedAt ? new Date(review.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}</div>
+            </div>
+          </div>
         </div>
       `;
       })
@@ -366,22 +379,28 @@ export class EmbedController {
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
-        body { margin: 0; padding: 10px; background: linear-gradient(135deg, ${primary}08, ${secondary}08, ${primary}05); min-height: 500px; font-family: 'Inter', sans-serif; }
-        .tt-widget { max-width: 1200px; margin: 0 auto; padding: 24px; background: ${isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)'}; border-radius: 24px; box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.2), 0 0 0 1px ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}; backdrop-filter: blur(16px); position: relative; overflow: hidden; }
-        .tt-widget::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, ${primary}03, transparent, ${secondary}03); pointer-events: none; }
-        .tt-header { text-align: center; margin-bottom: 24px; padding: 20px; background: linear-gradient(135deg, ${primary}15, ${secondary}15); border-radius: 16px; position: relative; overflow: hidden; backdrop-filter: blur(10px); }
-        .tt-header::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); animation: shimmer 3s infinite; }
-        .tt-header h3 { margin: 0 0 8px 0; background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; position: relative; z-index: 1; }
-        .tt-header p { color: ${isDark ? '#cbd5e1' : '#64748b'}; margin: 0; font-size: 16px; font-weight: 500; position: relative; z-index: 1; }
-        .tt-reviews-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; position: relative; z-index: 1; }
-        .tt-review-card { background: ${isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255, 255, 255, 0.9)'}; padding: 15px; border-radius: 24px; box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}; position: relative; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); backdrop-filter: blur(12px); overflow: hidden; }
-        .tt-review-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, ${primary}, ${secondary}); }
-        .tt-review-card:hover { transform: translateY(-12px) scale(1.02); box-shadow: 0 32px 80px rgba(0,0,0,0.25), 0 0 0 1px ${primary}20; }
-        .tt-rating { color: #fbbf24; font-size: 28px; margin-bottom: 20px; text-shadow: 0 2px 8px rgba(251, 191, 36, 0.3); filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4)); }
-        .tt-review-card h4 { margin: 0 0 20px 0; color: ${isDark ? '#f8fafc' : '#0f172a'}; font-size: 24px; font-weight: 700; line-height: 1.3; }
-        .tt-review-card p { margin: 0 0 5px 0; color: ${isDark ? '#ffffff' : '#475569'}; line-height: 1.7; font-size: 16px; }
-        .tt-review-card small { background: #ffffff; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; font-size: 15px; }
-        .tt-date { font-size: 13px; color: ${isDark ? '#94a3b8' : '#94a3b8'}; margin-top: 16px; opacity: 5.8; }
+        body { margin: 0; padding: 20px; background: ${isDark ? '#0f172a' : '#f8fafc'}; min-height: 100vh; font-family: 'Inter', sans-serif; }
+        
+        /* Widget Container */
+        .tt-widget { max-width: 1200px; margin: 0 auto; padding: 40px; background: ${background}; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; }
+        
+        /* Header */
+        .tt-header { text-align: center; margin-bottom: 40px; padding: 32px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-header h3 { margin: 0 0 12px 0; color: ${isDark ? '#f9fafb' : '#111827'}; font-size: 32px; font-weight: 800; letter-spacing: -0.025em; }
+        .tt-header p { color: ${isDark ? '#9ca3af' : '#6b7280'}; margin: 0; font-size: 16px; font-weight: 500; }
+        /* Grid Layout */
+        .tt-reviews-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
+        
+        /* Review Cards */
+        .tt-review-card { background: ${isDark ? '#1f2937' : '#ffffff'}; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; transition: all 0.2s ease; }
+        .tt-review-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        
+        /* Card Header */
+        .tt-card-header { margin-bottom: 16px; }
+        .tt-rating-display { display: flex; align-items: center; gap: 8px; }
+        .tt-stars { color: #f59e0b; font-size: 20px; }
+        .tt-rating-text { color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 12px; font-weight: 500; }
+        .tt-review-title { margin: 0 0 20px 0; color: ${isDark ? '#f9fafb' : '#111827'}; font-size: 20px; font-weight: 700; line-height: 1.3; }
         .tt-video-container { position: relative; width: 100%; margin: 24px 0; border-radius: 24px; overflow: hidden; box-shadow: 0 16px 48px rgba(0,0,0,0.25); }
         .tt-video-player { width: 100%; height: 320px; object-fit: cover; display: block; }
         .tt-audio-container { background: linear-gradient(120deg, ${secondary}55, ${primary}65); border-radius: 20px; padding: 24px; margin: 24px 0; border: 2px solid ${secondary}30; }
@@ -397,18 +416,50 @@ export class EmbedController {
         
         .tt-text-highlight { position: relative; background: linear-gradient(170deg, ${primary}50, ${secondary}60); border-radius: 16px; padding: 35px; margin: 20px 0; border-left: 4px solid ${primary}; }
         .tt-quote-icon { position: absolute; top: 5px; left: 10px; font-size: 24px; padding: 7px; border-radius: 50%; }
-        .tt-type-badge { position: absolute; top: 15px; right: 5px; padding: 10px 18px; border-radius: 30px; font-size: 12px; font-weight: 800; text-transform: uppercase; color: white; backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-        .tt-filters { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-        .tt-filter-btn { padding: 8px 16px; border: 2px solid ${primary}30; background: rgba(255,255,255,0.9); color: ${primary}; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(8px); }
-        .tt-filter-btn:hover { background: ${primary}10; transform: translateY(-2px); }
-        .tt-filter-btn.active { background: ${primary}; color: white; box-shadow: 0 4px 12px ${primary}40; }
-        .tt-video { background: linear-gradient(135deg, ${primary}, ${primary}cc); }
-        .tt-audio { background: linear-gradient(135deg, ${secondary}, ${secondary}cc); }
-        .tt-text { background: linear-gradient(135deg, ${secondary}, ${secondary}cc); }
-        .tt-google { background: linear-gradient(135deg, #4285f4, #34a853); }
-        .tt-powered { text-align: center; margin-top: 56px; padding: 28px; background: ${isDark ? 'rgba(30, 41, 59, 0.6)' : 'rgba(248, 250, 252, 0.8)'}; border-radius: 20px; backdrop-filter: blur(12px); position: relative; z-index: 1; }
-        .tt-powered a { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; font-weight: 800; font-size: 14px; }
-        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+        /* Video Styles */
+        .tt-video-container { margin: 16px 0; }
+        .tt-video-player { width: 100%; height: 200px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        
+        /* Audio Styles */
+        .tt-audio-container { margin: 16px 0; padding: 20px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-audio-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .tt-audio-title { color: ${isDark ? '#f9fafb' : '#111827'}; font-weight: 600; font-size: 14px; }
+        .tt-audio-visualizer { display: flex; align-items: center; justify-content: center; gap: 3px; margin-bottom: 16px; }
+        .tt-audio-bar { width: 3px; height: 16px; background: ${primary}; border-radius: 2px; animation: audioWave 1.5s infinite ease-in-out; }
+        .tt-audio-bar:nth-child(2) { animation-delay: 0.1s; height: 24px; }
+        .tt-audio-bar:nth-child(3) { animation-delay: 0.2s; height: 20px; }
+        .tt-audio-bar:nth-child(4) { animation-delay: 0.3s; height: 28px; }
+        .tt-audio-bar:nth-child(5) { animation-delay: 0.4s; height: 16px; }
+        .tt-audio-player { width: 100%; height: 32px; }
+        
+        /* Text Styles */
+        .tt-text-container, .tt-google-container { margin: 16px 0; padding: 20px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-text-header, .tt-google-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .tt-text-content p { color: ${isDark ? '#d1d5db' : '#374151'}; font-size: 14px; line-height: 1.5; margin: 0; font-style: italic; }
+        
+        /* Media Labels */
+        .tt-media-label { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 8px; color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 12px; font-weight: 500; }
+        .tt-media-icon { font-size: 14px; }
+        
+        /* Reviewer Section */
+        .tt-reviewer-section { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+        .tt-reviewer-avatar { width: 36px; height: 36px; background: ${primary}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+        .tt-reviewer-info { flex: 1; }
+        .tt-reviewer-name { color: ${isDark ? '#f9fafb' : '#111827'}; font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+        .tt-review-date { color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 12px; }
+        
+        /* Filters */
+        .tt-filters { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+        .tt-filter-btn { padding: 8px 16px; border: 1px solid ${isDark ? '#4b5563' : '#d1d5db'}; background: ${isDark ? '#374151' : '#ffffff'}; color: ${isDark ? '#d1d5db' : '#374151'}; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+        .tt-filter-btn:hover { background: ${isDark ? '#4b5563' : '#f9fafb'}; }
+        .tt-filter-btn.active { background: ${primary}; color: white; border-color: ${primary}; }
+        
+        /* Powered By */
+        .tt-powered { text-align: center; margin-top: 40px; padding: 20px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-powered a { color: ${primary}; text-decoration: none; font-weight: 600; font-size: 14px; }
+        .tt-powered a:hover { text-decoration: underline; }
+        
+        /* Animations */
         @keyframes audioWave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.5); } }
       </style>
     </head>
@@ -468,7 +519,7 @@ export class EmbedController {
       <div class="tt-widget">
         <div class="tt-header">
           <h3>${business.name} Reviews</h3>
-          <p>Trusted by our customers worldwide</p>
+          <p>Customer experiences and testimonials</p>
           ${this.generateFilterButtons(reviews, primary)}
         </div>
         <div class="tt-reviews-grid">
@@ -490,115 +541,135 @@ export class EmbedController {
   ): string {
     const isDark = settingsJson.theme === 'dark';
     const autoplay = settingsJson.autoplay || false;
-    const primary = settingsJson.primary || '#3b82f6';
-    const secondary = settingsJson.secondary || '#10b981';
-    const background =
-      settingsJson.background || (isDark ? '#1f2937' : '#ffffff');
+    const primary = settingsJson.primary || '#2563eb';
+    const secondary = settingsJson.secondary || '#059669';
+    const background = settingsJson.background || (isDark ? '#1f2937' : '#ffffff');
 
     if (reviews.length === 0) {
       return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>${business.name} Reviews</title>
-        <style>
-          .tt-widget { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 900px; margin: 0 auto; padding: 24px; background: ${background}; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
-          .tt-no-reviews { text-align: center; padding: 60px 30px; border: 2px dashed ${primary}; border-radius: 20px; background: linear-gradient(135deg, ${primary}10, ${secondary}10); }
-          .tt-no-reviews h3 { color: ${primary}; margin-bottom: 12px; font-size: 24px; font-weight: 700; }
-          .tt-no-reviews p { color: ${
-            isDark ? '#000000' : '#000000'
-          }; margin-bottom: 20px; font-size: 16px; }
-          .tt-review-btn { background: linear-gradient(135deg, ${primary}, ${secondary}); color: white; padding: 14px 28px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s ease; box-shadow: 0 4px 16px ${primary}40; }
-          .tt-review-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px ${primary}60; }
-        </style>
-      </head>
-      <body>
-        <div class="tt-widget">
-          <div class="tt-no-reviews">
-            <h3>No Reviews Yet</h3>
-            <p>Be the first to share your experience!</p>
-            <a href="${this.configService.get("FRONTEND_URL")}/record/${business.slug}" class="tt-review-btn" target="_blank">Submit Review</a>
-          </div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${business.name} Reviews</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 20px; background: ${isDark ? '#0f172a' : '#f8fafc'}; min-height: 100vh; font-family: 'Inter', sans-serif; }
+        .tt-widget { max-width: 1000px; margin: 0 auto; padding: 48px; background: ${background}; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; }
+        .tt-no-reviews { text-align: center; padding: 80px 40px; border: 2px dashed ${isDark ? '#4b5563' : '#d1d5db'}; border-radius: 8px; background: ${isDark ? '#374151' : '#f9fafb'}; }
+        .tt-no-reviews h3 { color: ${isDark ? '#f9fafb' : '#111827'}; margin-bottom: 16px; font-size: 24px; font-weight: 700; }
+        .tt-no-reviews p { color: ${isDark ? '#9ca3af' : '#6b7280'}; margin-bottom: 24px; font-size: 16px; }
+        .tt-review-btn { background: ${primary}; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.2s ease; }
+        .tt-review-btn:hover { background: ${primary}dd; transform: translateY(-1px); }
+      </style>
+    </head>
+    <body>
+      <div class="tt-widget">
+        <div class="tt-no-reviews">
+          <h3>📝 No Reviews Yet</h3>
+          <p>Be the first to share your experience!</p>
+          <a href="${this.configService.get("FRONTEND_URL")}/record/${business.slug}" class="tt-review-btn" target="_blank">Submit Review</a>
         </div>
-      </body>
-      </html>`;
+      </div>
+    </body>
+    </html>`;
     }
 
     const reviewCards = reviews
+      .slice(0, 12)
       .map((review, index) => {
+        console.log(`Processing review ${index + 1}:`, { type: review.type, title: review.title, index });
         let mediaContent = '';
 
         if (review.type === 'video' && review.media && review.media.length > 0) {
           const videoAsset = review.media[0];
           mediaContent = `
-            <div class="tt-video-container">
-              <div class="tt-video-wrapper">
-                <video class="tt-video-player" controls ${autoplay ? 'autoplay muted' : ''} poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%23374151'%3EVideo Review%3C/text%3E%3C/svg%3E">
-                  <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
-                  Your browser does not support video.
-                </video>
-                <div class="tt-video-overlay">
-                  <div class="tt-play-button">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
+          <div class="tt-video-container">
+            <video class="tt-video-player" controls ${autoplay ? 'autoplay muted' : ''}>
+              <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
+              Your browser does not support video.
+            </video>
+            <div class="tt-media-label">
+              <span class="tt-media-icon">🎬</span>
+              <span>Video Review</span>
             </div>
-          `;
+          </div>
+        `;
         } else if (review.type === 'audio' && review.media && review.media.length > 0) {
           const audioAsset = review.media[0];
           mediaContent = `
-            <div class="tt-audio-container">
-              <div class="tt-audio-visual">
-                <div class="tt-audio-icon">🎵</div>
-                <div class="tt-audio-waves">
-                  <span></span><span></span><span></span><span></span><span></span>
-                </div>
-              </div>
-              <audio class="tt-audio-player" controls ${autoplay ? 'autoplay' : ''}>
-                <source src="${this.configService.get('AWS_DOMAIN_URL')}/${audioAsset.s3Key}" type="audio/mpeg">
-                Your browser does not support audio.
-              </audio>
+          <div class="tt-audio-container">
+            <div class="tt-audio-header">
+              <span class="tt-media-icon">🎧</span>
+              <span class="tt-audio-title">Audio Review</span>
             </div>
-          `;
+            <div class="tt-audio-visualizer">
+              <div class="tt-audio-bar"></div>
+              <div class="tt-audio-bar"></div>
+              <div class="tt-audio-bar"></div>
+              <div class="tt-audio-bar"></div>
+              <div class="tt-audio-bar"></div>
+            </div>
+            <audio class="tt-audio-player" controls ${autoplay ? 'autoplay' : ''}>
+              <source src="${this.configService.get('AWS_DOMAIN_URL')}/${audioAsset.s3Key}" type="audio/mpeg">
+              Your browser does not support audio.
+            </audio>
+          </div>
+        `;
         } else if (review.type === 'text') {
+          const textContent = review.bodyText || 'Great experience with this business!';
           mediaContent = `
-            <div class="tt-text-highlight">
-              ${review.bodyText ? `<p>${review.bodyText}</p>` : ''}
+          <div class="tt-text-container">
+            <div class="tt-text-header">
+              <span class="tt-media-icon">💬</span>
+              <span>Written Review</span>
             </div>
-          `;
+            <div class="tt-text-content">
+              <p>"${textContent}"</p>
+            </div>
+          </div>
+        `;
+        } else if (review.type === 'google') {
+          const textContent = review.bodyText || review.content || review.reviewText || 'Excellent service and experience!';
+          mediaContent = `
+          <div class="tt-google-container">
+            <div class="tt-google-header">
+              <span class="tt-media-icon">⭐</span>
+              <span>Google Review</span>
+            </div>
+            <div class="tt-text-content">
+              <p>"${textContent}"</p>
+            </div>
+          </div>
+        `;
         }
 
-        const typeColors = {
-          video: primary,
-          audio: secondary,
-          text: '#10b981',
-          google: '#4285f4',
-        };
-
-        const typeIndicator =
-          review.type === 'google'
-            ? '<span class="tt-type-badge tt-google">Google</span>'
-            : `<span class="tt-type-badge tt-${review.type}">${
-                review.type.charAt(0).toUpperCase() + review.type.slice(1)
-              }</span>`;
-
-        return `
+        const slideHtml = `
         <div class="tt-carousel-slide tt-${review.type}" data-slide="${index}">
-          ${typeIndicator}
-          <div class="tt-rating">${'★'.repeat(review.rating || 5)}${'☆'.repeat(
-          5 - (review.rating || 5),
-        )}</div>
-          <h4>${review.title || 'Great Review'}</h4>
+          <div class="tt-slide-header">
+            <div class="tt-rating-display">
+              <div class="tt-stars">${'★'.repeat(review.rating || 5)}${'☆'.repeat(5 - (review.rating || 5))}</div>
+              <div class="tt-rating-text">${review.rating || 5} out of 5 stars</div>
+            </div>
+          </div>
+          <h3 class="tt-review-title">${review.title || 'Amazing Experience'}</h3>
           ${mediaContent}
-          <small>- ${review.reviewerName || 'Customer'}</small>
+          <div class="tt-reviewer-section">
+            <div class="tt-reviewer-avatar">${(review.reviewerName || 'Customer').charAt(0).toUpperCase()}</div>
+            <div class="tt-reviewer-info">
+              <div class="tt-reviewer-name">${review.reviewerName || 'Verified Customer'}</div>
+              <div class="tt-review-date">${review.publishedAt ? new Date(review.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}</div>
+            </div>
+          </div>
         </div>
       `;
+        console.log(`Generated slide ${index + 1} for ${review.type} review:`, review.title);
+        return slideHtml;
       })
       .join('');
+
+    console.log(`Generated ${reviews.slice(0, 12).length} carousel slides total`);
 
     return `
     <!DOCTYPE html>
@@ -609,54 +680,78 @@ export class EmbedController {
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
-        body { margin: 0; padding: 20px; background: linear-gradient(135deg, ${primary}08, ${secondary}08, ${primary}05); min-height: 100vh; font-family: 'Inter', sans-serif; }
-        .tt-widget { max-width: 1200px; margin: 0 auto; padding: 48px; background: ${isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)'}; border-radius: 32px; box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}; backdrop-filter: blur(24px); position: relative; overflow: hidden; }
-        .tt-widget::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, ${primary}03, transparent, ${secondary}03); pointer-events: none; }
-        .tt-header { text-align: center; margin-bottom: 56px; padding: 40px; background: linear-gradient(135deg, ${primary}15, ${secondary}15); border-radius: 24px; position: relative; overflow: hidden; backdrop-filter: blur(10px); }
-        .tt-header::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); animation: shimmer 3s infinite; }
-        .tt-header h3 { margin: 0 0 16px 0; background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 42px; font-weight: 900; letter-spacing: -0.025em; position: relative; z-index: 1; }
-        .tt-header p { color: ${isDark ? '#cbd5e1' : '#64748b'}; margin: 0; font-size: 20px; font-weight: 500; position: relative; z-index: 1; }
-        .tt-carousel-container { position: relative; overflow: hidden; border-radius: 32px; box-shadow: 0 24px 64px rgba(0,0,0,0.2); }
+        body { margin: 0; padding: 20px; background: ${isDark ? '#0f172a' : '#f8fafc'}; min-height: 100vh; font-family: 'Inter', sans-serif; }
+        
+        /* Widget Container */
+        .tt-widget { max-width: 1200px; margin: 0 auto; padding: 40px; background: ${background}; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; }
+        
+        /* Header */
+        .tt-header { text-align: center; margin-bottom: 40px; padding: 32px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-header h3 { margin: 0 0 12px 0; color: ${isDark ? '#f9fafb' : '#111827'}; font-size: 32px; font-weight: 800; letter-spacing: -0.025em; }
+        .tt-header p { color: ${isDark ? '#9ca3af' : '#6b7280'}; margin: 0; font-size: 16px; font-weight: 500; }
+        
+        /* Carousel Container */
+        .tt-carousel-container { position: relative; overflow: hidden; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); background: ${isDark ? '#1f2937' : '#ffffff'}; border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; }
         .tt-carousel { display: flex; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-        .tt-carousel-slide { min-width: 100%; padding: 40px 48px; background: ${isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.95)'}; position: relative; text-align: center; backdrop-filter: blur(12px); display: flex; flex-direction: column; justify-content: center; min-height: 500px; }
-        .tt-rating { color: #fbbf24; font-size: 32px; margin-bottom: 24px; text-shadow: 0 2px 8px rgba(251, 191, 36, 0.3); filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4)); }
-        .tt-carousel-slide h4 { margin: 0 0 24px 0; color: ${isDark ? '#f8fafc' : '#0f172a'}; font-size: 32px; font-weight: 800; line-height: 1.2; }
-        .tt-carousel-slide p { margin: 0 0 28px 0; color: ${isDark ? '#cbd5e1' : '#475569'}; line-height: 1.7; font-size: 18px; max-width: 700px; margin-left: auto; margin-right: auto; }
-        .tt-carousel-slide small { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; font-size: 16px; }
-        .tt-video-container { position: relative; width: 100%; max-width: 600px; margin: 32px auto; }
-        .tt-video-wrapper { position: relative; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); background: linear-gradient(135deg, ${primary}10, ${secondary}10); }
-        .tt-video-player { width: 100%; height: 300px; object-fit: cover; display: block; border-radius: 24px; }
-        .tt-video-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
-        .tt-video-wrapper:hover .tt-video-overlay { opacity: 1; }
-        .tt-play-button { width: 60px; height: 60px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-        .tt-audio-container { background: linear-gradient(135deg, ${secondary}15, ${primary}15); border-radius: 24px; padding: 32px; margin: 32px auto; max-width: 500px; border: 2px solid ${secondary}30; }
-        .tt-audio-visual { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px; }
-        .tt-audio-icon { font-size: 40px; }
-        .tt-audio-waves { display: flex; gap: 6px; align-items: center; }
-        .tt-audio-waves span { width: 6px; height: 24px; background: ${secondary}; border-radius: 3px; animation: audioWave 1.5s infinite ease-in-out; }
-        .tt-audio-waves span:nth-child(2) { animation-delay: 0.1s; height: 36px; }
-        .tt-audio-waves span:nth-child(3) { animation-delay: 0.2s; height: 30px; }
-        .tt-audio-waves span:nth-child(4) { animation-delay: 0.3s; height: 42px; }
-        .tt-audio-waves span:nth-child(5) { animation-delay: 0.4s; height: 24px; }
-        .tt-audio-player { width: 100%; height: 48px; }
-        .tt-text-highlight { position: relative; background: linear-gradient(135deg, ${primary}15, ${secondary}15); border-radius: 20px; padding: 35px; margin: 32px auto; max-width: 600px; border-left: 6px solid ${primary}; }
-        .tt-quote-icon { position: absolute; top: 5px; left: 24px; font-size: 32px; background: ${isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)'}; padding: 10px; border-radius: 50%; backdrop-filter: blur(10px); }
-        .tt-type-badge { position: absolute; top: 24px; right: 24px; padding: 12px 20px; border-radius: 30px; font-size: 14px; font-weight: 800; text-transform: uppercase; color: white; backdrop-filter: blur(12px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-        .tt-video { background: linear-gradient(135deg, ${primary}, ${primary}cc); }
-        .tt-audio { background: linear-gradient(135deg, ${secondary}, ${secondary}cc); }
-        .tt-text { background: linear-gradient(135deg, ${secondary}, ${secondary}cc); }
-        .tt-google { background: linear-gradient(135deg, #4285f4, #34a853); }
-        .tt-carousel-nav { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 24px; position: relative; z-index: 1; }
-        .tt-nav-btn { background: linear-gradient(135deg, ${primary}, ${secondary}); color: white; border: none; padding: 16px 32px; border-radius: 16px; cursor: pointer; font-weight: 700; transition: all 0.4s ease; box-shadow: 0 8px 32px ${primary}40; font-size: 16px; }
-        .tt-nav-btn:hover { transform: translateY(-4px) scale(1.05); box-shadow: 0 16px 48px ${primary}60; }
-        .tt-nav-btn:disabled { background: ${isDark ? 'rgba(75, 85, 99, 0.5)' : 'rgba(209, 213, 219, 0.5)'}; cursor: not-allowed; transform: none; box-shadow: none; }
-        .tt-filters { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-        .tt-filter-btn { padding: 8px 16px; border: 2px solid ${primary}30; background: rgba(255,255,255,0.9); color: ${primary}; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(8px); }
-        .tt-filter-btn:hover { background: ${primary}10; transform: translateY(-2px); }
-        .tt-filter-btn.active { background: ${primary}; color: white; box-shadow: 0 4px 12px ${primary}40; }
-        .tt-powered { text-align: center; margin-top: 56px; padding: 28px; background: ${isDark ? 'rgba(30, 41, 59, 0.6)' : 'rgba(248, 250, 252, 0.8)'}; border-radius: 20px; backdrop-filter: blur(12px); position: relative; z-index: 1; }
-        .tt-powered a { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; font-weight: 800; font-size: 14px; }
-        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+        .tt-carousel-slide { min-width: 100%; padding: 48px 40px; background: ${isDark ? '#1f2937' : '#ffffff'}; position: relative; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 500px; }
+        
+        /* Slide Header */
+        .tt-slide-header { margin-bottom: 24px; }
+        .tt-rating-display { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .tt-stars { color: #f59e0b; font-size: 32px; }
+        .tt-rating-text { color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 14px; font-weight: 500; }
+        .tt-review-title { margin: 0 0 32px 0; color: ${isDark ? '#f9fafb' : '#111827'}; font-size: 28px; font-weight: 700; line-height: 1.3; }
+        
+        /* Video Styles */
+        .tt-video-container { margin: 24px auto; max-width: 600px; }
+        .tt-video-player { width: 100%; height: 300px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        
+        /* Audio Styles */
+        .tt-audio-container { margin: 24px auto; max-width: 500px; padding: 24px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-audio-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; justify-content: center; }
+        .tt-audio-title { color: ${isDark ? '#f9fafb' : '#111827'}; font-weight: 600; font-size: 16px; }
+        .tt-audio-visualizer { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 20px; }
+        .tt-audio-bar { width: 4px; height: 20px; background: ${primary}; border-radius: 2px; animation: audioWave 1.5s infinite ease-in-out; }
+        .tt-audio-bar:nth-child(2) { animation-delay: 0.1s; height: 30px; }
+        .tt-audio-bar:nth-child(3) { animation-delay: 0.2s; height: 25px; }
+        .tt-audio-bar:nth-child(4) { animation-delay: 0.3s; height: 35px; }
+        .tt-audio-bar:nth-child(5) { animation-delay: 0.4s; height: 20px; }
+        .tt-audio-player { width: 100%; height: 40px; }
+        
+        /* Text Styles */
+        .tt-text-container, .tt-google-container { margin: 24px auto; max-width: 600px; padding: 32px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-text-header, .tt-google-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; justify-content: center; }
+        .tt-text-content p { color: ${isDark ? '#d1d5db' : '#374151'}; font-size: 18px; line-height: 1.6; margin: 0; font-style: italic; }
+        
+        /* Media Labels */
+        .tt-media-label { display: flex; align-items: center; gap: 8px; justify-content: center; margin-top: 12px; color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 14px; font-weight: 500; }
+        .tt-media-icon { font-size: 18px; }
+        
+        /* Reviewer Section */
+        .tt-reviewer-section { display: flex; align-items: center; gap: 16px; margin-top: 32px; justify-content: center; }
+        .tt-reviewer-avatar { width: 48px; height: 48px; background: ${primary}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; }
+        .tt-reviewer-info { text-align: left; }
+        .tt-reviewer-name { color: ${isDark ? '#f9fafb' : '#111827'}; font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+        .tt-review-date { color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 14px; }
+        
+        /* Navigation */
+        .tt-carousel-nav { display: flex; justify-content: center; gap: 16px; margin-top: 32px; }
+        .tt-nav-btn { background: ${primary}; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s ease; font-size: 14px; }
+        .tt-nav-btn:hover { background: ${primary}dd; transform: translateY(-1px); }
+        .tt-nav-btn:disabled { background: ${isDark ? '#4b5563' : '#d1d5db'}; cursor: not-allowed; transform: none; }
+        
+        /* Filters */
+        .tt-filters { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+        .tt-filter-btn { padding: 8px 16px; border: 1px solid ${isDark ? '#4b5563' : '#d1d5db'}; background: ${isDark ? '#374151' : '#ffffff'}; color: ${isDark ? '#d1d5db' : '#374151'}; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+        .tt-filter-btn:hover { background: ${isDark ? '#4b5563' : '#f9fafb'}; }
+        .tt-filter-btn.active { background: ${primary}; color: white; border-color: ${primary}; }
+        
+        /* Powered By */
+        .tt-powered { text-align: center; margin-top: 40px; padding: 20px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-powered a { color: ${primary}; text-decoration: none; font-weight: 600; font-size: 14px; }
+        .tt-powered a:hover { text-decoration: underline; }
+        
+        /* Animations */
         @keyframes audioWave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.5); } }
       </style>
     </head>
@@ -664,7 +759,7 @@ export class EmbedController {
       <div class="tt-widget">
         <div class="tt-header">
           <h3>${business.name} Reviews</h3>
-          <p>Swipe to see more reviews</p>
+          <p>Customer experiences and testimonials</p>
           ${this.generateFilterButtons(reviews, primary)}
         </div>
         <div class="tt-carousel-container">
@@ -673,8 +768,8 @@ export class EmbedController {
           </div>
         </div>
         <div class="tt-carousel-nav">
-          <button class="tt-nav-btn" id="prevBtn">‹ Previous</button>
-          <button class="tt-nav-btn" id="nextBtn">Next ›</button>
+          <button class="tt-nav-btn" id="prevBtn">← Previous</button>
+          <button class="tt-nav-btn" id="nextBtn">Next →</button>
         </div>
         <div class="tt-powered">
           Powered by <a href="https://truetestify.com" target="_blank">TrueTestify</a>
@@ -687,7 +782,7 @@ export class EmbedController {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               businessId: '${business.id}',
-              widgetId: null,
+              widgetId: '${widget?.id || ''}',
               eventType: eventType,
               eventData: { action: action }
             })
@@ -741,18 +836,16 @@ export class EmbedController {
               });
             }
             
-            // Filter functionality for carousel
+            // Filter functionality
             var filterBtns = document.querySelectorAll('.tt-filter-btn');
             filterBtns.forEach(function(btn) {
               btn.addEventListener('click', function() {
                 var filter = this.getAttribute('data-filter');
                 var slides = document.querySelectorAll('.tt-carousel-slide');
                 
-                // Update active button
                 filterBtns.forEach(function(b) { b.classList.remove('active'); });
                 this.classList.add('active');
                 
-                // Filter slides and update carousel
                 var visibleSlides = [];
                 slides.forEach(function(slide, index) {
                   if (filter === 'all' || slide.classList.contains('tt-' + filter)) {
@@ -763,7 +856,6 @@ export class EmbedController {
                   }
                 });
                 
-                // Reset to first visible slide
                 if (visibleSlides.length > 0) {
                   currentSlide = 0;
                   totalSlides = visibleSlides.length;
@@ -790,12 +882,14 @@ export class EmbedController {
   ): string {
     const isDark = settingsJson.theme === 'dark';
     const autoplay = settingsJson.autoplay || false;
-    const primary = settingsJson.primary || '#3b82f6';
-    const secondary = settingsJson.secondary || '#10b981';
-    const background =
-      settingsJson.background || (isDark ? '#1f2937' : '#ffffff');
+    const primary = settingsJson.primary || '#2563eb';
+    const secondary = settingsJson.secondary || '#059669';
+    const background = settingsJson.background || (isDark ? '#1f2937' : '#ffffff');
 
-    if (reviews.length === 0) {
+    // Filter to only show audio and video reviews for spotlight widget
+    const mediaReviews = reviews.filter(review => review.type === 'video' || review.type === 'audio');
+
+    if (mediaReviews.length === 0) {
       return `
       <!DOCTYPE html>
       <html>
@@ -803,21 +897,22 @@ export class EmbedController {
         <meta charset="utf-8">
         <title>${business.name} Reviews</title>
         <style>
-          .tt-widget { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 450px; margin: 0 auto; padding: 24px; background: ${background}; border-radius: 24px; box-shadow: 0 12px 48px rgba(0,0,0,0.15); }
-          .tt-no-reviews { text-align: center; padding: 60px 30px; border: 2px dashed ${primary}; border-radius: 20px; background: linear-gradient(135deg, ${primary}10, ${secondary}10); }
-          .tt-no-reviews h3 { color: ${primary}; margin-bottom: 12px; font-size: 24px; font-weight: 700; }
-          .tt-no-reviews p { color: ${
-            isDark ? '#000000' : '#000000'
-          }; margin-bottom: 20px; font-size: 16px; }
-          .tt-review-btn { background: linear-gradient(135deg, ${primary}, ${secondary}); color: white; padding: 14px 28px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s ease; box-shadow: 0 4px 16px ${primary}40; }
-          .tt-review-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px ${primary}60; }
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+          * { box-sizing: border-box; }
+          body { margin: 0; padding: 20px; background: ${isDark ? '#0f172a' : '#f8fafc'}; min-height: 100vh; font-family: 'Inter', sans-serif; }
+          .tt-widget { max-width: 450px; margin: 0 auto; padding: 40px; background: ${background}; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; }
+          .tt-no-reviews { text-align: center; padding: 60px 30px; border: 2px dashed ${isDark ? '#4b5563' : '#d1d5db'}; border-radius: 8px; background: ${isDark ? '#374151' : '#f9fafb'}; }
+          .tt-no-reviews h3 { color: ${isDark ? '#f9fafb' : '#111827'}; margin-bottom: 16px; font-size: 20px; font-weight: 700; }
+          .tt-no-reviews p { color: ${isDark ? '#9ca3af' : '#6b7280'}; margin-bottom: 24px; font-size: 14px; }
+          .tt-review-btn { background: ${primary}; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.2s ease; }
+          .tt-review-btn:hover { background: ${primary}dd; transform: translateY(-1px); }
         </style>
       </head>
       <body>
         <div class="tt-widget">
           <div class="tt-no-reviews">
-            <h3>No Reviews Yet</h3>
-            <p>Be the first to share your experience!</p>
+            <h3>🎬 No Media Reviews</h3>
+            <p>No video or audio reviews available yet</p>
             <a href="${this.configService.get("FRONTEND_URL")}/record/${business.slug}" class="tt-review-btn" target="_blank">Submit Review</a>
           </div>
         </div>
@@ -825,7 +920,7 @@ export class EmbedController {
       </html>`;
     }
 
-    const reviewsToShow = reviews;
+    const reviewsToShow = mediaReviews.slice(0, 5); // Limit for performance
 
     const reviewItems = reviewsToShow
       .map((review, index) => {
@@ -838,17 +933,26 @@ export class EmbedController {
                 <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
                 Your browser does not support video.
               </video>
+              <div class="tt-media-label">
+                <span class="tt-media-icon">🎬</span>
+                <span>Video Review</span>
+              </div>
             </div>
           `;
         } else if (review.type === 'audio' && review.media && review.media.length > 0) {
           const audioAsset = review.media[0];
           mediaContent = `
             <div class="tt-audio-container">
-              <div class="tt-audio-visual">
-                <div class="tt-audio-icon">🎵</div>
-                <div class="tt-audio-waves">
-                  <span></span><span></span><span></span><span></span><span></span>
-                </div>
+              <div class="tt-audio-header">
+                <span class="tt-media-icon">🎧</span>
+                <span class="tt-audio-title">Audio Review</span>
+              </div>
+              <div class="tt-audio-visualizer">
+                <div class="tt-audio-bar"></div>
+                <div class="tt-audio-bar"></div>
+                <div class="tt-audio-bar"></div>
+                <div class="tt-audio-bar"></div>
+                <div class="tt-audio-bar"></div>
               </div>
               <audio class="tt-audio-player" controls ${autoplay ? 'autoplay' : ''}>
                 <source src="${this.configService.get('AWS_DOMAIN_URL')}/${audioAsset.s3Key}" type="audio/mpeg">
@@ -875,22 +979,30 @@ export class EmbedController {
         const typeIndicator =
           review.type === 'google'
             ? '<span class="tt-type-badge tt-google">Google</span>'
-            : `<span class="tt-type-badge tt-${review.type}">${
-                review.type.charAt(0).toUpperCase() + review.type.slice(1)
-              }</span>`;
+            : `<span class="tt-type-badge tt-${review.type}">${review.type.charAt(0).toUpperCase() + review.type.slice(1)
+            }</span>`;
 
         return `
-        <div class="tt-review-item" data-index="${index}" style="display: ${
-          index === 0 ? 'flex' : 'none'
-        }">
-          ${typeIndicator}
-          <div class="tt-rating">${'★'.repeat(review.rating || 5)}${'☆'.repeat(
-          5 - (review.rating || 5),
-        )}</div>
-          <h3>${review.title || 'Great Review'}</h3>
-          ${mediaContent}
-          <small>— ${review.reviewerName || 'Customer'}</small>
-          ${review.publishedAt ? `<div class="tt-date">${new Date(review.publishedAt).toLocaleDateString()}</div>` : ''}
+        <div class="tt-review-item" data-index="${index}" ${index === 0 ? '' : 'style="display: none"'}>
+          <div class="tt-review-header">
+            <div class="tt-rating-display">
+              <div class="tt-stars">${'★'.repeat(review.rating || 5)}${'☆'.repeat(5 - (review.rating || 5))}</div>
+              <div class="tt-rating-text">${review.rating || 5} out of 5 stars</div>
+            </div>
+            <h3 class="tt-review-title">${review.title || 'Amazing Experience'}</h3>
+          </div>
+          <div class="tt-review-content">
+            ${mediaContent}
+          </div>
+          <div class="tt-review-footer">
+            <div class="tt-reviewer-section">
+              <div class="tt-reviewer-avatar">${(review.reviewerName || 'Customer').charAt(0).toUpperCase()}</div>
+              <div class="tt-reviewer-info">
+                <div class="tt-reviewer-name">${review.reviewerName || 'Verified Customer'}</div>
+                <div class="tt-review-date">${review.publishedAt ? new Date(review.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent'}</div>
+              </div>
+            </div>
+          </div>
         </div>
       `;
       })
@@ -905,50 +1017,133 @@ export class EmbedController {
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
-        body { margin: 0; padding: 10px; background: linear-gradient(135deg, ${primary}08, ${secondary}08, ${primary}05); min-height: 600px; font-family: 'Inter', sans-serif; }
-        .tt-widget { max-width: 450px; height: 550px; margin: 0 auto; padding: 24px; background: ${isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)'}; border-radius: 24px; box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.2), 0 0 0 1px ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}; backdrop-filter: blur(16px); position: relative; overflow: hidden; }
-        .tt-widget::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, ${primary}03, transparent, ${secondary}03); pointer-events: none; }
-        .tt-spotlight-container { position: relative; height: 100%; }
-        .tt-review-item { position: absolute; top: -20; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-        .tt-rating { color: #fbbf24; font-size: 36px; margin-bottom: 5px; text-shadow: 0 4px 12px rgba(251, 191, 36, 0.4); filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.5)); }
-        .tt-review-item h3 { margin: 0 0 0 0; color: ${isDark ? '#f8fafc' : '#0f172a'}; font-size: 28px; font-weight: 800; line-height: 1.2; }
-        .tt-review-item p { color: ${isDark ? '#cbd5e1' : '#475569'}; line-height: 1.7; margin-bottom: 28px; font-size: 18px; max-width: 380px; }
-        .tt-review-item small { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 700; font-size: 16px; }
-        .tt-video-container { position: relative; width: 100%; max-width: 400px; margin: 32px auto; border-radius: 28px; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,0.4); }
-        .tt-video-player { width: 100%; height: 220px; object-fit: cover; display: block; }
-        .tt-audio-container { background: linear-gradient(135deg, ${secondary}20, ${primary}20); border-radius: 24px; padding: 32px; margin: 32px auto; max-width: 380px; border: 2px solid ${secondary}40; backdrop-filter: blur(10px); }
-        .tt-audio-visual { display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 24px; }
-        .tt-audio-icon { font-size: 48px; }
-        .tt-audio-waves { display: flex; gap: 8px; align-items: center; }
-        .tt-audio-waves span { width: 8px; height: 32px; background: ${secondary}; border-radius: 4px; animation: audioWave 1.5s infinite ease-in-out; }
-        .tt-audio-waves span:nth-child(2) { animation-delay: 0.1s; height: 48px; }
-        .tt-audio-waves span:nth-child(3) { animation-delay: 0.2s; height: 40px; }
-        .tt-audio-waves span:nth-child(4) { animation-delay: 0.3s; height: 56px; }
-        .tt-audio-waves span:nth-child(5) { animation-delay: 0.4s; height: 32px; }
-        .tt-audio-player { width: 100%; height: 56px; }
-        .tt-text-highlight { position: relative; background: linear-gradient(135deg, ${primary}20, ${secondary}20); border-radius: 24px; padding: 40px; margin: 32px auto; max-width: 380px; border-left: 8px solid ${primary}; backdrop-filter: blur(10px); }
-        .tt-quote-icon { position: absolute; top: 10px; left: 8px; font-size: 25px; background: ${isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)'}; padding: 15px; border-radius: 50%; backdrop-filter: blur(12px); box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
-        .tt-type-badge { position: absolute; top: 20px; right: -5px; padding: 12px 24px; border-radius: 32px; font-size: 14px; font-weight: 800; text-transform: uppercase; color: white; backdrop-filter: blur(16px); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
-        .tt-video { background: linear-gradient(135deg, ${primary}, ${primary}cc); }
-        .tt-audio { background: linear-gradient(135deg, ${secondary}, ${secondary}cc); }
-        .tt-text { background: linear-gradient(135deg, ${secondary}, ${secondary}cc); }
-        .tt-google { background: linear-gradient(135deg, #4285f4, #34a853); }
-        .tt-date { font-size: 14px; color: ${isDark ? '#94a3b8' : '#94a3b8'}; margin-top: 5px; opacity: 0.8; }
-        .tt-nav-btn { position: absolute; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, ${primary}, ${secondary}); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px; z-index: 10; transition: all 0.4s ease; box-shadow: 0 8px 32px ${primary}50; backdrop-filter: blur(12px); }
-        .tt-nav-btn:hover { transform: scale(1.15); box-shadow: 0 16px 48px ${primary}70; }
-        .tt-prev-btn { top: 50%; left: 24px; transform: translateY(-50%); }
-        .tt-next-btn { top: 50%; right: 24px; transform: translateY(-50%); }
-        .tt-nav-dots { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 16px; z-index: 10; }
-        .tt-dot { width: 16px; height: 16px; border-radius: 50%; background: ${isDark ? 'rgba(255,255,255,0.3)' : 'rgb(40 83 139 / 30%)'}; cursor: pointer; transition: all 0.4s ease; backdrop-filter: blur(12px); }
-        .tt-dot:hover { transform: scale(1.4); }
-        .tt-dot.active { background: ${primary}; box-shadow: 0 0 32px ${primary}80; }
-        .tt-powered { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); font-size: 12px; color: ${isDark ? '#94a3b8' : '#94a3b8'}; z-index: 10; }
-        .tt-powered a { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; font-weight: 700; }
+        body { margin: 0; padding: 20px; background: ${isDark ? '#0f172a' : '#f8fafc'}; min-height: 100vh; font-family: 'Inter', sans-serif; }
+        
+        /* Widget Container - Professional Design with Proper Structure */
+        .tt-widget { 
+          max-width: 450px; 
+          height: 575px; 
+          margin: 0 auto; 
+          padding: 15px; 
+          background: ${background}; 
+          border-radius: 12px; 
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+          border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; 
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        
+        /* Header Section - Fixed Position */
+        .tt-header { 
+          text-align: center; 
+          padding: 20px; 
+          background: ${isDark ? '#374151' : '#f9fafb'}; 
+          border-radius: 8px; 
+          border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; 
+          flex-shrink: 0;
+        }
+        .tt-header h3 { margin: 0 0 6px 0; color: ${isDark ? '#f9fafb' : '#111827'}; font-size: 20px; font-weight: 800; letter-spacing: -0.025em; }
+        .tt-header p { color: ${isDark ? '#9ca3af' : '#6b7280'}; margin: 0; font-size: 12px; font-weight: 500; }
+        
+        /* Main Content Section - Flexible */
+        .tt-spotlight-container { 
+          position: relative; 
+          flex: 1; 
+          margin: 16px 0; 
+          background: ${isDark ? '#1f2937' : '#ffffff'}; 
+          border-radius: 8px; 
+          border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; 
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); 
+          overflow: hidden;
+        }
+        .tt-review-item { 
+          position: absolute; 
+          top: -10px; 
+          left: 0; 
+          width: 100%; 
+          height: 100%; 
+          display: flex !important; 
+          flex-direction: column; 
+          justify-content: space-between; 
+          align-items: center; 
+          text-align: center; 
+          padding: 20px 20px; 
+          transition: all 0.3s ease;
+          opacity: 1;
+          visibility: visible;
+        }
+        .tt-review-item[style*="display: none"] {
+          opacity: 0;
+          visibility: hidden;
+        }
+        
+        /* Review Content Structure */
+        .tt-review-header { flex-shrink: 0; margin-bottom: 16px; }
+        .tt-review-content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .tt-review-footer { flex-shrink: 0; margin-top: 16px; }
+        
+        /* Rating Display - Professional Style */
+        .tt-rating-display { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 12px; }
+        .tt-stars { color: #f59e0b; font-size: 20px; }
+        .tt-rating-text { color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 11px; font-weight: 500; }
+        .tt-review-title { margin: 0; color: ${isDark ? '#f9fafb' : '#111827'}; font-size: 18px; font-weight: 700; line-height: 1.3; }
+        
+        /* Video Styles - Professional */
+        .tt-video-container { margin: 0 auto; max-width: 280px; }
+        .tt-video-player { width: 100%; height: 160px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        
+        /* Audio Styles - Professional */
+        .tt-audio-container { margin: 0 auto; max-width: 260px; padding: 16px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 8px; border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; }
+        .tt-audio-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; justify-content: center; }
+        .tt-audio-title { color: ${isDark ? '#f9fafb' : '#111827'}; font-weight: 600; font-size: 13px; }
+        .tt-audio-visualizer { display: flex; align-items: center; justify-content: center; gap: 3px; margin-bottom: 12px; }
+        .tt-audio-bar { width: 3px; height: 14px; background: ${primary}; border-radius: 2px; animation: audioWave 1.5s infinite ease-in-out; }
+        .tt-audio-bar:nth-child(2) { animation-delay: 0.1s; height: 20px; }
+        .tt-audio-bar:nth-child(3) { animation-delay: 0.2s; height: 17px; }
+        .tt-audio-bar:nth-child(4) { animation-delay: 0.3s; height: 24px; }
+        .tt-audio-bar:nth-child(5) { animation-delay: 0.4s; height: 14px; }
+        .tt-audio-player { width: 100%; height: 30px; }
+        
+        /* Media Labels - Professional */
+        .tt-media-label { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 8px; color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 12px; font-weight: 500; }
+        .tt-media-icon { font-size: 14px; }
+        
+        /* Reviewer Section - Professional */
+        .tt-reviewer-section { display: flex; align-items: center; gap: 10px; justify-content: center; }
+        .tt-reviewer-avatar { width: 32px; height: 32px; background: ${primary}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+        .tt-reviewer-info { text-align: left; }
+        .tt-reviewer-name { color: ${isDark ? '#f9fafb' : '#111827'}; font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+        .tt-review-date { color: ${isDark ? '#9ca3af' : '#6b7280'}; font-size: 11px; }
+        
+        /* Navigation Dots - Professional */
+        .tt-nav-dots { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10; }
+        .tt-dot { width: 8px; height: 8px; border-radius: 50%; background: ${isDark ? '#4b5563' : '#d1d5db'}; cursor: pointer; transition: all 0.2s ease; }
+        .tt-dot:hover { background: ${isDark ? '#6b7280' : '#9ca3af'}; }
+        .tt-dot.active { background: ${primary}; }
+        
+        /* Footer Section - Fixed Position */
+        .tt-footer { 
+          text-align: center; 
+          padding: 12px; 
+          background: ${isDark ? '#374151' : '#f9fafb'}; 
+          border-radius: 8px; 
+          border: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; 
+          flex-shrink: 0;
+        }
+        .tt-footer a { color: ${primary}; text-decoration: none; font-weight: 600; font-size: 11px; }
+        .tt-footer a:hover { text-decoration: underline; }
+        
+        /* Animations */
         @keyframes audioWave { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.5); } }
       </style>
     </head>
     <body>
       <div class="tt-widget">
+        <div class="tt-header">
+          <h3>${business.name} Reviews</h3>
+          <p>Audio & Video Testimonials</p>
+        </div>
         <div class="tt-spotlight-container">
           ${reviewItems}
           ${reviewsToShow.length > 1 ? `
@@ -956,9 +1151,9 @@ export class EmbedController {
               ${reviewsToShow.map((_, i) => `<div class="tt-dot ${i === 0 ? 'active' : ''}" data-index="${i}"></div>`).join('')}
             </div>
           ` : ''}
-          <div class="tt-powered">
-            Powered by <a href="https://truetestify.com" target="_blank">TrueTestify</a>
-          </div>
+        </div>
+        <div class="tt-footer">
+          Powered by <a href="https://truetestify.com" target="_blank">TrueTestify</a>
         </div>
       </div>
       <script>
@@ -1040,10 +1235,9 @@ export class EmbedController {
     widget?: any,
   ): string {
     const isDark = settingsJson.theme === 'dark';
-    const primary = settingsJson.primary || '#3b82f6';
-    const secondary = settingsJson.secondary || '#10b981';
-    const background =
-      settingsJson.background || (isDark ? '#1f2937' : '#ffffff');
+    const primary = settingsJson.primary || '#2563eb';
+    const secondary = settingsJson.secondary || '#059669';
+    const background = settingsJson.background || (isDark ? '#1f2937' : '#ffffff');
 
     if (reviews.length === 0) {
       return `
@@ -1056,14 +1250,40 @@ export class EmbedController {
           .tt-floating { position: fixed; bottom: 24px; right: 24px; width: 320px; background: ${background}; border: 2px solid ${primary}20; border-radius: 20px; padding: 20px; box-shadow: 0 16px 48px rgba(0,0,0,0.2); z-index: 1000; backdrop-filter: blur(10px); }
           .tt-no-reviews { text-align: center; }
           .tt-no-reviews h4 { color: ${primary}; margin-bottom: 12px; font-size: 18px; font-weight: 700; }
-          .tt-no-reviews p { color: ${
-            isDark ? '#000000' : '#000000'
-          }; margin-bottom: 16px; font-size: 14px; }
+          .tt-no-reviews p { color: ${isDark ? '#000000' : '#000000'
+        }; margin: 0 0 16px 0; font-size: 14px; }
           .tt-review-btn { background: linear-gradient(135deg, ${primary}, ${secondary}); color: white; padding: 10px 20px; border: none; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s ease; box-shadow: 0 4px 16px ${primary}40; }
           .tt-review-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px ${primary}60; }
         </style>
       </head>
       <body>
+        <script>
+          function trackEvent(eventType, action) {
+            fetch('${this.configService.get('BACKEND_URL')}/api/analytics/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                businessId: '${business.id}',
+                widgetId: '${widget?.id || ''}',
+                eventType: eventType,
+                eventData: { action: action }
+              })
+            }).catch(() => {});
+          }
+          
+          // Track widget view on load
+          trackEvent('widget_view', 'load');
+          
+          // Add click tracking
+          document.addEventListener('click', function(e) {
+            if (e.target.closest('.tt-review-btn')) {
+              trackEvent('widget_click', 'submit_review_button');
+            }
+            if (e.target.closest('.tt-floating')) {
+              trackEvent('widget_click', 'floating_widget_no_reviews');
+            }
+          });
+        </script>
         <div class="tt-floating">
           <div class="tt-no-reviews">
             <h4>No Reviews Yet</h4>
@@ -1077,7 +1297,7 @@ export class EmbedController {
 
     // Filter to only show text and Google reviews for floating widget
     const textReviews = reviews.filter(review => review.type === 'text' || review.type === 'google');
-    
+
     const miniReviews = textReviews
       .slice(0, 3)
       .map((review) => {
@@ -1104,7 +1324,7 @@ export class EmbedController {
       `;
       })
       .join('');
-      
+
     // If no text reviews available, show message
     if (textReviews.length === 0) {
       return `
@@ -1124,6 +1344,30 @@ export class EmbedController {
         </style>
       </head>
       <body>
+        <script>
+          function trackEvent(eventType, action) {
+            fetch('${this.configService.get('BACKEND_URL')}/api/analytics/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                businessId: '${business.id}',
+                widgetId: '${widget?.id || ''}',
+                eventType: eventType,
+                eventData: { action: action }
+              })
+            }).catch(() => {});
+          }
+          
+          // Track widget view on load
+          trackEvent('widget_view', 'load');
+          
+          // Add click tracking
+          document.addEventListener('click', function(e) {
+            if (e.target.closest('.tt-floating')) {
+              trackEvent('widget_click', 'floating_widget_empty');
+            }
+          });
+        </script>
         <div class="tt-floating">
           <div class="tt-no-text">
             <h4>💬 Text Reviews</h4>
@@ -1141,31 +1385,60 @@ export class EmbedController {
       <meta charset="utf-8">
       <title>${business.name} Reviews</title>
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'Inter', sans-serif; height: auto; min-height: 300px; }
-        .tt-floating { position: fixed; bottom: 32px; right: 32px; width: 380px; height: auto; max-height: 500px; background: ${isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)'}; border: 2px solid ${primary}30; border-radius: 20px; padding: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.25); z-index: 1000; transition: all 0.3s ease; backdrop-filter: blur(16px); }
-        .tt-floating::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, ${primary}05, transparent, ${secondary}05); border-radius: 24px; pointer-events: none; }
-        .tt-floating:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 32px 80px rgba(0,0,0,0.4); }
-        .tt-floating h4 { margin: 0 0 20px 0; font-size: 18px; text-align: center; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; z-index: 1; }
-        .tt-floating h4 span { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .tt-review-mini { margin-bottom: 16px; padding: 16px; background: ${isDark ? 'rgba(30, 41, 59, 0.8)' : 'rgba(248, 250, 252, 0.9)'}; border-radius: 12px; border-left: 4px solid; transition: all 0.3s ease; backdrop-filter: blur(8px); position: relative; overflow: hidden; }
-        .tt-review-mini::before { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; background: linear-gradient(135deg, ${primary}15, ${secondary}15); border-radius: 0 16px 0 60px; }
-        .tt-review-mini:hover { transform: translateX(8px) scale(1.02); box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+        body { margin: 0; font-family: 'Inter', sans-serif; }
+        .tt-floating { position: fixed; bottom: 24px; right: 24px; width: 360px; max-height: 480px; overflow-y: auto; background: ${background}; border: 1px solid ${isDark ? '#374151' : '#e5e7eb'}; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 1000; }
+        .tt-floating::-webkit-scrollbar { width: 6px; }
+        .tt-floating::-webkit-scrollbar-track { background: ${isDark ? '#374151' : '#f1f5f9'}; border-radius: 3px; }
+        .tt-floating::-webkit-scrollbar-thumb { background: ${primary}; border-radius: 3px; }
+        .tt-floating::-webkit-scrollbar-thumb:hover { background: ${primary}dd; }
+        .tt-floating h4 { margin: 0 0 20px 0; font-size: 18px; text-align: center; font-weight: 700; color: ${primary}; }
+        .tt-review-mini { margin-bottom: 16px; padding: 16px; background: ${isDark ? '#374151' : '#f9fafb'}; border-radius: 12px; border-left: 4px solid; transition: all 0.2s ease; }
+        .tt-review-mini:hover { transform: translateX(4px); }
         .tt-review-mini:last-child { margin-bottom: 0; }
-        .tt-mini-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; position: relative; z-index: 1; }
-        .tt-mini-text { font-size: 13px; color: ${isDark ? '#cbd5e1' : '#64748b'}; line-height: 1.4; margin: 8px 0; position: relative; z-index: 1; }
-        .tt-type-icon { font-size: 20px; }
-        .tt-rating { color: #fbbf24; font-size: 16px; text-shadow: 0 2px 4px rgba(251, 191, 36, 0.3); }
-        .tt-mini-title { font-size: 14px; font-weight: 600; color: ${isDark ? '#f8fafc' : '#0f172a'}; margin-bottom: 6px; line-height: 1.3; position: relative; z-index: 1; }
-        .tt-review-mini small { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 14px; font-weight: 600; position: relative; z-index: 1; }
-        .tt-powered { text-align: center; margin-top: 20px; font-size: 11px; color: ${isDark ? '#94a3b8' : '#94a3b8'}; border-top: 1px solid ${isDark ? 'rgba(75, 85, 99, 0.3)' : 'rgba(229, 231, 235, 0.5)'}; padding-top: 16px; position: relative; z-index: 1; }
-        .tt-powered a { background: linear-gradient(135deg, ${primary}, ${secondary}); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-decoration: none; font-weight: 700; }
+        .tt-mini-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .tt-mini-text { font-size: 13px; color: ${isDark ? '#d1d5db' : '#6b7280'}; line-height: 1.4; margin: 8px 0; }
+        .tt-type-icon { font-size: 16px; }
+        .tt-rating { color: #f59e0b; font-size: 14px; }
+        .tt-mini-title { font-size: 14px; font-weight: 600; color: ${isDark ? '#f9fafb' : '#111827'}; margin-bottom: 6px; line-height: 1.3; }
+        .tt-review-mini small { color: ${primary}; font-size: 12px; font-weight: 600; }
+        .tt-powered { text-align: center; margin-top: 20px; font-size: 11px; color: ${isDark ? '#9ca3af' : '#6b7280'}; border-top: 1px solid ${isDark ? '#4b5563' : '#e5e7eb'}; padding-top: 16px; }
+        .tt-powered a { color: ${primary}; text-decoration: none; font-weight: 600; }
+        .tt-powered a:hover { text-decoration: underline; }
       </style>
     </head>
     <body>
+      <script>
+        function trackEvent(eventType, action) {
+          fetch('${this.configService.get('BACKEND_URL')}/api/analytics/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              businessId: '${business.id}',
+              widgetId: '${widget?.id || ''}',
+              eventType: eventType,
+              eventData: { action: action }
+            })
+          }).catch(() => {});
+        }
+        
+        trackEvent('widget_view', 'load');
+        
+        document.addEventListener('click', function(e) {
+          if (e.target.closest('.tt-review-mini')) {
+            trackEvent('widget_click', 'review_mini');
+          }
+          if (e.target.closest('.tt-powered a')) {
+            trackEvent('widget_click', 'powered_by');
+          }
+          if (e.target.closest('.tt-floating')) {
+            trackEvent('widget_click', 'floating_widget');
+          }
+        });
+      </script>
       <div class="tt-floating">
-        <h4><span>⭐ ${business.name}</span></h4>
+        <h4>⭐ ${business.name}</h4>
         ${miniReviews}
         <div class="tt-powered">
           Powered by <a href="https://truetestify.com" target="_blank">TrueTestify</a>

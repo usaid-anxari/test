@@ -19,6 +19,8 @@ export interface SubscriptionRequirement {
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
   private readonly logger = new Logger(SubscriptionGuard.name);
+  private billingCache = new Map<string, { data: any; timestamp: number }>();
+  private readonly CACHE_TTL = 60000; // 1 minute cache
 
   constructor(
     private reflector: Reflector,
@@ -49,8 +51,22 @@ export class SubscriptionGuard implements CanActivate {
       throw new ForbiddenException('No business associated with user');
     }
 
-    // Get billing info
-    const billingInfo = await this.billingService.getBillingInfo(business.id);
+    // Get billing info with caching
+    const cacheKey = `billing:${business.id}`;
+    const cached = this.billingCache.get(cacheKey);
+    
+    let billingInfo;
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      billingInfo = cached.data;
+    } else {
+      billingInfo = await this.billingService.getBillingInfo(business.id);
+      this.billingCache.set(cacheKey, { data: billingInfo, timestamp: Date.now() });
+      
+      // Clean cache periodically
+      if (this.billingCache.size > 100) {
+        this.cleanCache();
+      }
+    }
 
     // Check if subscription is active or in trial (if trial allowed)
     const isActive = billingInfo.billingStatus === BillingStatus.ACTIVE;
@@ -92,5 +108,14 @@ export class SubscriptionGuard implements CanActivate {
     req.businessId = business.id;
 
     return true;
+  }
+
+  private cleanCache(): void {
+    const now = Date.now();
+    for (const [key, data] of this.billingCache.entries()) {
+      if (now - data.timestamp > this.CACHE_TTL) {
+        this.billingCache.delete(key);
+      }
+    }
   }
 }

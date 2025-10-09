@@ -2,10 +2,17 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { json } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const configService = app.get(ConfigService);
+
+  // Raw body middleware for Stripe webhooks only
+  app.use('/api/billing/webhook', json({ verify: (req: any, res, buf) => { req.rawBody = buf; } }));
+  
+  // Regular JSON middleware for all other routes
+  app.use(json());
 
   // Enable CORS - Allow all origins for widget functionality
   app.enableCors({

@@ -14,12 +14,13 @@ import {
 } from "@heroicons/react/24/outline";
 
 const AdminSettings = () => {
-  const { hasFeature, tenant, refreshBusinessInfo } =
-    useContext(AuthContext);
+  const { hasFeature, tenant, refreshBusinessInfo } = useContext(AuthContext);
   const [allowTextReviews, setAllowTextReviews] = useState(true);
   const [allowGoogleReviews, setAllowGoogleReviews] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  console.log({ tenant }); 
+  
   // Load settings from business data
   useEffect(() => {
     if (tenant?.settingsJson?.textReviewsEnabled !== undefined) {
@@ -61,12 +62,10 @@ const AdminSettings = () => {
     try {
       const newSetting = !allowGoogleReviews;
 
- await axiosInstance.post(
-        API_PATHS.BUSINESSES.TOGGLE_GOOGLE_REVIEWS,
-        {
-          enabled: newSetting,
-        }
-      );
+      const toggle = await axiosInstance.post(API_PATHS.BUSINESSES.TOGGLE_GOOGLE_REVIEWS, {
+        enabled: newSetting,
+      });
+console.log(toggle);
 
       setAllowGoogleReviews(newSetting);
       await refreshBusinessInfo();

@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { Review } from './entities/review.entity';
 import { MediaAsset } from './entities/media-asset.entity';
 import { TranscodeJob } from './entities/transcode-job.entity';
+import { ConsentLog } from './entities/consent-log.entity';
 import { Business } from '../business/entities/business.entity';
 import { S3Service } from '../common/s3/s3.service';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -23,6 +24,7 @@ export class ReviewsService {
     @InjectRepository(Review) private reviewsRepo: Repository<Review>,
     @InjectRepository(MediaAsset) private mediaRepo: Repository<MediaAsset>,
     @InjectRepository(TranscodeJob) private jobsRepo: Repository<TranscodeJob>,
+    @InjectRepository(ConsentLog) private consentRepo: Repository<ConsentLog>,
     @InjectRepository(Business) private bizRepo: Repository<Business>,
     private s3: S3Service,
   ) {}
@@ -58,7 +60,7 @@ export class ReviewsService {
   }
 
   // Creates review entry (for text or for file; file flow will call upload separately)
-  async createReviewForBusiness(biz: Business, dto: CreateReviewDto) {
+  async createReviewForBusiness(biz: Business, dto: CreateReviewDto, ip?: string, userAgent?: string) {
     if (!dto.consentChecked) {
       throw new BadRequestException(
         'Consent is required before submitting a review',
@@ -76,7 +78,18 @@ export class ReviewsService {
       source: 'public',
       submittedAt: new Date(),
     });
-    return this.reviewsRepo.save(r);
+    const savedReview = await this.reviewsRepo.save(r);
+    
+    // Log consent automatically (Milestone 9 compliance)
+    await this.logConsent(
+      biz.id,
+      savedReview.id,
+      `I agree to record my review and allow ${biz.name} to use it publicly.`,
+      ip,
+      userAgent
+    );
+    
+    return savedReview;
   }
 
   // Upload file (stream) to S3, create media asset and transcode job
@@ -164,5 +177,57 @@ export class ReviewsService {
             })) || [],
       })),
     };
+  }
+
+  // Right-to-delete endpoint (Milestone 9 - GDPR compliance)
+  async deleteReviewPermanently(businessId: string, reviewId: string, ip?: string) {
+    const review = await this.reviewsRepo.findOne({
+      where: { id: reviewId, businessId },
+      relations: ['mediaAssets']
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review not found');
+    }
+
+    // Delete media assets from S3
+    for (const asset of review.mediaAssets || []) {
+      try {
+        await this.s3.deleteFile(asset.s3Key);
+        this.logger.log(`Deleted S3 file: ${asset.s3Key}`);
+      } catch (error) {
+        this.logger.warn(`Failed to delete S3 file ${asset.s3Key}:`, error.message);
+      }
+    }
+
+    // Log consent deletion
+    const consentLog = this.consentRepo.create({
+      businessId,
+      reviewId,
+      consentText: 'Right-to-delete request processed',
+      ip: ip || 'unknown',
+      userAgent: 'system',
+      consentCheckedAt: new Date(),
+    });
+    await this.consentRepo.save(consentLog);
+
+    // Delete review and related data
+    await this.reviewsRepo.remove(review);
+
+    this.logger.log(`✅ Permanently deleted review ${reviewId} for business ${businessId}`);
+    return { message: 'Review permanently deleted' };
+  }
+
+  // Log consent (Milestone 9)
+  async logConsent(businessId: string, reviewId: string, consentText: string, ip?: string, userAgent?: string) {
+    const consentLog = this.consentRepo.create({
+      businessId,
+      reviewId,
+      consentText,
+      ip: ip || 'unknown',
+      userAgent: userAgent || 'unknown',
+      consentCheckedAt: new Date(),
+    });
+    return await this.consentRepo.save(consentLog);
   }
 }

@@ -18,6 +18,7 @@ export const API_PATHS = {
     TOGGLE_GOOGLE_REVIEWS: "/api/business/settings/google-reviews",
   },
   REVIEWS: {
+    LIST: '/api/reviews',
     GET_PUBLIC_REVIEWS: (slug) => `/public/${slug}/reviews`,
     CREATE_REVIEW: (slug) => `/api/public/${slug}/reviews`,
     GET_REVIEWS: (slug) => `/api/admin/${slug}/reviews`,
@@ -47,6 +48,21 @@ export const API_PATHS = {
     GET_INVOICES: "/api/billing/invoices",
     DOWNLOAD_INVOICE: (invoiceId) => `/api/billing/invoices/${invoiceId}/download`,
   },
-  // EMAIL: Removed - using Auth0 email verification
-  // GOOGLE: Removed - not needed for MVP
+  GOOGLE:{
+    CONNECT_GOOGLE_ACCOUNT:'/api/google/auth-url',
+    CONNECTION_STATUS:'/api/google/status',
+    CONNECTION_PROGRESS:'/api/google/connection-progress',
+    BUSINESS_PROFILES:'/api/google/business-profiles',
+    IMPORT_REVIEWS:'/api/google/import-reviews',
+    FETCH_REVIEWS:'/api/google/reviews',
+    DISCONNECT_GOOGLE_ACCOUNT:'/api/google/disconnect'
+  },
+  COMPLIANCE: {
+    DELETE_REVIEW_PERMANENTLY: (id) => `/api/reviews/${id}/delete-permanently`,
+    GET_CONSENT_LOGS: '/api/compliance/consent-logs'
+  },
+  VALIDATION: {
+    CHECK_SLUG_AVAILABILITY: (slug) => `/api/validation/slug/${slug}`,
+    SUGGEST_SLUG: (name) => `/api/validation/suggest-slug?name=${encodeURIComponent(name)}`
+  }
 };

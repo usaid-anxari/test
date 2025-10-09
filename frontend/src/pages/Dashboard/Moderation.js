@@ -33,6 +33,8 @@ const Moderation = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('newest');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState(null);
   
   // Fetch business and reviews data
   useEffect(() => {
@@ -116,6 +118,26 @@ const Moderation = () => {
     } catch (error) {
       console.error("Failed to update review:", error);
       toast.error("Failed to update review status");
+    }
+  };
+
+  const handleDeleteReview = (review) => {
+    setReviewToDelete(review);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteReview = async () => {
+    try {
+      await axiosInstance.delete(API_PATHS.COMPLIANCE.DELETE_REVIEW_PERMANENTLY(reviewToDelete.id));
+      setReviews(reviews.filter(r => r.id !== reviewToDelete.id));
+      toast.success('Review permanently deleted for compliance');
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Failed to delete review:', error);
+      toast.error('Failed to delete review');
+    } finally {
+      setShowDeleteModal(false);
+      setReviewToDelete(null);
     }
   };
 
@@ -380,16 +402,27 @@ const Moderation = () => {
                           </button>
                         </>
                       ) : (
-                        <button
-                          onClick={() => updateReview(review.id, "hidden")}
-                          className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-xl hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                        >
-                          <TrashIcon className="w-5 h-5 mr-2" />
-                          Hide
-                        </button>
+                        <>
+                          <button
+                            onClick={() => updateReview(review.id, "hidden")}
+                            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white font-semibold rounded-xl hover:from-gray-600 hover:to-gray-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                          >
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                            </svg>
+                            Hide
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReview(review)}
+                            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-xl hover:from-red-700 hover:to-red-800 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                          >
+                            <TrashIcon className="w-5 h-5 mr-2" />
+                            Delete Permanently
+                          </button>
+                        </>
                       )}
                     </div>
-                  </motion.div>
+                    </motion.div>
                 ))}
               </div>
             ) : (
@@ -428,6 +461,80 @@ const Moderation = () => {
 
       {isModalOpen && selectedReview && (
         <ReviewPreviewModal review={selectedReview} onClose={closeModal} />
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-red-600 px-6 py-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Permanent Deletion</h3>
+                  <p className="text-red-100 text-sm">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-900 mb-2">Are you sure you want to permanently delete this review?</h4>
+                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="font-medium text-gray-900">{reviewToDelete?.reviewerName}</span>
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <svg key={i} className={`w-4 h-4 ${i < (reviewToDelete?.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+                  </div>
+                  {reviewToDelete?.title && (
+                    <h5 className="font-medium text-gray-800 mb-1">{reviewToDelete.title}</h5>
+                  )}
+                  {reviewToDelete?.bodyText && (
+                    <p className="text-sm text-gray-600 line-clamp-2">{reviewToDelete.bodyText}</p>
+                  )}
+                </div>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <div>
+                      <h5 className="font-medium text-yellow-800 mb-1">GDPR Compliance Notice</h5>
+                      <p className="text-sm text-yellow-700">
+                        This will permanently delete the review and all associated media files. 
+                        A compliance log will be created for audit purposes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-6 py-3 text-gray-600 font-semibold rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteReview}
+                  className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  Delete Permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

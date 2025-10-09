@@ -6,6 +6,7 @@ import { GoogleConnection } from './entities/google-connection.entity';
 import { GoogleReview } from './entities/google-review.entity';
 import { BusinessModule } from '../business/business.module';
 import { AuthModule } from '../auth/auth.module';
+import { BillingModule } from '../billing/billing.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -13,6 +14,7 @@ import { ConfigModule } from '@nestjs/config';
     TypeOrmModule.forFeature([GoogleConnection, GoogleReview]),
     forwardRef(() => BusinessModule),
     forwardRef(() => AuthModule),
+    forwardRef(() => BillingModule),
     ConfigModule,
   ],
   providers: [GoogleService],

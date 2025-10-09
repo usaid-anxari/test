@@ -1,6 +1,7 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import compression from 'compression';
 import { UsersModule } from './users/users.module';
 import { BusinessModule } from './business/business.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -11,26 +12,24 @@ import { HttpModule } from '@nestjs/axios';
 import { ReviewsModule } from './review/review.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { PerformanceInterceptor } from './common/interceptors/performance.interceptor';
-// import { TranscodeModule } from './transcode/transcode.module'; // Removed - not used in MVP
+import { SubscriptionStatusMiddleware } from './common/middleware/subscription-status.middleware';
 import { AdminModule } from './admin/admin.module';
-// import { StorageModule } from './storage/storage.module'; // Removed - simple storage tracking in billing
-// import { GoogleModule } from './google/google.module'; // Removed - not needed for MVP
 import { WidgetsModule } from './widgets/widgets.module';
 import { EmbedController } from './embed/embed.controller';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from './billing/billing.module';
-// import { EmailModule } from './email/email.module'; // Removed - using Auth0 email verification
-// import { SubscriptionStatusMiddleware } from './common/middleware/subscription-status.middleware'; // Removed for performance
+import { GoogleModule } from './google/google.module';
+import { ValidationModule } from './validation/validation.module';
 
 
 @Module({
   imports: [
     HttpModule,
-    ConfigModule.forRoot({isGlobal: true}),
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService : ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get("DB_HOST"),
         port: +configService.get('DB_PORT'),
@@ -38,9 +37,31 @@ import { BillingModule } from './billing/billing.module';
         password: configService.get("DB_PASSWORD"),
         database: configService.get('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true,
+        synchronize: true, // CRITICAL: Never use true in production
         autoLoadEntities: true,
-        logging: false, // Disabled for performance
+        logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn'] : false,
+
+        // PERFORMANCE OPTIMIZATIONS
+        extra: {
+          max: 20, // Connection pool size
+          min: 5,
+          acquire: 30000,
+          idle: 10000,
+          connectionTimeoutMillis: 2000,
+          idleTimeoutMillis: 30000,
+          statement_timeout: 30000,
+          query_timeout: 30000,
+        },
+
+        // Query optimization
+        cache: {
+          duration: 30000, // 30 seconds default cache
+        },
+
+        // Connection optimization
+        keepConnectionAlive: true,
+        retryAttempts: 3,
+        retryDelay: 3000,
       }),
     }),
     UsersModule,
@@ -48,14 +69,12 @@ import { BillingModule } from './billing/billing.module';
     AuthModule,
     ReviewsModule,
     UploadsModule,
-    // TranscodeModule, // Removed - not used in MVP
     AdminModule,
-    // StorageModule, // Removed - simple storage tracking in billing
-    // GoogleModule, // Removed - not needed for MVP
     WidgetsModule,
     AnalyticsModule,
     BillingModule,
-    // EmailModule, // Removed - using Auth0 email verification
+    GoogleModule,
+    ValidationModule,
   ],
   controllers: [AppController, EmbedController],
   providers: [
@@ -68,7 +87,7 @@ import { BillingModule } from './billing/billing.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // Removed subscription middleware - was causing 200-500ms delay on every request
-    // Apply only to specific billing routes if needed
+    consumer.apply(compression()).forRoutes('*');
+    consumer.apply(SubscriptionStatusMiddleware).forRoutes('api/*');
   }
 }

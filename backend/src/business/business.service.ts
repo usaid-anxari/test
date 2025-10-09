@@ -13,12 +13,15 @@ import { BusinessUser } from './entities/business-user.entity';
 import { User } from '../users/entities/user.entity';
 import { Review } from '../review/entities/review.entity';
 import { MediaAsset } from '../review/entities/media-asset.entity';
+import { ConsentLog } from '../review/entities/consent-log.entity';
 import { GoogleReview } from '../google/entities/google-review.entity';
 import { S3Service } from '../common/s3/s3.service';
 
 @Injectable()
 export class BusinessService {
   private readonly logger = new Logger(BusinessService.name);
+  private cache = new Map<string, { data: any; timestamp: number }>();
+  private readonly CACHE_TTL = 300000; // 5 minutes
 
   constructor(
     @InjectRepository(Business) private businessRepo: Repository<Business>,
@@ -26,14 +29,15 @@ export class BusinessService {
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Review) private reviewRepo: Repository<Review>,
     @InjectRepository(MediaAsset) private mediaRepo: Repository<MediaAsset>,
+    @InjectRepository(ConsentLog) private consentRepo: Repository<ConsentLog>,
     @InjectRepository(GoogleReview) private googleReviewRepo: Repository<GoogleReview>,
     private s3Service: S3Service,
-  ) {}
+  ) { }
 
   async create(dto: Partial<Business>): Promise<Business> {
     if (dto.slug) {
-      const existing = await this.businessRepo.findOne({ 
-        where: { slug: dto.slug } 
+      const existing = await this.businessRepo.findOne({
+        where: { slug: dto.slug }
       });
       if (existing) {
         throw new ConflictException('Business slug already exists');
@@ -45,26 +49,26 @@ export class BusinessService {
   }
 
   async findBySlug(slug: string): Promise<Business | null> {
-    return this.businessRepo.findOne({ 
-      where: { slug, deletedAt: IsNull() } 
+    return this.businessRepo.findOne({
+      where: { slug, deletedAt: IsNull() }
     });
   }
 
   async findById(id: string): Promise<Business | null> {
-    return this.businessRepo.findOne({ 
-      where: { id, deletedAt: IsNull() } 
+    return this.businessRepo.findOne({
+      where: { id, deletedAt: IsNull() }
     });
   }
 
   async addOwner(
-    businessId: string, 
-    userId: string, 
+    businessId: string,
+    userId: string,
     isDefault: boolean
   ): Promise<BusinessUser> {
     const existing = await this.businessUserRepo.findOne({
       where: { businessId, userId }
     });
-    
+
     if (existing) {
       existing.role = 'owner';
       existing.isDefault = isDefault;
@@ -80,22 +84,22 @@ export class BusinessService {
 
     const saved = await this.businessUserRepo.save(businessUser);
     this.logger.log(`User ${userId} added as owner of business ${businessId}`);
-    
+
     return saved;
   }
 
   async requireUserBelongsToBusiness(
-    userId: string, 
+    userId: string,
     businessId: string
   ): Promise<BusinessUser> {
-    const relationship = await this.businessUserRepo.findOne({ 
-      where: { userId, businessId } 
+    const relationship = await this.businessUserRepo.findOne({
+      where: { userId, businessId }
     });
-    
+
     if (!relationship) {
       throw new ForbiddenException('Access denied: user not associated with business');
     }
-    
+
     return relationship;
   }
 
@@ -104,7 +108,7 @@ export class BusinessService {
       where: { userId, isDefault: true },
       relations: ['business'],
     });
-    
+
     return businessUser?.business || null;
   }
 
@@ -120,7 +124,7 @@ export class BusinessService {
       where: { userId },
       relations: ['business'],
     });
-    
+
     return relationships
       .map(r => r.business)
       .filter(b => b && !b.deletedAt);
@@ -132,7 +136,7 @@ export class BusinessService {
     settings: any
   ): Promise<Business> {
     await this.requireUserBelongsToBusiness(userId, businessId);
-    
+
     const business = await this.findById(businessId);
     if (!business) {
       throw new NotFoundException('Business not found');
@@ -155,18 +159,18 @@ export class BusinessService {
     const queryBuilder = this.reviewRepo
       .createQueryBuilder('r')
       .select([
-        'r.id', 'r.type', 'r.title', 'r.bodyText', 'r.rating', 
+        'r.id', 'r.type', 'r.title', 'r.bodyText', 'r.rating',
         'r.reviewerName', 'r.publishedAt'
       ])
       .leftJoin('r.mediaAssets', 'm')
       .addSelect(['m.id', 'm.assetType', 'm.s3Key', 'm.durationSec'])
       .where('r.businessId = :businessId', { businessId: business.id })
       .andWhere('r.status = :status', { status: 'approved' });
-    
+
     // Note: Text reviews are always enabled for widgets to ensure content availability
     // Business setting textReviewsEnabled only affects the review submission form
     // Widgets should show all approved reviews regardless of this setting
-    
+
     const reviews = await queryBuilder
       .orderBy(
         `CASE 
@@ -222,7 +226,7 @@ export class BusinessService {
 
     const allReviews = [...reviewsWithMedia, ...googleReviewsFormatted];
     this.logger.log(`Total reviews returned: ${allReviews.length}`);
-    
+
     return {
       business: {
         id: business.id,
@@ -345,10 +349,145 @@ export class BusinessService {
 
     // Check if all required fields are filled
     const isComplete = requiredFields.every(field => field && field.trim().length > 0);
-    
+
     if (isComplete) {
       await this.businessRepo.update(businessId, { isVerified: true });
       this.logger.log(`Business ${businessId} auto-verified - profile complete`);
     }
+  }
+
+  // OPTIMIZED: Single query for dashboard instead of separate queries
+  async findDefaultForUserWithReviews(userId: string): Promise<{ business: Business; reviews: any[] } | null> {
+    const cacheKey = `dashboard:${userId}`;
+    const cached = this.getFromCache<{ business: Business; reviews: any[] }>(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    const businessUser = await this.businessUserRepo.findOne({
+      where: { userId, isDefault: true },
+      relations: ['business'],
+    });
+
+    if (!businessUser?.business) {
+      return null;
+    }
+
+    const business = businessUser.business;
+     
+    // Single optimized query for all reviews with media
+    const reviews = await this.reviewRepo
+      .createQueryBuilder('r')
+      .select([
+        'r.id', 'r.type', 'r.status', 'r.title', 'r.bodyText', 'r.rating',
+        'r.reviewerName', 'r.submittedAt', 'r.publishedAt'
+      ])
+      .leftJoinAndSelect('r.mediaAssets', 'm')
+      .where('r.businessId = :businessId', { businessId: business.id })
+      .orderBy('r.submittedAt', 'DESC')
+      .limit(100) // Reasonable limit for dashboard
+      .getMany();
+
+    const formattedReviews = reviews.map((review) => ({
+      id: review.id,
+      type: review.type,
+      status: review.status,
+      title: review.title,
+      bodyText: review.bodyText,
+      rating: review.rating,
+      reviewerName: review.reviewerName,
+      submittedAt: review.submittedAt,
+      publishedAt: review.publishedAt,
+      mediaAssets: (review.mediaAssets || []).map((asset) => ({
+        id: asset.id,
+        assetType: asset.assetType,
+        s3Key: asset.s3Key,
+        durationSec: asset.durationSec,
+        sizeBytes: asset.sizeBytes,
+      })),
+    }));
+
+    const result = { business, reviews: formattedReviews };
+   
+    // Cache for 2 minutes (dashboard data changes frequently)
+    this.setInCache(cacheKey, result, 120000);
+    return result;
+  }
+
+  // Simple in-memory cache helpers
+  private getFromCache<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setInCache(key: string, data: any, ttlMs: number = this.CACHE_TTL): void {
+    this.cache.set(key, { data, timestamp: Date.now() });
+    
+    // Clean cache periodically
+    if (this.cache.size > 100) {
+      this.cleanCache();
+    }
+  }
+
+  private cleanCache(): void {
+    const now = Date.now();
+    for (const [key, cached] of this.cache.entries()) {
+      if (now - cached.timestamp > this.CACHE_TTL) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  // Right-to-delete functionality (Milestone 9)
+  async deleteReviewPermanently(businessId: string, reviewId: string, ip?: string) {
+    const review = await this.reviewRepo.findOne({
+      where: { id: reviewId, businessId },
+      relations: ['mediaAssets']
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review not found');
+    }
+
+    // Delete media assets from S3
+    for (const asset of review.mediaAssets || []) {
+      try {
+        await this.s3Service.deleteFile(asset.s3Key);
+        this.logger.log(`Deleted S3 file: ${asset.s3Key}`);
+      } catch (error) {
+        this.logger.warn(`Failed to delete S3 file ${asset.s3Key}:`, error.message);
+      }
+    }
+
+    // Log consent deletion
+    const consentLog = this.consentRepo.create({
+      businessId,
+      reviewId,
+      action: 'DELETE_REVIEW',
+      consentText: 'Right-to-delete request processed',
+      ip: ip || 'unknown',
+      userAgent: 'system',
+      consentCheckedAt: new Date(),
+    });
+    await this.consentRepo.save(consentLog);
+
+    // Delete review and related data
+    await this.reviewRepo.remove(review);
+
+    this.logger.log(`✅ Permanently deleted review ${reviewId} for business ${businessId}`);
+    return { message: 'Review permanently deleted' };
+  }
+
+  // Get consent logs (Milestone 9)
+  async getConsentLogs(businessId: string) {
+    return await this.consentRepo.find({
+      where: { businessId },
+      order: { consentCheckedAt: 'DESC' },
+      take: 100 // Limit for performance
+    });
   }
 }

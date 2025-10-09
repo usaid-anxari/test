@@ -39,56 +39,5 @@ export class EmailController {
     return { success, message: success ? 'Successfully unsubscribed' : 'Invalid token' };
   }
 
-  // Test endpoints for development
-  @UseGuards(JwtAuthGuard)
-  @Post('test/welcome')
-  async testWelcomeEmail(@Request() req, @Body() data: any) {
-    return this.emailService.sendWelcomeEmail(
-      data.email,
-      data.name,
-      req.user.businessId,
-      data.businessName || 'Test Business'
-    );
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('test/review-notification')
-  async testReviewNotification(@Request() req, @Body() data: any) {
-    const reviewData = {
-      businessName: data.businessName || 'Test Business',
-      type: data.type || 'video',
-      title: data.title || 'Great service!',
-      reviewerName: data.reviewerName || 'John Doe',
-      bodyText: data.bodyText || 'Amazing experience with this business!',
-      rating: data.rating || 5,
-      submittedAt: new Date(),
-    };
-
-    return this.emailService.sendReviewNotification(
-      data.email,
-      data.name,
-      req.user.businessId,
-      reviewData
-    );
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('test/trial-expiring')
-  async testTrialExpiringEmail(@Request() req, @Body() data: any) {
-    const trialData = {
-      businessName: data.businessName || 'Test Business',
-      daysLeft: data.daysLeft || 3,
-      trialEndDate: new Date(Date.now() + (data.daysLeft || 3) * 24 * 60 * 60 * 1000),
-      reviewCount: data.reviewCount || 5,
-      viewCount: data.viewCount || 150,
-      storageUsed: data.storageUsed || 0.5,
-    };
-
-    return this.emailService.sendTrialExpiringEmail(
-      data.email,
-      data.name,
-      req.user.businessId,
-      trialData
-    );
-  }
+  // Test endpoints removed for production performance
 }

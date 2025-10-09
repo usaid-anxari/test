@@ -1,82 +1,79 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import axiosInstance from '../service/axiosInstanse';
+import { useState, useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { billingService } from '../service/billingService';
 
 const useSubscription = () => {
-  const [subscriptionStatus, setSubscriptionStatus] = useState({ loading: true });
-  const fetchedRef = useRef(false);
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const [subscriptionData, setSubscriptionData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const fetchSubscriptionStatus = async () => {
-    if (fetchedRef.current) return;
-    
+  const fetchSubscriptionData = async () => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      fetchedRef.current = true;
-      const response = await axiosInstance.get('/api/billing/status', {
-        timeout: 20000 // 20 second timeout for billing
-      });
-      setSubscriptionStatus({
-        ...response.data,
-        loading: false,
-      });
-    } catch (error) {
-      console.warn('Failed to fetch subscription status:', error);
-      // Set default values on timeout/error
-      setSubscriptionStatus({
-        tier: 'free',
-        status: 'inactive',
-        loading: false,
-        storageUsage: '0/1',
-      });
-      fetchedRef.current = false;
+      setLoading(true);
+      const token = await getAccessTokenSilently();
+      const data = await billingService.getBillingStatus(token);
+      setSubscriptionData(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching subscription data:', err);
+      setError(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSubscriptionStatus();
-  }, []);
+    fetchSubscriptionData();
+  }, [isAuthenticated]);
 
-  const canAccessFeature = useCallback((feature) => {
-    const { status, tier, trialActive } = subscriptionStatus;
+  const canAccessFeature = (feature) => {
+    if (!subscriptionData) return false;
     
-    if (status !== 'active' && !trialActive) {
+    const { tier, status } = subscriptionData;
+    
+    // Check if subscription is active
+    if (status !== 'ACTIVE' && status !== 'TRIALING') {
       return false;
     }
 
+    // Feature access based on tier
     switch (feature) {
-      case 'analytics':
-        return tier !== 'free';
+      case 'embed_code':
+        return tier !== 'FREE';
+      case 'google_reviews':
+        return tier === 'PROFESSIONAL' || tier === 'ENTERPRISE';
       case 'custom_branding':
-        return ['professional', 'enterprise'].includes(tier);
+        return tier === 'PROFESSIONAL' || tier === 'ENTERPRISE';
       case 'api_access':
-        return ['professional', 'enterprise'].includes(tier);
+        return tier === 'PROFESSIONAL' || tier === 'ENTERPRISE';
       case 'white_label':
-        return tier === 'enterprise';
+        return tier === 'ENTERPRISE';
       case 'priority_support':
-        return tier !== 'free';
-      case 'unlimited_widgets':
-        return tier !== 'free';
+        return tier !== 'FREE';
       default:
         return true;
     }
-  }, [subscriptionStatus]);
+  };
 
-  const isStorageExceeded = useCallback(() => {
-    if (!subscriptionStatus.storageUsage) return false;
-    const [used, limit] = subscriptionStatus.storageUsage.split('/').map(Number);
-    return used >= limit;
-  }, [subscriptionStatus.storageUsage]);
-
-  const getStoragePercentage = useCallback(() => {
-    if (!subscriptionStatus.storageUsage) return 0;
-    const [used, limit] = subscriptionStatus.storageUsage.split('/').map(Number);
-    return limit > 0 ? (used / limit) * 100 : 0;
-  }, [subscriptionStatus.storageUsage]);
+  const isStorageExceeded = () => {
+    if (!subscriptionData) return false;
+    const percentage = parseFloat(subscriptionData.storagePercentage) || 0;
+    return percentage >= 100;
+  };
 
   return {
-    ...subscriptionStatus,
+    subscriptionData,
+    loading,
+    error,
     canAccessFeature,
     isStorageExceeded,
-    getStoragePercentage,
-    refresh: fetchSubscriptionStatus,
+    refetch: fetchSubscriptionData
   };
 };
 
