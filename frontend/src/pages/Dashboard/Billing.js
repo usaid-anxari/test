@@ -318,16 +318,16 @@ console.log({subscription});
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
-      {/* Premium Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+      {/* Header */}
+      <div className="bg-[#04A4FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold mb-2 text-white" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                 Billing & Payments
               </h1>
-              <p className="text-blue-100 text-lg font-medium">
+              <p className="text-white/80 text-lg font-medium">
                 Manage your subscription, payment methods, and billing history
               </p>
             </div>
@@ -397,7 +397,7 @@ console.log({subscription});
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
           >
-            <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+            <div className="bg-white p-6 border-b border-gray-100">
               <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
                 <svg className="w-8 h-8 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
@@ -583,7 +583,7 @@ console.log({subscription});
               {billingAccount?.planName === 'FREE' ? (
                 <button
                   onClick={() => document.getElementById('pricing-plans').scrollIntoView({ behavior: 'smooth' })}
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-red-600 transition-colors"
+                  className="inline-flex items-center px-6 py-3 bg-orange-500 text-white font-semibold rounded-xl hover:bg-orange-600 transition-colors"
                 >
                   <CurrencyDollarIcon className="w-5 h-5 mr-2" />
                   Upgrade Now
@@ -720,7 +720,7 @@ console.log({subscription});
                         className={`w-full px-4 py-3 rounded-lg font-semibold transition-colors ${
                           isProcessing 
                             ? 'bg-gray-400 text-white cursor-not-allowed' 
-                            : 'bg-gradient-to-r from-blue-600 to-orange-500 text-white hover:from-blue-700 hover:to-orange-600'
+                            : 'bg-[#04A4FF] text-white hover:bg-blue-600'
                         }`}
                       >
                         {isProcessing ? (

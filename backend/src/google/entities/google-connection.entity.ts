@@ -19,17 +19,17 @@ export class GoogleConnection {
   @Column({ name: 'google_account_id', nullable: true })
   googleAccountId: string;
 
-  @Column({ name: 'location_id', nullable: true })
-  locationId: string;
+  @Column({ name: 'location_id', type: 'varchar', nullable: true })
+  locationId: string | null;
 
-  @Column({ name: 'access_token', nullable: true })
-  accessToken: string;
+  @Column({ name: 'access_token', type: 'varchar', nullable: true })
+  accessToken: string | null;
 
-  @Column({ name: 'refresh_token', nullable: true })
-  refreshToken: string;
+  @Column({ name: 'refresh_token', type: 'varchar', nullable: true })
+  refreshToken: string | null;
 
   @Column({ name: 'status', default: 'connected' })
-  status: 'connected' | 'disconnected' | 'error';
+  status: 'connected' | 'disconnected' | 'error' | 'pending_selection';
 
   @Column({ name: 'connected_at', type: 'timestamp', nullable: true })
   connectedAt: Date;

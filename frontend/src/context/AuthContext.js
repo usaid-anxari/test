@@ -100,7 +100,7 @@ const AuthProvider = ({ children }) => {
             const businessInfo = await fetchBusinessInfo();
             if (businessInfo) {
               setNeedsOnboarding(false);
-              
+              setTenant(businessInfo);
               // ✅ STEP 5: Fetch widgets only after business is confirmed
               setTimeout(() => fetchWidgets(), 100);
             } else {
@@ -116,8 +116,8 @@ const AuthProvider = ({ children }) => {
       } else {
         if (user || tenant || widgets.length > 0) {
           setUser(null);
-          setTenant("");
           setWidgets([]);
+          setTenant("");
           setSelectedWidget(null);
           setNeedsOnboarding(false);
         }

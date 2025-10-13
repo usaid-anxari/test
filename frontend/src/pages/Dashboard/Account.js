@@ -94,9 +94,9 @@ const Account = () => {
 
   if (fetchLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#04A4FF] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading account data...</p>
         </div>
       </div>
@@ -115,16 +115,16 @@ const Account = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
-      {/* Premium Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+      {/* Header */}
+      <div className="bg-[#04A4FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold mb-2 text-white" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                 Account Management
               </h1>
-              <p className="text-blue-100 text-lg font-medium">
+              <p className="text-white/80 text-lg font-medium" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
                 Manage your profile, security settings, and account preferences
               </p>
             </div>
@@ -139,9 +139,9 @@ const Account = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
         >
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
-              <UserIcon className="w-8 h-8 mr-3 text-blue-600" />
+          <div className="bg-white p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+              <UserIcon className="w-8 h-8 mr-3 text-[#04A4FF]" />
               Profile Information
             </h2>
             <p className="text-gray-600">
@@ -162,7 +162,7 @@ const Account = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Personal Information */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2">
+                    <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                       Personal Details
                     </h3>
 
@@ -175,7 +175,7 @@ const Account = () => {
                           <p className="text-sm font-medium text-gray-500">
                             Full Name
                           </p>
-                          <p className="text-lg font-bold text-gray-800">
+                          <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                             {business?.name || "Not set"}
                           </p>
                         </div>
@@ -191,7 +191,7 @@ const Account = () => {
                           <p className="text-sm font-medium text-gray-500">
                             Email Address
                           </p>
-                          <p className="text-lg font-bold text-gray-800">
+                          <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                             {auth0User?.email || "Not available"}
                           </p>
                         </div>
@@ -201,7 +201,7 @@ const Account = () => {
 
                   {/* Business Information */}
                   <div className="space-y-4">
-                    <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2">
+                    <h3 className="text-lg font-bold text-gray-900 border-b border-gray-200 pb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                       Business Details
                     </h3>
 
@@ -214,7 +214,7 @@ const Account = () => {
                           <p className="text-sm font-medium text-gray-500">
                             Business Slug
                           </p>
-                          <p className="text-lg font-bold text-gray-800">
+                          <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                             /{business?.slug || "not-set"}
                           </p>
                         </div>
@@ -249,9 +249,9 @@ const Account = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
         >
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
-              <CogIcon className="w-8 h-8 mr-3 text-blue-600" />
+          <div className="bg-white p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+              <CogIcon className="w-8 h-8 mr-3 text-[#04A4FF]" />
               Account Statistics
             </h2>
             <p className="text-gray-600">
@@ -261,7 +261,7 @@ const Account = () => {
 
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 text-center">
+              <div className="bg-blue-50 rounded-2xl p-6 text-center">
                 <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <CalendarDaysIcon className="w-6 h-6 text-white" />
                 </div>
@@ -273,7 +273,7 @@ const Account = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 text-center">
+              <div className="bg-green-50 rounded-2xl p-6 text-center">
                 <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <ClockIcon className="w-6 h-6 text-white" />
                 </div>
@@ -294,9 +294,9 @@ const Account = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
         >
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
-              <ShieldCheckIcon className="w-8 h-8 mr-3 text-blue-600" />
+          <div className="bg-white p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+              <ShieldCheckIcon className="w-8 h-8 mr-3 text-[#04A4FF]" />
               Security & Actions
             </h2>
             <p className="text-gray-600">
@@ -312,7 +312,7 @@ const Account = () => {
                     <ArrowRightEndOnRectangleIcon className="w-6 h-6 text-red-600" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                       Sign Out
                     </h3>
                     <p className="text-gray-600">
@@ -327,7 +327,8 @@ const Account = () => {
                     navigate("/");
                     toast.success("Successfully signed out!");
                   }}
-                  className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-xl hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="inline-flex items-center px-8 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}
                 >
                   <ArrowRightEndOnRectangleIcon className="w-5 h-5 mr-2" />
                   Sign Out

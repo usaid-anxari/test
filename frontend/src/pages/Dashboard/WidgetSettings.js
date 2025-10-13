@@ -44,7 +44,6 @@ const WidgetsettingsJson = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);  
     
- console.log(tenant);
  
   // Fetch widgets from API
   const fetchWidgets = async (showRefreshToast = false) => {
@@ -229,8 +228,8 @@ const WidgetsettingsJson = () => {
 
   const publicReviewBaseUrl =
    typeof window !== "undefined" ? window.location.origin : "";
-  const businessSlug = tenant?.slug || "your-business";
-  const publicRecordUrl = `${publicReviewBaseUrl}/record/${tenant?.slug}`;
+  const businessSlug = tenant?.slug || "your-business";  
+  const publicRecordUrl = `${publicReviewBaseUrl}/record/${businessSlug}`;
   const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
@@ -267,16 +266,16 @@ const WidgetsettingsJson = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
-      {/* Premium Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+      {/* Header */}
+      <div className="bg-[#04A4FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold mb-2 text-white" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                 Widget Management
               </h1>
-              <p className="text-blue-100 text-lg font-medium">
+              <p className="text-white/80 text-lg font-medium">
                 Create, customize, and embed your review widgets
               </p>
             </div>
@@ -315,7 +314,7 @@ const WidgetsettingsJson = () => {
         >
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-orange-500 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-[#04A4FF] rounded-xl flex items-center justify-center">
                 <PuzzlePieceIcon className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -366,7 +365,7 @@ const WidgetsettingsJson = () => {
               });
               setShowEditModal(true);
             }}
-            className="bg-gradient-to-r from-blue-600 to-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-orange-600 transition-all duration-200 flex items-center space-x-2 shadow-lg"
+            className="bg-[#04A4FF] text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-600 transition-all duration-200 flex items-center space-x-2 shadow-lg"
           >
             <PlusIcon className="h-5 w-5" />
             <span>Create New Widget</span>
@@ -400,7 +399,7 @@ const WidgetsettingsJson = () => {
                   whileHover={{ scale: 1.02 }}
                   className={`relative bg-white border-2 rounded-2xl p-6 cursor-pointer transition-all duration-300 shadow-lg hover:shadow-xl ${
                     selectedWidget?.id === widget.id
-                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-orange-50 ring-2 ring-blue-200"
+                      ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
                       : "border-gray-200 hover:border-blue-300"
                   }`}
                   onClick={() => setSelectedWidget(widget)}
@@ -563,7 +562,7 @@ const WidgetsettingsJson = () => {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
           >
-            <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+            <div className="bg-white p-6 border-b border-gray-100">
               <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
                 <EyeIcon className="w-8 h-8 mr-3 text-blue-600" />
                 Widget Preview: "{selectedWidget.name}"
@@ -667,7 +666,7 @@ const WidgetsettingsJson = () => {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
         >
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
+          <div className="bg-white p-6 border-b border-gray-100">
             <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
               <QrCodeIcon className="w-8 h-8 mr-3 text-blue-600" />
               QR Code Collection
@@ -680,7 +679,7 @@ const WidgetsettingsJson = () => {
           <div className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="text-center">
-                <div className="bg-gradient-to-br from-blue-50 to-orange-50 p-8 rounded-2xl border-2 border-dashed border-gray-300">
+                <div className="bg-gray-50 p-8 rounded-2xl border-2 border-dashed border-gray-300">
                   {qrDataUrl ? (
                     <img
                       src={qrDataUrl}
@@ -716,7 +715,7 @@ const WidgetsettingsJson = () => {
                 <div className="space-y-3">
                   <button
                     onClick={handleDownloadQr}
-                    className="w-full inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-bold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className="w-full inline-flex items-center justify-center px-6 py-3 bg-[#04A4FF] text-white font-bold rounded-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                   >
                     <ArrowUpOnSquareStackIcon className="w-5 h-5 mr-2" />
                     Download QR Code
@@ -974,7 +973,7 @@ const WidgetsettingsJson = () => {
                 )}
               </div>
               <div className="lg:col-span-2">
-                <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-4 rounded-lg border border-gray-200">
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <div className="flex items-center justify-between">
                     <div>
                       <label className="text-sm font-medium text-gray-700">
@@ -1030,7 +1029,7 @@ const WidgetsettingsJson = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-8 py-3 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-orange-500 rounded-lg hover:from-blue-700 hover:to-orange-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="px-8 py-3 text-sm font-semibold text-white bg-[#04A4FF] rounded-lg hover:bg-blue-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {loading && (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

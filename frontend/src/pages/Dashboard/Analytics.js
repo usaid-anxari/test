@@ -190,16 +190,16 @@ const Analytics = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
-      {/* Premium Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+      {/* Header */}
+      <div className="bg-[#04A4FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold mb-2 text-white" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                 Business Analytics
               </h1>
-              <p className="text-blue-100 text-lg font-medium">
+              <p className="text-white/80 text-lg font-medium">
                 Track your review performance and engagement metrics
               </p>
             </div>
@@ -211,7 +211,7 @@ const Analytics = () => {
                     onClick={() => setTimeRange(range)}
                     className={`px-4 py-2 rounded-lg font-semibold transition-all ${
                       timeRange === range
-                        ? 'bg-white text-blue-600 shadow-lg'
+                        ? 'bg-white text-[#04A4FF] shadow-lg'
                         : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
@@ -432,7 +432,7 @@ const Analytics = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-blue-600 to-orange-500 rounded-2xl p-6 text-white"
+            className="bg-[#04A4FF] rounded-2xl p-6 text-white"
           >
             <h3 className="text-lg font-semibold mb-4">Quick Insights</h3>
             <div className="space-y-4">

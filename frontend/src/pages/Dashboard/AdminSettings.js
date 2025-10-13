@@ -13,6 +13,7 @@ import {
   StarIcon,
 } from "@heroicons/react/24/outline";
 
+
 const AdminSettings = () => {
   const { hasFeature, tenant, refreshBusinessInfo } = useContext(AuthContext);
   const [allowTextReviews, setAllowTextReviews] = useState(true);
@@ -93,31 +94,31 @@ console.log(toggle);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
-      {/* Premium Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+      {/* Header */}
+      <div className="bg-[#04A4FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                 Advanced Settings
               </h1>
-              <p className="text-blue-100 text-lg font-medium">
+              <p className="text-white/90 text-lg font-medium">
                 Configure your business preferences and advanced features
               </p>
             </div>
             <div className="mt-6 lg:mt-0 grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
+              <div className="bg-white/20 rounded-xl px-4 py-3 text-center">
                 <div className="text-2xl font-bold">
                   {allowTextReviews ? "✓" : "✗"}
                 </div>
-                <div className="text-sm text-blue-100">Text Reviews</div>
+                <div className="text-sm text-white/90">Text Reviews</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
+              <div className="bg-white/20 rounded-xl px-4 py-3 text-center">
                 <div className="text-2xl font-bold">
                   {allowGoogleReviews ? "✓" : "✗"}
                 </div>
-                <div className="text-sm text-blue-100">Google Reviews</div>
+                <div className="text-sm text-white/90">Google Reviews</div>
               </div>
             </div>
           </div>
@@ -131,9 +132,9 @@ console.log(toggle);
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden mb-8"
         >
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
-              <DocumentTextIcon className="w-8 h-8 mr-3 text-blue-600" />
+          <div className="bg-gray-50 p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+              <DocumentTextIcon className="w-8 h-8 mr-3 text-[#04A4FF]" />
               Review Configuration
             </h2>
             <p className="text-gray-600">
@@ -176,9 +177,9 @@ console.log(toggle);
                   <button
                     onClick={handleToggle}
                     disabled={!hasFeature("advanced_moderation") || loading}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#04A4FF] focus:ring-offset-2 ${
                       allowTextReviews
-                        ? "bg-gradient-to-r from-green-500 to-green-600"
+                        ? "bg-green-500"
                         : "bg-gray-300"
                     } ${
                       !hasFeature("advanced_moderation") || loading
@@ -207,7 +208,7 @@ console.log(toggle);
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex items-start space-x-4">
                   <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <StarIcon className="w-6 h-6 text-blue-600" />
+                    <StarIcon className="w-6 h-6 text-[#04A4FF]" />
                   </div>
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-gray-800 mb-2">
@@ -228,7 +229,7 @@ console.log(toggle);
                 <div className="flex items-center space-x-4">
                   <div
                     className={`text-sm font-semibold ${
-                      allowGoogleReviews ? "text-blue-600" : "text-gray-500"
+                      allowGoogleReviews ? "text-[#04A4FF]" : "text-gray-500"
                     }`}
                   >
                     {allowGoogleReviews ? "Enabled" : "Disabled"}
@@ -236,9 +237,9 @@ console.log(toggle);
                   <button
                     onClick={handleToggleGoogleReviews}
                     disabled={!hasFeature("advanced_moderation") || loading}
-                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#04A4FF] focus:ring-offset-2 ${
                       allowGoogleReviews
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600"
+                        ? "bg-[#04A4FF]"
                         : "bg-gray-300"
                     } ${
                       !hasFeature("advanced_moderation") || loading
@@ -252,7 +253,7 @@ console.log(toggle);
                       }`}
                     >
                       {allowGoogleReviews ? (
-                        <CheckCircleIcon className="w-4 h-4 text-blue-500 m-1" />
+                        <CheckCircleIcon className="w-4 h-4 text-[#04A4FF] m-1" />
                       ) : (
                         <XCircleIcon className="w-4 h-4 text-gray-400 m-1" />
                       )}
@@ -270,9 +271,9 @@ console.log(toggle);
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
         >
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-6 border-b border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center">
-              <ShieldCheckIcon className="w-8 h-8 mr-3 text-blue-600" />
+          <div className="bg-gray-50 p-6 border-b border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2 flex items-center" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+              <ShieldCheckIcon className="w-8 h-8 mr-3 text-[#04A4FF]" />
               Privacy & Compliance
             </h2>
             <p className="text-gray-600">
@@ -297,7 +298,7 @@ console.log(toggle);
                       compliance.
                     </p>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-sm text-blue-700">
+                      <p className="text-sm text-[#04A4FF]">
                         <strong>Recommended:</strong> Keep this enabled to
                         protect your business and comply with privacy
                         regulations.
@@ -320,7 +321,7 @@ console.log(toggle);
                     }}
                     className={`relative inline-flex h-8 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 hover:shadow-lg ${
                       showConsent
-                        ? "bg-gradient-to-r from-purple-500 to-purple-600"
+                        ? "bg-purple-500"
                         : "bg-gray-300"
                     }`}
                   >

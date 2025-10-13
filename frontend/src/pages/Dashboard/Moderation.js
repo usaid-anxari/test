@@ -149,16 +149,16 @@ const Moderation = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
-      {/* Premium Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+      {/* Header */}
+      <div className="bg-[#04A4FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold mb-2 text-white" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                 Review Moderation
               </h1>
-              <p className="text-blue-100 text-lg font-medium">
+              <p className="text-white/80 text-lg font-medium">
                 Manage and moderate customer reviews for your business
               </p>
             </div>
@@ -243,7 +243,7 @@ const Moderation = () => {
                       onClick={() => setFilter(status)}
                       className={`inline-flex items-center px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 ${
                         isActive
-                          ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white shadow-xl scale-105'
+                          ? 'bg-[#04A4FF] text-white shadow-xl scale-105'
                           : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200 hover:border-blue-300'
                       }`}
                     >
@@ -388,14 +388,14 @@ const Moderation = () => {
                         <>
                           <button
                             onClick={() => updateReview(review.id, "approved")}
-                            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                            className="inline-flex items-center px-6 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                           >
                             <CheckCircleIcon className="w-5 h-5 mr-2" />
                             Approve
                           </button>
                           <button
                             onClick={() => updateReview(review.id, "rejected")}
-                            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-xl hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                            className="inline-flex items-center px-6 py-3 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                           >
                             <XCircleIcon className="w-5 h-5 mr-2" />
                             Reject
@@ -405,7 +405,7 @@ const Moderation = () => {
                         <>
                           <button
                             onClick={() => updateReview(review.id, "hidden")}
-                            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white font-semibold rounded-xl hover:from-gray-600 hover:to-gray-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                            className="inline-flex items-center px-6 py-3 bg-gray-500 text-white font-semibold rounded-xl hover:bg-gray-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                           >
                             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
@@ -414,7 +414,7 @@ const Moderation = () => {
                           </button>
                           <button
                             onClick={() => handleDeleteReview(review)}
-                            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-xl hover:from-red-700 hover:to-red-800 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                            className="inline-flex items-center px-6 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                           >
                             <TrashIcon className="w-5 h-5 mr-2" />
                             Delete Permanently
@@ -448,7 +448,7 @@ const Moderation = () => {
                 {(searchTerm || filter !== 'all') && (
                   <button
                     onClick={() => { setSearchTerm(''); setFilter('all'); }}
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-orange-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className="inline-flex items-center px-6 py-3 bg-[#04A4FF] text-white font-semibold rounded-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                   >
                     Clear Filters
                   </button>

@@ -38,7 +38,7 @@ const GoogleReviews = () => {
     }
   }, [user]);
 
-  // Fetch business profiles when connected
+  // Fetch business profiles when connected or needs location selection
   useEffect(() => {
     if (connectionStatus?.connected) {
       fetchBusinessProfiles();
@@ -52,6 +52,8 @@ const GoogleReviews = () => {
       const response = await axiosInstance.get(
         API_PATHS.GOOGLE.CONNECTION_STATUS
       );
+      console.log(response.data);
+      
       setConnectionStatus(response.data);
     } catch (error) {
       console.error("Failed to fetch connection status:", error);
@@ -163,18 +165,38 @@ const GoogleReviews = () => {
       const response = await axiosInstance.get(
         API_PATHS.GOOGLE.BUSINESS_PROFILES
       );
-      setBusinessProfiles(response.data.profiles || []);
+      const profiles = response.data.profiles || [];
+      setBusinessProfiles(profiles);
 
       // Auto-select first profile if only one exists
-      if (response.data.profiles?.length === 1) {
-        setSelectedProfile(response.data.profiles[0]);
+      if (profiles.length === 1) {
+        setSelectedProfile(profiles[0]);
       }
     } catch (error) {
       console.error("Failed to fetch business profiles:", error);
-      setError("Failed to load Google Business Profiles");
+      const errorMessage = error.response?.data?.message || "Failed to load Google Business Profiles";
+      setError(errorMessage);
       setBusinessProfiles([]);
     } finally {
       setLoadingProfiles(false);
+    }
+  };
+
+  // Select Google Business Location
+  const handleSelectLocation = async (locationId) => {
+    try {
+      setError(null);
+      const response = await axiosInstance.post('/api/google/select-location', {
+        locationId
+      });
+      
+      toast.success('Location selected successfully!');
+      await fetchConnectionStatus();
+    } catch (error) {
+      console.error('Failed to select location:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to select location';
+      toast.error(errorMessage);
+      setError(errorMessage);
     }
   };
 
@@ -229,9 +251,9 @@ const GoogleReviews = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#04A4FF] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading Google Reviews...</p>
         </div>
       </div>
@@ -239,41 +261,42 @@ const GoogleReviews = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
-      {/* Premium Header */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-orange-600 text-white">
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
+      {/* Header */}
+      <div className="bg-[#04A4FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between"></div>
-          <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-orange-100 bg-clip-text text-transparent">
-              Google Reviews Integration
-            </h1>
-            <p className="text-blue-100 text-lg font-medium">
-              Import and display your Google Business reviews alongside
-              TrueTestify reviews
-            </p>
-          </div>
-          <div className="mt-6 lg:mt-0 flex items-center space-x-4">
-            <button
-              onClick={() => fetchGoogleReviews(true)}
-              disabled={refreshing}
-              className="p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-colors"
-              title="Refresh Google reviews"
-            >
-              <ArrowPathIcon
-                className={`w-6 h-6 text-white ${
-                  refreshing ? "animate-spin" : ""
-                }`}
-              />
-            </button>
-            {connectionStatus?.connected && (
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+                Google Reviews Integration
+              </h1>
+              <p className="text-white/90 text-lg font-medium">
+                Import and display your Google Business reviews alongside
+                TrueTestify reviews
+              </p>
+            </div>
+            <div className="mt-6 lg:mt-0 flex items-center space-x-4">
               <button
-                onClick={() => setShowSubmitModal(true)}
-                className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-colors text-white font-medium"
+                onClick={() => fetchGoogleReviews(true)}
+                disabled={refreshing}
+                className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-colors"
+                title="Refresh Google reviews"
               >
-                Submit Google Review
+                <ArrowPathIcon
+                  className={`w-6 h-6 text-white ${
+                    refreshing ? "animate-spin" : ""
+                  }`}
+                />
               </button>
-            )}
+              {connectionStatus?.connected && (
+                <button
+                  onClick={() => setShowSubmitModal(true)}
+                  className="px-4 py-2 bg-white/20 rounded-xl hover:bg-white/30 transition-colors text-white font-medium"
+                >
+                  Submit Google Review
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -319,11 +342,15 @@ const GoogleReviews = () => {
                 )}
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-800">
+                <h2 className="text-xl font-semibold text-gray-800" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                   Google Business Profile
                 </h2>
                 <p className="text-gray-500">
-                  {connectionStatus?.connected ? "Connected" : "Not Connected"}
+                  {connectionStatus?.connected 
+                    ? connectionStatus?.needsLocationSelection 
+                      ? "Connected - Location Selection Required" 
+                      : "Connected" 
+                    : "Not Connected"}
                 </p>
                 {connectionStatus?.businessName && (
                   <p className="text-sm text-gray-400">
@@ -335,18 +362,24 @@ const GoogleReviews = () => {
 
             {connectionStatus?.connected ? (
               <div className="flex space-x-3">
-                <button
-                  onClick={handleImportReviews}
-                  disabled={importing}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {importing ? (
-                    <ArrowPathIcon className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <CloudArrowDownIcon className="w-4 h-4 mr-2" />
-                  )}
-                  {importing ? "Importing..." : "Import Reviews"}
-                </button>
+                {connectionStatus?.needsLocationSelection ? (
+                  <div className="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg">
+                    Please select a location first
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleImportReviews}
+                    disabled={importing}
+                    className="flex items-center px-4 py-2 bg-[#04A4FF] text-white rounded-lg hover:bg-[#0394E6] transition-colors disabled:opacity-50"
+                  >
+                    {importing ? (
+                      <ArrowPathIcon className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CloudArrowDownIcon className="w-4 h-4 mr-2" />
+                    )}
+                    {importing ? "Importing..." : "Import Reviews"}
+                  </button>
+                )}
                 <button
                   onClick={handleDisconnect}
                   className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -359,7 +392,7 @@ const GoogleReviews = () => {
               <button
                 onClick={handleConnect}
                 disabled={connecting}
-                className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-lg hover:from-blue-700 hover:to-orange-600 transition-all disabled:opacity-50"
+                className="flex items-center px-6 py-3 bg-[#04A4FF] text-white rounded-lg hover:bg-[#0394E6] transition-colors disabled:opacity-50"
               >
                 {connecting ? (
                   <ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" />
@@ -383,8 +416,65 @@ const GoogleReviews = () => {
           )}
         </motion.div>
 
+        {/* Location Selection for pending_selection status */}
+        {connectionStatus?.connected && connectionStatus?.needsLocationSelection && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-orange-50 border border-orange-200 rounded-2xl p-6 shadow-lg mb-8"
+          >
+            <div className="flex items-center mb-4">
+              <ExclamationTriangleIcon className="w-6 h-6 text-orange-500 mr-3" />
+              <div>
+                <h2 className="text-xl font-semibold text-orange-800" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+                  Select Business Location
+                </h2>
+                <p className="text-orange-700">
+                  Please select a business location to complete the setup
+                </p>
+              </div>
+            </div>
+
+            {loadingProfiles ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                <p className="text-orange-700">Loading available locations...</p>
+              </div>
+            ) : businessProfiles.length > 0 ? (
+              <div className="space-y-3">
+                {businessProfiles.map((profile) => (
+                  <div
+                    key={profile.id}
+                    className="border border-orange-200 rounded-xl p-4 bg-white hover:bg-orange-50 cursor-pointer transition-all"
+                    onClick={() => handleSelectLocation(profile.locationId)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-800" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+                          {profile.name}
+                        </h3>
+                        <p className="text-sm text-gray-600">{profile.address}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {profile.reviewCount} reviews • {profile.averageRating}★
+                        </p>
+                      </div>
+                      <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                        Select
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-orange-700">No business locations found. Please check your Google Business Profile setup.</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Google Business Profiles Selection (Milestone 6 - ProjectMVP) */}
-        {connectionStatus?.connected && (
+        {connectionStatus?.connected && !connectionStatus?.needsLocationSelection && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -392,7 +482,7 @@ const GoogleReviews = () => {
           >
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-800">
+                <h2 className="text-xl font-semibold text-gray-800" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                   Google Business Profiles
                 </h2>
                 <p className="text-gray-500">
@@ -400,7 +490,7 @@ const GoogleReviews = () => {
                 </p>
               </div>
               {loadingProfiles && (
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#04A4FF]"></div>
               )}
             </div>
 
@@ -411,14 +501,14 @@ const GoogleReviews = () => {
                     key={profile.id}
                     className={`border rounded-xl p-4 cursor-pointer transition-all ${
                       selectedProfile?.id === profile.id
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-[#04A4FF] bg-blue-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                     onClick={() => setSelectedProfile(profile)}
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-gray-800">
+                        <h3 className="font-semibold text-gray-800" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                           {profile.name}
                         </h3>
                         <p className="text-sm text-gray-500">
@@ -431,7 +521,7 @@ const GoogleReviews = () => {
                       <div className="text-right">
                         <div className="flex items-center space-x-2">
                           {selectedProfile?.id === profile.id && (
-                            <CheckCircleIcon className="w-5 h-5 text-blue-600" />
+                            <CheckCircleIcon className="w-5 h-5 text-[#04A4FF]" />
                           )}
                           <div className="text-sm text-gray-600">
                             <div>
@@ -447,7 +537,7 @@ const GoogleReviews = () => {
               </div>
             ) : loadingProfiles ? (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#04A4FF] mx-auto mb-4"></div>
                 <p className="text-gray-600">
                   Loading your Google Business Profiles...
                 </p>
@@ -455,7 +545,7 @@ const GoogleReviews = () => {
             ) : (
               <div className="text-center py-8">
                 <ExclamationTriangleIcon className="w-12 h-12 text-orange-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                <h3 className="text-lg font-semibold text-gray-600 mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                   No Business Profiles Found
                 </h3>
                 <p className="text-gray-500">
@@ -474,13 +564,14 @@ const GoogleReviews = () => {
           className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
         >
           <div className="flex items-center justify-between mb-6"></div>
-          <h2 className="text-xl font-semibold text-gray-800"></h2>
-          Imported Google Reviews ({googleReviews.length})
+          <h2 className="text-xl font-semibold text-gray-800" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
+            Imported Google Reviews ({googleReviews.length})
+          </h2>
           {googleReviews.length > 0 && (
             <button
               onClick={() => fetchGoogleReviews(true)}
               disabled={refreshing}
-              className="flex items-center px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center px-3 py-2 text-[#04A4FF] hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
             >
               <ArrowPathIcon
                 className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
@@ -499,7 +590,7 @@ const GoogleReviews = () => {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-gray-800">
+                    <h3 className="font-semibold text-gray-800" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                       {review.reviewerName}
                     </h3>
                     <div className="flex items-center space-x-2 mt-1">
@@ -531,7 +622,7 @@ const GoogleReviews = () => {
         ) : (
           <div className="text-center py-12">
             <CloudArrowDownIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+            <h3 className="text-lg font-semibold text-gray-600 mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
               No Google Reviews Yet
             </h3>
             <p className="text-gray-500 mb-6">
@@ -562,26 +653,26 @@ const GoogleReviews = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 bg-gradient-to-br from-blue-600 to-orange-500 rounded-2xl p-6 text-white"
+          className="mt-8 bg-[#04A4FF] rounded-2xl p-6 text-white"
         >
-          <h3 className="text-lg font-semibold mb-4">
+          <h3 className="text-lg font-semibold mb-4" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
             How Google Reviews Integration Works
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="text-2xl font-bold mb-2">1</div>
+            <div className="bg-white/20 rounded-xl p-4">
+              <div className="text-2xl font-bold mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>1</div>
               <div className="text-sm opacity-90">
                 Connect your Google Business Profile with one click
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="text-2xl font-bold mb-2">2</div>
+            <div className="bg-white/20 rounded-xl p-4">
+              <div className="text-2xl font-bold mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>2</div>
               <div className="text-sm opacity-90">
                 Import existing reviews automatically
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-              <div className="text-2xl font-bold mb-2">3</div>
+            <div className="bg-white/20 rounded-xl p-4">
+              <div className="text-2xl font-bold mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>3</div>
               <div className="text-sm opacity-90">
                 Display alongside TrueTestify reviews on your public page
               </div>
@@ -593,7 +684,7 @@ const GoogleReviews = () => {
         {showSubmitModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
             <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
                 Submit Review to Google
               </h3>
               <p className="text-gray-600 mb-6">
@@ -610,12 +701,12 @@ const GoogleReviews = () => {
                 <button
                   onClick={() => {
                     const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${
-                      connectionStatus?.placeId || "YOUR_PLACE_ID"
+                      connectionStatus?.locationId || "YOUR_PLACE_ID"
                     }`;
                     window.open(googleReviewUrl, "_blank");
                     setShowSubmitModal(false);
                   }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-[#04A4FF] text-white rounded-lg hover:bg-[#0394E6] transition-colors"
                 >
                   Open Google Reviews
                 </button>

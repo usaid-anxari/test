@@ -44,7 +44,7 @@ const HomeReviewCard = ({ review }) => {
     >
       {/* Video Section */}
       <div className="relative h-56 bg-gradient-to-br from-blue-50 to-orange-50">
-        {review.type === "video" && review.media?.[0]?.url && !videoError ? (
+        {review.type === "video" && review.media && !videoError ? (
           <>
             <video
               ref={setVideoRef}
@@ -57,7 +57,7 @@ const HomeReviewCard = ({ review }) => {
               onError={handleVideoError}
               poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3E%3Cpath fill='%23f97316' d='M8 5v14l11-7z'/%3E%3C/svg%3E"
             >
-              <source src={review.media[0].url} type="video/mp4" />
+              <source src={review.media} type="video/mp4" />
             </video>
             {!isPlaying && (
               <div 

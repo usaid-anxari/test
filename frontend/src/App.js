@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Toaster } from "react-hot-toast";
 import { useAuth0 } from "@auth0/auth0-react";
+import "./dashboard.css";
 
 // Core Components (Always loaded)
 import Navbar from "./components/Navbar";
@@ -13,6 +14,7 @@ import ComprehensiveOnboarding from "./components/ComprehensiveOnboarding";
 import Auth0ProtectedRoute from "./components/Auth0ProtectedRoute";
 import PaymentGuard from "./components/PaymentGuard";
 import NotFound from "./pages/NotFound";
+import Testimonial from "./pages/Testimonial";
 
 
 // Lazy loaded components for better performance
@@ -47,7 +49,7 @@ const RecordReview = lazy(() => import("./pages/RecordReview"));
 // Dashboard Components
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout"));
 const Moderation = lazy(() => import("./pages/Dashboard/Moderation"));
-const AdminSettings = lazy(import("./pages/Dashboard/AdminSettings"));
+const AdminSettings = lazy(()=>import("./pages/Dashboard/AdminSettings"));
 const Analytics = lazy(() => import("./pages/Dashboard/Analytics"));
 const BusinessDashboard = lazy(() => import("./pages/Dashboard/BusinessDashboard"));
 const WidgetSettings = lazy(() => import("./pages/Dashboard/WidgetSettings"));
@@ -91,7 +93,7 @@ function App() {
   // }
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-gray-50">
+    <div className="min-h-screen flex flex-col dashboard-container">
       <Toaster position="top-center" reverseOrder={false} />
       
       {/* Navbar - Only show on public routes */}
@@ -108,6 +110,7 @@ function App() {
             <Route path="/docs" element={<Document />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/testimonial" element={<Testimonial />} />
             <Route path="/integrations" element={<Integrations />} />
             <Route path="/support" element={<Support />} />
             <Route path="/terms" element={<TermsOfService />} />

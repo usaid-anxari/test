@@ -71,11 +71,7 @@ export class GoogleController {
 
     return {
       message: 'Google Business Profile connected successfully',
-      connection: {
-        id: connection.id,
-        status: connection.status,
-        connectedAt: connection.connectedAt,
-      },
+      status: 'pending_selection',
     };
   }
 
@@ -155,13 +151,13 @@ export class GoogleController {
     };
   }
 
-  // Import REAL Google reviews - ProjectMVP Milestone 6
-  @UseGuards(JwtAuthGuard, SubscriptionGuard  )
+  // Select Google Business Location
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
   @RequireProfessionalPlan()
   @ApiBearerAuth()
-  @Post('import-reviews')
-  @ApiResponse({ status: 200, description: 'Google reviews imported successfully' })
-  async importReviews(@Req() req) {
+  @Post('select-location')
+  @ApiResponse({ status: 200, description: 'Select Google Business location' })
+  async selectLocation(@Req() req, @Body() body: { locationId: string }) {
     const userId = req.userEntity.id;
     const business = await this.businessService.findDefaultForUser(userId);
     
@@ -169,7 +165,35 @@ export class GoogleController {
       throw new BadRequestException('Business not found');
     }
 
-    const reviews = await this.googleService.importGoogleReviews(business.id);
+    const connection = await this.googleService.selectGoogleBusinessLocation(
+      business.id, 
+      body.locationId
+    );
+    
+    return {
+      message: 'Google Business location selected successfully',
+      locationId: connection.locationId
+    };
+  }
+
+  // Import REAL Google reviews - ProjectMVP Milestone 6
+  @UseGuards(JwtAuthGuard, SubscriptionGuard)
+  @RequireProfessionalPlan()
+  @ApiBearerAuth()
+  @Post('import-reviews')
+  @ApiResponse({ status: 200, description: 'Google reviews imported successfully' })
+  async importReviews(@Req() req, @Body() body?: { locationId?: string }) {
+    const userId = req.userEntity.id;
+    const business = await this.businessService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new BadRequestException('Business not found');
+    }
+
+    const reviews = await this.googleService.importGoogleReviews(
+      business.id, 
+      body?.locationId
+    );
     
     return {
       message: `Imported ${reviews.length} REAL Google reviews`,

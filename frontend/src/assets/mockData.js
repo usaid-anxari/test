@@ -1,3 +1,4 @@
+import Logo from './TrueTestify.png'
 export const MOCK_REVIEWS = [
   {
     id: "13cd4d7f-0f97-426a-846e-eadd805745a1",
@@ -10,13 +11,7 @@ export const MOCK_REVIEWS = [
     publishedAt: "2025-01-15T10:30:00Z",
     createdAt: "2025-01-15T10:30:00Z",
     updatedAt: "2025-01-15T10:35:00Z",
-    media: [{
-      id: "media-1",
-      s3Key: "reviews/video/video-1.mp4",
-      fileType: "video/mp4",
-      fileSize: 5242880,
-      url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4"
-    }]
+    media: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
   },
   {
     id: "13cd4d7f-0f97-426a-846e-eadd805745a2",
@@ -29,13 +24,7 @@ export const MOCK_REVIEWS = [
     publishedAt: "2025-01-14T14:20:00Z",
     createdAt: "2025-01-14T14:20:00Z",
     updatedAt: "2025-01-14T14:25:00Z",
-    media: [{
-      id: "media-2",
-      s3Key: "reviews/audio/audio-1.mp3",
-      fileType: "audio/mp3",
-      fileSize: 2048000,
-      url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
-    }]
+    media: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
   },
   {
     id: "13cd4d7f-0f97-426a-846e-eadd805745a3",
@@ -57,17 +46,11 @@ export const MOCK_REVIEWS = [
     rating: 5,
     reviewerName: "Emily Davis",
     bodyText: "The performance is incredible and it never lets me down. Highly recommended!",
-    status: "pending",
+    status: "approved",
     publishedAt: "2025-01-12T16:45:00Z",
     createdAt: "2025-01-12T16:45:00Z",
     updatedAt: "2025-01-12T16:45:00Z",
-    media: [{
-      id: "media-4",
-      s3Key: "reviews/video/video-2.mp4",
-      fileType: "video/mp4",
-      fileSize: 7340032,
-      url: "https://www.w3schools.com/html/mov_bbb.mp4"
-    }]
+    media:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
   },
   {
     id: "13cd4d7f-0f97-426a-846e-eadd805745a5",
@@ -93,13 +76,7 @@ export const MOCK_REVIEWS = [
     publishedAt: "2025-01-10T13:20:00Z",
     createdAt: "2025-01-10T13:20:00Z",
     updatedAt: "2025-01-10T13:25:00Z",
-    media: [{
-      id: "media-6",
-      s3Key: "reviews/audio/audio-2.mp3",
-      fileType: "audio/mp3",
-      fileSize: 1843200,
-      url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
-    }]
+    media:"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
   },
   {
     id: "13cd4d7f-0f97-426a-846e-eadd805745a7",
@@ -112,13 +89,8 @@ export const MOCK_REVIEWS = [
     publishedAt: "2025-01-09T15:10:00Z",
     createdAt: "2025-01-09T15:10:00Z",
     updatedAt: "2025-01-09T15:15:00Z",
-    media: [{
-      id: "media-7",
-      s3Key: "reviews/video/video-3.mp4",
-      fileType: "video/mp4",
-      fileSize: 6291456,
-      url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-    }]
+    media: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
+    
   },
   {
     id: "13cd4d7f-0f97-426a-846e-eadd805745a8",
@@ -181,3 +153,7 @@ export const MOCK_GOOGLE_REVIEWS = [
     media: []
   }
 ];
+
+export const assest = {
+  Logo
+}

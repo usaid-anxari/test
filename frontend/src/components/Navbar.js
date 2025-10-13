@@ -98,42 +98,14 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="w-full text-white py-2 md:py-3 fixed top-0 left-0 right-0 z-[100] overflow-visible" style={{
-        background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #ef7c00 100%)'
-      }}>
-        {/* Animated background overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer"></div>
-        <div className="absolute inset-0 bg-black/10"></div>
+      <nav className="w-full text-white py-2 md:py-3 fixed top-0 left-0 right-0 z-[100] overflow-visible bg-blue-900 shadow-lg">
         <div className="flex justify-between items-center max-w-7xl mx-auto px-4 relative z-10 overflow-visible">
           <Link to="/" className="flex items-center gap-3">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105" style={{
-                  background: 'linear-gradient(135deg, #ef7c00 0%, #f97316 100%)'
-                }}>
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-white tracking-tight drop-shadow-lg">
-                  TrueTestify
-                </span>
-                <span className="text-xs text-orange-200 font-semibold -mt-1 tracking-wide">
-                  Authentic Video Reviews
-                </span>
-              </div>
-            </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-[10px] uppercase bg-gradient-to-r from-orange-500/40 to-orange-600/40 text-orange-100 px-3 py-1.5 rounded-full font-bold border border-orange-400/40 backdrop-blur-sm shadow-lg">
-                ✨ Beta
-              </span>
-              <span className="text-[10px] uppercase bg-gradient-to-r from-green-500/40 to-green-600/40 text-green-100 px-3 py-1.5 rounded-full font-bold border border-green-400/40 backdrop-blur-sm shadow-lg">
-                🚀 Live
-              </span>
-            </div>
+            <img 
+              src="./TrueTestify.png" 
+              alt="TrueTestify" 
+              className="h-10 w-auto hover:scale-105 transition-transform duration-300"
+            />
           </Link>
           <div className="flex items-center space-x-2 md:space-x-3">
             {/* Desktop links */}
@@ -225,7 +197,7 @@ const Navbar = () => {
                   onClick={link.action}
                   className={`hidden lg:block px-4 py-2 font-semibold transition-all duration-300 rounded-lg text-sm ${
                     link.isPrimary
-                      ? "text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                      ? "text-white bg-orange-600 hover:bg-orange-700"
                       : "text-white/90 border border-white/30 hover:bg-white/10"
                   }`}
                 >
@@ -237,7 +209,7 @@ const Navbar = () => {
                   to={link.href}
                   className={`hidden lg:block px-4 py-2 font-semibold transition-all duration-300 rounded-lg text-sm ${
                     link.isPrimary
-                      ? "text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                      ? "text-white bg-orange-600 hover:bg-orange-700"
                       : "text-white/90 border border-white/30 hover:bg-white/10"
                   }`}
                 >
@@ -274,25 +246,19 @@ const Navbar = () => {
             transition={{ type: "tween", duration: 0.3 }}
             className="fixed inset-0 w-full h-full bg-opacity-70 z-50 flex justify-end"
           >
-            <div className="w-[85%] sm:w-[50%] h-full text-white p-6 flex flex-col overflow-hidden relative" style={{
-              background: 'linear-gradient(180deg, #1e3a8a 0%, #1e40af 50%, #ef7c00 100%)'
-            }}>
-              <div className="absolute inset-0 bg-black/20"></div>
-              <div className="relative z-10 flex flex-col h-full">
+            <div className="w-[85%] sm:w-[50%] h-full bg-blue-900 text-white p-6 flex flex-col overflow-hidden relative">
+              <div className="flex flex-col h-full">
               <div className="flex justify-between items-center pb-6 border-b border-gray-700">
                 <Link
                   to="/"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3"
                 >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{
-                    background: 'linear-gradient(135deg, #ef7c00 0%, #f97316 100%)'
-                  }}>
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <span className="text-2xl font-black text-white drop-shadow-lg">TrueTestify</span>
+                  <img 
+                    src="/TrueTestify.png" 
+                    alt="TrueTestify" 
+                    className="h-8 w-auto"
+                  />
                 </Link>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -363,7 +329,7 @@ const Navbar = () => {
                       onClick={link.action}
                       className={`block text-xl font-bold transition-all duration-300 py-3 px-4 rounded-xl ${
                         link.isPrimary
-                          ? "text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
+                          ? "text-white bg-orange-600 hover:bg-orange-700 shadow-lg"
                           : "text-white/90 hover:text-white hover:bg-white/10"
                       }`}
                     >
@@ -376,7 +342,7 @@ const Navbar = () => {
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`block text-xl font-bold transition-all duration-300 py-3 px-4 rounded-xl ${
                         link.isPrimary
-                          ? "text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg"
+                          ? "text-white bg-orange-600 hover:bg-orange-700 shadow-lg"
                           : "text-white/90 hover:text-white hover:bg-white/10"
                       }`}
                     >

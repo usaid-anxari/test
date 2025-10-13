@@ -5,6 +5,7 @@ import { API_PATHS } from "../../service/apiPaths";
 import toast from "react-hot-toast";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import { BRAND_COLORS } from "../../utils/brandColors";
 
 const BusinessDashboard = () => {
   const [business, setBusiness] = useState(null);
@@ -21,6 +22,8 @@ const BusinessDashboard = () => {
   const [formData, setFormData] = useState({});
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   // Fetch business data
   const fetchData = async () => {
@@ -85,6 +88,8 @@ const BusinessDashboard = () => {
     setEditing(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  console.log({business});
+  
   // Handle input change
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -105,6 +110,29 @@ const BusinessDashboard = () => {
       toast.success(`${field} updated successfully!`);
     } catch (error) {
       toast.error(`Failed to update ${field}`);
+    }
+  };
+
+  // Handle logo upload
+  const handleLogoUpload = async (file) => {
+    if (!file) return;
+    
+    setLogoUploading(true);
+    try {
+      const form = new FormData();
+      form.append('logo', file);
+      
+      const response = await axiosInstance.put(API_PATHS.BUSINESSES.UPDATE_PRIVATE_PROFILE, form, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      
+      setBusiness(prev => ({ ...prev, logoUrl: response.data.business.logoUrl }));
+      toast.success('Logo updated successfully!');
+    } catch (error) {
+      toast.error('Failed to update logo');
+    } finally {
+      setLogoUploading(false);
+      setLogoFile(null);
     }
   };
 
@@ -140,12 +168,12 @@ const BusinessDashboard = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${BRAND_COLORS.background.light}`} style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-start space-x-6">
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 relative group">
               {loading ? (
                 <Skeleton circle width={80} height={80} />
               ) : business?.logoUrl ? (
@@ -155,12 +183,37 @@ const BusinessDashboard = () => {
                   className="w-20 h-20 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center">
+                <div className="w-20 h-20 rounded-full bg-sky-600 flex items-center justify-center">
                   <span className="text-white text-2xl font-bold">
                     {business?.name?.[0]?.toUpperCase()}
                   </span>
                 </div>
               )}
+              
+              {/* Logo upload overlay */}
+              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setLogoFile(file);
+                      handleLogoUpload(file);
+                    }
+                  }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={logoUploading}
+                />
+                {logoUploading ? (
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                ) : (
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                )}
+              </div>
             </div>
             
             <div className="flex-1">
@@ -194,7 +247,7 @@ const BusinessDashboard = () => {
                       </div>
                     ) : (
                       <div className="flex items-center space-x-2">
-                        <h1 className="text-2xl font-bold text-gray-900">{business.name}</h1>
+                        <h1 className={`text-2xl font-bold ${BRAND_COLORS.text.primary}`} style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>{business.name}</h1>
                         <button onClick={() => toggleEdit('name')} className="text-gray-400 hover:text-blue-600">
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
@@ -272,7 +325,7 @@ const BusinessDashboard = () => {
             ) : (
               <div className="bg-white rounded-lg border p-4">
                 <h3 className="font-semibold mb-4">About {business?.name}</h3>
-                <div className="bg-orange-500 w-16 h-16 rounded mb-4 flex items-center justify-center">
+                <div className="bg-orange-600 w-16 h-16 rounded mb-4 flex items-center justify-center">
                   <span className="text-white font-bold text-xl">
                     {business?.name?.[0]?.toUpperCase()}
                   </span>
@@ -481,7 +534,6 @@ const BusinessDashboard = () => {
                     {editing.socialLinks ? (
                       <div className="space-y-2">
                         {['facebook', 'twitter', 'linkedin', 'instagram'].map(platform => {
-                          const socialLinks = business?.socialLinks ? JSON.parse(business.socialLinks) : {};
                           return (
                             <input
                               key={platform}
@@ -744,7 +796,8 @@ const BusinessDashboard = () => {
                 <h3 className="font-semibold">Review Management</h3>
                 <Link
                   to="/dashboard/moderation"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className={`inline-flex items-center px-4 py-2 ${BRAND_COLORS.background.secondary} text-white rounded-lg hover:from-blue-700 hover:to-orange-600 transition-colors text-sm font-medium`}
+                  style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}
                 >
                   <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />

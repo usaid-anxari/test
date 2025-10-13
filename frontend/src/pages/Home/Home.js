@@ -27,13 +27,13 @@ const Home = () => {
   return (
     <div className="text-center">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 px-6 py-16 md:p-20 border-b border-gray-200">
+      <div className="relative overflow-hidden bg-white px-6 py-16 md:p-20 border-b border-gray-200">
         <div className="absolute inset-0 pointer-events-none" aria-hidden>
           <svg className="absolute -top-24 -right-24 w-96 h-96 opacity-20 text-orange-300" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M41.9,-64.5C54.8,-55.8,66.1,-46.5,73.1,-34.7C80.1,-22.8,82.9,-8.5,80.9,4.8C79,18.2,72.4,30.7,64.1,42.3C55.9,53.9,45.9,64.6,33.7,70.6C21.5,76.7,7.2,78,-5.8,76.3C-18.8,74.7,-30.5,70.1,-42,63.6C-53.4,57.1,-64.6,48.7,-71.9,37.5C-79.1,26.3,-82.4,12.1,-83.1,-2.2C-83.8,-16.5,-81.8,-33,-73.9,-45C-66.1,-56.9,-52.4,-64.4,-38.3,-72.1C-24.2,-79.8,-12.1,-87.6,0.1,-87.8C12.3,-88,24.7,-80.6,41.9,-64.5Z" transform="translate(100 100)" /></svg>
         </div>
         <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 tracking-tight mb-6 leading-tight">
           Transform Customer Feedback Into
-          <span className="text-orange-500"> Sales Power</span>
+          <span className="text-orange-600"> Sales Power</span>
         </h1>
         <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-4xl mx-auto leading-relaxed">
           The #1 platform for collecting, moderating, and displaying authentic customer testimonials. 
@@ -42,13 +42,13 @@ const Home = () => {
         <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-12">
           <Link
             to="/features"
-            className="px-12 py-5 text-white bg-orange-500 font-bold text-lg tracking-wide transition-all hover:bg-orange-600 hover:shadow-lg transform hover:-translate-y-1"
+            className="px-12 py-5 text-white bg-orange-600 font-bold text-lg tracking-wide transition-all hover:bg-orange-700 hover:shadow-lg transform hover:-translate-y-1 rounded-lg"
           >
             Explore Features
           </Link>
           <Link
             to="/pricing"
-            className="px-12 py-5 text-gray-800 font-bold text-lg border-2 border-gray-300 hover:bg-gray-100 transition-all hover:shadow-lg transform hover:-translate-y-1"
+            className="px-12 py-5 text-blue-900 font-bold text-lg border-2 border-blue-900 hover:bg-blue-50 transition-all hover:shadow-lg transform hover:-translate-y-1 rounded-lg"
           >
             Check Pricing
           </Link>
@@ -103,19 +103,19 @@ const Home = () => {
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="text-4xl md:text-2xl font-bold text-orange-500 mb-2">10K+</div>
+              <div className="text-4xl md:text-2xl font-bold text-orange-600 mb-2">10K+</div>
               <p className="text-gray-600 font-sans">Active Businesses</p>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-2xl font-bold text-orange-500 mb-2">2M+</div>
+              <div className="text-4xl md:text-2xl font-bold text-orange-600 mb-2">2M+</div>
               <p className="text-gray-600 font-sans">Reviews Collected</p>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-2xl font-bold text-orange-500 mb-2">98%</div>
+              <div className="text-4xl md:text-2xl font-bold text-orange-600 mb-2">98%</div>
               <p className="text-gray-600 font-sans">Customer Satisfaction</p>
             </div>
             <div className="text-center">
-              <div className="text-4xl md:text-2xl font-bold text-orange-500 mb-2">24/7</div>
+              <div className="text-4xl md:text-2xl font-bold text-orange-600 mb-2">24/7</div>
               <p className="text-gray-600 font-sans">Support Available</p>
             </div>
           </div>
@@ -130,7 +130,7 @@ const Home = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div className="flex flex-col items-center text-center p-6 bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="bg-orange-100 text-orange-500 p-4 mb-6 rounded-full ">
+              <div className="bg-orange-100 text-orange-600 p-4 mb-6 rounded-full">
                 <CloudArrowUpIcon className="h-7 w-7" />
               </div>
               <h3 className="text-1xl font-bold text-gray-800 mb-4">
@@ -141,7 +141,7 @@ const Home = () => {
               </p>
             </div>
             <div className="flex flex-col items-center text-center p-8 bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="bg-orange-100 text-orange-500 p-4 mb-6 rounded-full">
+              <div className="bg-orange-100 text-orange-600 p-4 mb-6 rounded-full">
                 <PencilIcon className="h-7 w-7" />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-4">
@@ -152,7 +152,7 @@ const Home = () => {
               </p>
             </div>
             <div className="flex flex-col items-center text-center p-8 bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="bg-orange-100 text-orange-500 p-4 mb-6 rounded-full">
+              <div className="bg-orange-100 text-orange-600 p-4 mb-6 rounded-full">
                 <PuzzlePieceIcon className="h-7 w-7" />
               </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-4">
@@ -174,7 +174,7 @@ const Home = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center p-6 bg-gray-50 rounded-xl">
-              <div className="bg-blue-100 text-blue-500 p-4 mb-4 rounded-lg mx-auto w-16 h-16 flex items-center justify-center">
+              <div className="bg-blue-100 text-blue-900 p-4 mb-4 rounded-lg mx-auto w-16 h-16 flex items-center justify-center">
                 <CursorArrowRaysIcon className="h-7 w-7" />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-3">Carousel</h3>
@@ -195,7 +195,7 @@ const Home = () => {
               <p className="text-gray-600">Feature your best testimonials with prominent display options.</p>
             </div>
             <div className="text-center p-6 bg-gray-50 rounded-xl">
-              <div className="bg-orange-100 text-orange-500 p-4 mb-4 rounded-lg mx-auto w-16 h-16 flex items-center justify-center">
+              <div className="bg-orange-100 text-orange-600 p-4 mb-4 rounded-lg mx-auto w-16 h-16 flex items-center justify-center">
                 <UsersIcon className="h-7 w-7" />
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-3">Wall</h3>
@@ -273,7 +273,7 @@ const Home = () => {
             <div className="text-center">
               <Link
                 to="/testimonial"
-                className="inline-block px-12 py-5 text-white bg-blue-600 font-bold text-lg tracking-wide transition-all hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-1"
+                className="inline-block px-12 py-5 text-white bg-blue-900 font-bold text-lg tracking-wide transition-all hover:bg-blue-800 hover:shadow-lg transform hover:-translate-y-1 rounded-lg"
               >
                 View All Testimonials
               </Link>

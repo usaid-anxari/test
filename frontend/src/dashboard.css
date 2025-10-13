@@ -1,0 +1,198 @@
+/* TrueTestify Dashboard Styles */
+/* Consistent branding and typography across all dashboard pages */
+
+/* Import TrueTestify brand fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* Founders Grotesk font fallback - if not available, use system fonts */
+@font-face {
+  font-family: 'Founders Grotesk';
+  src: local('Founders Grotesk'), local('FoundersGrotesk-Regular');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Founders Grotesk';
+  src: local('Founders Grotesk Medium'), local('FoundersGrotesk-Medium');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Founders Grotesk';
+  src: local('Founders Grotesk Semibold'), local('FoundersGrotesk-Semibold');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Founders Grotesk';
+  src: local('Founders Grotesk Bold'), local('FoundersGrotesk-Bold');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* CSS Custom Properties for TrueTestify Brand Colors */
+:root {
+  /* Primary Brand Colors */
+  --tt-teal-primary: #04A4FF;
+  --tt-blue-secondary: #04A4FF;
+  --tt-teal-light: #7dd3fc;
+  --tt-sky-highlight: #bae6fd;
+  
+  /* Widget Accent Colors */
+  --tt-video-bg: #f0f9ff;
+  --tt-video-text: #0284c7;
+  --tt-audio-bg: #ecfeff;
+  --tt-audio-text: #0891b2;
+  --tt-text-bg: #eff6ff;
+  --tt-text-text: #2563eb;
+  
+  /* Typography */
+  --tt-font-heading: 'Founders Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
+  --tt-font-body: 'Poppins', system-ui, -apple-system, sans-serif;
+}
+
+/* Global Dashboard Styles */
+.dashboard-container {
+  font-family: var(--tt-font-body);
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+/* Dashboard Headers */
+.dashboard-header {
+  background: #04A4FF;
+  color: white;
+}
+
+.dashboard-title {
+  font-family: var(--tt-font-heading);
+  font-weight: 700;
+  color: white;
+}
+
+.dashboard-subtitle {
+  font-family: var(--tt-font-body);
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+/* Card Headers */
+.card-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.card-title {
+  font-family: var(--tt-font-heading);
+  font-weight: 700;
+  color: #111827;
+}
+
+.card-description {
+  font-family: var(--tt-font-body);
+  color: #6b7280;
+}
+
+/* Buttons */
+.btn-primary {
+  background: #04A4FF;
+  font-family: var(--tt-font-heading);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: #0284c7;
+  transform: translateY(-1px);
+}
+
+/* Widget Type Indicators */
+.widget-video {
+  background-color: var(--tt-video-bg);
+  color: var(--tt-video-text);
+}
+
+.widget-audio {
+  background-color: var(--tt-audio-bg);
+  color: var(--tt-audio-text);
+}
+
+.widget-text {
+  background-color: var(--tt-text-bg);
+  color: var(--tt-text-text);
+}
+
+/* Status Indicators */
+.status-approved {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-rejected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Typography Classes */
+.text-heading {
+  font-family: var(--tt-font-heading);
+}
+
+.text-body {
+  font-family: var(--tt-font-body);
+}
+
+.text-primary {
+  color: #111827;
+}
+
+.text-secondary {
+  color: #6b7280;
+}
+
+.text-muted {
+  color: #9ca3af;
+}
+
+.text-teal {
+  color: var(--tt-teal-primary);
+}
+
+.text-blue {
+  color: var(--tt-blue-secondary);
+}
+
+/* Loading States */
+.loading-spinner {
+  border-color: var(--tt-teal-primary);
+}
+
+/* Form Elements */
+.form-input {
+  font-family: var(--tt-font-body);
+  border-color: #d1d5db;
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: var(--tt-teal-primary);
+  box-shadow: 0 0 0 3px rgba(4, 164, 255, 0.1);
+}
+
+.form-label {
+  font-family: var(--tt-font-body);
+  font-weight: 500;
+  color: #374151;
+}
