@@ -1,42 +1,45 @@
-import {
-  DocumentTextIcon,
-  TrashIcon,
-  VideoCameraIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  EyeIcon,
-  FunnelIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/16/solid";
-import { useContext, useEffect, useState } from "react";
-import { AuthContext } from "../../context/AuthContext";
+import  { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import ReviewPreviewModal from "../../components/ReviewPreviewModal";
 import { API_PATHS } from "../../service/apiPaths";
 import axiosInstance from "../../service/axiosInstanse";
-import { SpeakerWaveIcon } from "@heroicons/react/20/solid";
+import { 
+  SpeakerWaveIcon, 
+  FunnelIcon, 
+  MagnifyingGlassIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  XCircleIcon
+} from "@heroicons/react/20/solid";
 import { motion } from "framer-motion";
 import PaymentPrompt from "../../components/PaymentPrompt";
 import { useAuth0 } from "@auth0/auth0-react";
 import useSubscription from "../../hooks/useSubscription";
+import { useTrialStatus } from "../../components/TrialGuard";
+import SubscriptionBanner from "../../components/SubscriptionBanner";
+import ReviewCard from "../../components/ReviewCard";
 
 const Moderation = () => {
   const { isAuthenticated } = useAuth0();
   const subscription = useSubscription();
+  const { isReadOnly } = useTrialStatus();
+  const { subscriptionData } = subscription;
   const [showPaymentPrompt, setShowPaymentPrompt] = useState(true);
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [selectedReview, setSelectedReview] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filter, setFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('newest');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [reviewToReject, setReviewToReject] = useState(null);
   
-  // Fetch business and reviews data
+  // ------ Fetch business and reviews data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -57,20 +60,18 @@ const Moderation = () => {
       fetchData();
     }
   }, [isAuthenticated]);
+
   
-  const openModal = (review) => {
-    setSelectedReview(review);
-    setIsModalOpen(true);
-  };
-  
-  // Filter and search reviews
+  // ------ Filter and search reviews
   const filteredReviews = reviews.filter(review => {
     const reviewStatus = review.status?.toLowerCase() || '';
-    const matchesFilter = filter === 'all' || reviewStatus === filter.toLowerCase();
+    const reviewType = review.type?.toLowerCase() || '';
+    const matchesStatusFilter = statusFilter === 'all' || reviewStatus === statusFilter.toLowerCase();
+    const matchesTypeFilter = typeFilter === 'all' || reviewType === typeFilter.toLowerCase();
     const matchesSearch = (review.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          (review.reviewerName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          (review.bodyText?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
+    return matchesStatusFilter && matchesTypeFilter && matchesSearch;
   }).sort((a, b) => {
     switch (sortBy) {
       case 'newest':
@@ -86,50 +87,91 @@ const Moderation = () => {
     }
   });
 
+  // -- Stats Calculation
   const stats = {
     total: reviews.length,
     pending: reviews.filter(r => r.status?.toLowerCase() === 'pending').length,
     approved: reviews.filter(r => r.status?.toLowerCase() === 'approved').length,
     rejected: reviews.filter(r => r.status?.toLowerCase() === 'rejected').length,
   };
-  
+    // ------ openModal
+  const openModal = (review) => {
+    setSelectedReview(review);
+    setIsModalOpen(true);
+  };
+  // ------ handleViewReview
+  const handleViewReview = useCallback((review) => {
+    openModal(review);
+  }, []);
+  // ------ closeModal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedReview(null);
+  };
 
-  const updateReview = async (id, newStatus) => {
+
+  
+  // ------- updateReview
+  const updateReview = useCallback(async (id, newStatus) => {
     if (!business?.slug) {
       toast.error("Business information not loaded");
       return;
     }
-    
-    console.log('Updating review with business slug:', business.slug);
-    console.log('API URL:', API_PATHS.REVIEWS.UPDATE_REVIEW_STATUS(business.slug, id));
     
     try {
       await axiosInstance.post(
         API_PATHS.REVIEWS.UPDATE_REVIEW_STATUS(business.slug, id),
         { status: newStatus }
       );
-      // Refresh reviews data
-      const reviewsResponse = await axiosInstance.get(
-        API_PATHS.REVIEWS.GET_REVIEWS(business.slug)
-      );
-      setReviews(reviewsResponse.data.reviews || []);
+      
+      setReviews(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
       toast.success(`Review has been ${newStatus}.`);
       setIsModalOpen(false);
     } catch (error) {
       console.error("Failed to update review:", error);
       toast.error("Failed to update review status");
     }
-  };
+  }, [business?.slug]);
 
-  const handleDeleteReview = (review) => {
+  // ------ handleUpdateStatus
+  const handleUpdateStatus = useCallback((id, status) => {
+    updateReview(id, status);
+  }, [updateReview]);
+
+    // ------ handleRejectReview
+  const handleRejectReview = useCallback((review) => {
+    setReviewToReject(review);
+    setShowRejectModal(true);
+  }, []);
+
+   // ------ confirmRejectReview
+  const confirmRejectReview = useCallback(async () => {
+    try {
+      await axiosInstance.delete(API_PATHS.COMPLIANCE.DELETE_REVIEW_PERMANENTLY(reviewToReject.id));
+      setReviews(prev => prev.filter(r => r.id !== reviewToReject.id));
+      toast.success('Review rejected and permanently deleted');
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Failed to reject review:', error);
+      toast.error('Failed to reject review');
+    } finally {
+      setShowRejectModal(false);
+      setReviewToReject(null);
+    }
+  }, [reviewToReject]);
+
+  
+  // ------ handleDeleteReview
+  const handleDeleteReview = useCallback((review) => {
     setReviewToDelete(review);
     setShowDeleteModal(true);
-  };
+  }, []);
 
-  const confirmDeleteReview = async () => {
+  // ------ confirmDeleteReview
+  const confirmDeleteReview = useCallback(async () => {
     try {
       await axiosInstance.delete(API_PATHS.COMPLIANCE.DELETE_REVIEW_PERMANENTLY(reviewToDelete.id));
-      setReviews(reviews.filter(r => r.id !== reviewToDelete.id));
+      setReviews(prev => prev.filter(r => r.id !== reviewToDelete.id));
       toast.success('Review permanently deleted for compliance');
       setIsModalOpen(false);
     } catch (error) {
@@ -139,399 +181,472 @@ const Moderation = () => {
       setShowDeleteModal(false);
       setReviewToDelete(null);
     }
-  };
+  }, [reviewToDelete]);
 
+// Review Card Component
+// const ReviewCard = ({ review, onViewReview, onUpdateStatus, onDeleteReview, onRejectReview, isReadOnly }) => {
+//   const [audioDuration, setAudioDuration] = useState('0:00');
+  
+//   useEffect(() => {
+//     if (review.type === 'audio' && review.mediaAssets?.[0]?.s3Key) {
+//       const audio = new Audio(`${process.env.REACT_APP_S3_BASE_URL}/${review.mediaAssets[0].s3Key}`);
+//       audio.addEventListener('loadedmetadata', () => {
+//         const minutes = Math.floor(audio.duration / 60);
+//         const seconds = Math.floor(audio.duration % 60);
+//         setAudioDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+//       });
+//     }
+//   }, [review.mediaAssets, review.type]);
+//   const getStatusBadge = (status) => {
+//     switch (status?.toLowerCase()) {
+//       case 'approved': 
+//         return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
+//       case 'pending': 
+//         return <ClockIcon className="w-5 h-5 text-gray-400" />;
+//       case 'rejected': 
+//         return <XCircleIcon className="w-5 h-5 text-red-500" />;
+//       case 'hidden':
+//         return <XCircleIcon className="w-5 h-5 text-gray-400" />;
+//       default: 
+//         return <ClockIcon className="w-5 h-5 text-gray-400" />;
+//     }
+//   };
 
+//   // Video Review Card (existing design)
+//   if (review.type === 'video') {
+//     return (
+//       <motion.div
+//         initial={{ opacity: 0, y: 20 }}
+//         animate={{ opacity: 1, y: 0 }}
+//         className="relative rounded-2xl overflow-hidden cursor-pointer hover:shadow-xl transition-all bg-gray-100"
+//         style={{ height: '340px' }}
+//         onClick={() => onViewReview(review)}
+//       >
+//         {review.mediaAssets && review.mediaAssets[0] && (
+//           <video 
+//             className="absolute inset-0 w-full h-full object-cover"
+//             src={`${process.env.REACT_APP_S3_BASE_URL}/${review.mediaAssets[0].s3Key}`}
+//             preload="metadata"
+//           />
+//         )}
+//         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+//         <div className="absolute top-4 right-4 bg-white rounded-full p-1.5 shadow-lg">
+//           {getStatusBadge(review.status)}
+//         </div>
+//         <div className="absolute bottom-0 left-0 right-0 p-5">
+//           <div className="flex items-center gap-3 mb-4">
+//             <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
+//               <span className="text-sm font-semibold text-white">{review.reviewerName?.charAt(0)}</span>
+//             </div>
+//             <div className="flex-1">
+//               <div className="text-white font-semibold text-sm">{review.reviewerName}</div>
+//               <div className="flex">
+//                 {[...Array(5)].map((_, i) => (
+//                   <span key={i} className={`text-xs ${i < review.rating ? 'text-yellow-400' : 'text-white/30'}`}>★</span>
+//                 ))}
+//               </div>
+//             </div>
+//             <div className="text-xs text-white/80">
+//               {new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+//             </div>
+//           </div>
+//           {!isReadOnly && (
+//             <div className="flex gap-2">
+//               {review.status === 'pending' && (
+//                 <>
+//                   <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'approved'); }} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-white transition-all shadow-lg">✓ Approve</button>
+//                   <button onClick={(e) => { e.stopPropagation(); onRejectReview(review); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg">✕ Reject</button>
+//                 </>
+//               )}
+//               {review.status === 'approved' && (
+//                 <>
+//                   <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'hidden'); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"><XCircleIcon className="w-4 h-4" />Hide</button>
+//                   <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-lg text-sm font-semibold hover:bg-white/20 transition-all">Delete Review</button>
+//                 </>
+//               )}
+//               {review.status === 'hidden' && (
+//                 <>
+//                   <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'approved'); }} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-white transition-all shadow-lg flex items-center justify-center gap-2"><CheckCircleIcon className="w-4 h-4" />Unhide</button>
+//                   <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-lg text-sm font-semibold hover:bg-white/20 transition-all">Delete Review</button>
+//                 </>
+//               )}
+//               {review.status === 'rejected' && (
+//                 <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg">🗑️ Delete</button>
+//               )}
+//             </div>
+//           )}
+//         </div>
+//       </motion.div>
+//     );
+//   }
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedReview(null);
-  };
+//   // Audio Review Card
+//   if (review.type === 'audio') {
 
+//     return (
+//       <motion.div
+//         initial={{ opacity: 0, y: 20 }}
+//         animate={{ opacity: 1, y: 0 }}
+//         className="relative rounded-2xl overflow-hidden cursor-pointer hover:shadow-xl transition-all bg-gradient-to-br from-purple-500 to-purple-700"
+//         style={{ height: '340px' }}
+//         onClick={() => onViewReview(review)}
+//       >
+//         {/* Audio Waveform Background */}
+//         <div className="absolute inset-0 flex items-center justify-center opacity-20">
+//           <div className="flex items-end gap-1">
+//             {[3, 5, 4, 6, 3, 7, 4, 5, 3, 6, 4, 5, 3, 4, 5, 6, 4, 3, 5, 4, 6, 5, 3, 4].map((height, i) => (
+//               <div key={i} className="w-2 bg-white rounded-full" style={{ height: `${height * 12}px` }} />
+//             ))}
+//           </div>
+//         </div>
+        
+//         {/* Center Audio Icon */}
+//         <div className="absolute inset-0 flex items-center justify-center">
+//           <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/30">
+//             <SpeakerWaveIcon className="w-12 h-12 text-white" />
+//           </div>
+//         </div>
+        
+//         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+//         <div className="absolute top-4 right-4 bg-white rounded-full p-1.5 shadow-lg">
+//           {getStatusBadge(review.status)}
+//         </div>
+//         <div className="absolute bottom-0 left-0 right-0 p-5">
+//           <div className="flex items-center gap-3 mb-4">
+//             <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
+//               <span className="text-sm font-semibold text-white">{review.reviewerName?.charAt(0)}</span>
+//             </div>
+//             <div className="flex-1">
+//               <div className="text-white font-semibold text-sm">{review.reviewerName}</div>
+//               <div className="flex items-center gap-2">
+//                 <div className="flex">
+//                   {[...Array(5)].map((_, i) => (
+//                     <span key={i} className={`text-xs ${i < review.rating ? 'text-yellow-400' : 'text-white/30'}`}>★</span>
+//                   ))}
+//                 </div>
+//                 <span className="text-xs text-white/80">• {audioDuration}</span>
+//               </div>
+//             </div>
+//             <div className="text-xs text-white/80">
+//               {new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+//             </div>
+//           </div>
+//           {!isReadOnly && (
+//             <div className="flex gap-2">
+//               {review.status === 'pending' && (
+//                 <>
+//                   <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'approved'); }} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-white transition-all shadow-lg">✓ Approve</button>
+//                   <button onClick={(e) => { e.stopPropagation(); onRejectReview(review); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg">✕ Reject</button>
+//                 </>
+//               )}
+//               {review.status === 'approved' && (
+//                 <>
+//                   <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'hidden'); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"><XCircleIcon className="w-4 h-4" />Hide</button>
+//                   <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-lg text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
+//                 </>
+//               )}
+//               {review.status === 'hidden' && (
+//                 <>
+//                   <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'approved'); }} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-white transition-all shadow-lg flex items-center justify-center gap-2"><CheckCircleIcon className="w-4 h-4" />Unhide</button>
+//                   <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-lg text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
+//                 </>
+//               )}
+//               {review.status === 'rejected' && (
+//                 <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg">🗑️ Delete</button>
+//               )}
+//             </div>
+//           )}
+//         </div>
+//       </motion.div>
+//     );
+//   }
+
+//   // Text Review Card
+//   return (
+//     <motion.div
+//       initial={{ opacity: 0, y: 20 }}
+//       animate={{ opacity: 1, y: 0 }}
+//       className="relative rounded-2xl overflow-hidden cursor-pointer hover:shadow-xl transition-all bg-gradient-to-br from-green-500 to-green-700"
+//       style={{ height: '340px' }}
+//       onClick={() => onViewReview(review)}
+//     >
+//       {/* Text Pattern Background */}
+//       <div className="absolute inset-0 flex items-center justify-center opacity-10">
+//         <div className="grid grid-cols-6 gap-2 transform rotate-12">
+//           {Array.from({ length: 24 }).map((_, i) => (
+//             <div key={i} className="w-8 h-1 bg-white rounded-full" />
+//           ))}
+//         </div>
+//       </div>
+      
+//       {/* Text Content */}
+//       <div className="absolute inset-0 p-6 flex flex-col justify-center">
+//         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+//           <h3 className="text-white font-semibold text-lg mb-2 line-clamp-2">{review.title}</h3>
+//           <p className="text-white/90 text-sm line-clamp-4">
+//             {review.bodyText && review.bodyText.length > 120 
+//               ? `${review.bodyText.substring(0, 120)}...` 
+//               : review.bodyText || 'No content available'}
+//           </p>
+//         </div>
+//       </div>
+      
+//       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+//       <div className="absolute top-4 right-4 bg-white rounded-full p-1.5 shadow-lg">
+//         {getStatusBadge(review.status)}
+//       </div>
+//       <div className="absolute bottom-0 left-0 right-0 p-5">
+//         <div className="flex items-center gap-3 mb-4">
+//           <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
+//             <span className="text-sm font-semibold text-white">{review.reviewerName?.charAt(0)}</span>
+//           </div>
+//           <div className="flex-1">
+//             <div className="text-white font-semibold text-sm">{review.reviewerName}</div>
+//             <div className="flex">
+//               {[...Array(5)].map((_, i) => (
+//                 <span key={i} className={`text-xs ${i < review.rating ? 'text-yellow-400' : 'text-white/30'}`}>★</span>
+//               ))}
+//             </div>
+//           </div>
+//           <div className="text-xs text-white/80">
+//             {new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+//           </div>
+//         </div>
+//         {!isReadOnly && (
+//           <div className="flex gap-2">
+//             {review.status === 'pending' && (
+//               <>
+//                 <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'approved'); }} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-white transition-all shadow-lg">✓ Approve</button>
+//                 <button onClick={(e) => { e.stopPropagation(); onRejectReview(review); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg">✕ Reject</button>
+//               </>
+//             )}
+//             {review.status === 'approved' && (
+//               <>
+//                 <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'hidden'); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"><XCircleIcon className="w-4 h-4" />Hide</button>
+//                 <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-lg text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
+//               </>
+//             )}
+//             {review.status === 'hidden' && (
+//               <>
+//                 <button onClick={(e) => { e.stopPropagation(); onUpdateStatus(review.id, 'approved'); }} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-white transition-all shadow-lg flex items-center justify-center gap-2"><CheckCircleIcon className="w-4 h-4" />Unhide</button>
+//                 <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="px-4 py-2.5 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-lg text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
+//               </>
+//             )}
+//             {review.status === 'rejected' && (
+//               <button onClick={(e) => { e.stopPropagation(); onDeleteReview(review); }} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-2.5 px-4 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-lg">🗑️ Delete</button>
+//             )}
+//           </div>
+//         )}
+//       </div>
+//     </motion.div>
+//   );
+// };
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
-      {/* Header */}
-      <div className="bg-[#04A4FF] text-white">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2 text-white" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
-                Review Moderation
-              </h1>
-              <p className="text-white/80 text-lg font-medium">
-                Manage and moderate customer reviews for your business
-              </p>
+      {/* Header with Stats */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-blue-500 rounded-xl px-6 py-5 text-white flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{stats.total.toLocaleString()}</div>
+                <div className="text-sm font-medium mt-1">Total</div>
+              </div>
+              <div className="text-white/30">
+                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                  <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                </svg>
+              </div>
             </div>
-            <div className="mt-6 lg:mt-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold">{stats.total}</div>
-                <div className="text-sm text-blue-100">Total</div>
+            <div className="bg-orange-500 rounded-xl px-6 py-5 text-white flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{stats.pending.toLocaleString()}</div>
+                <div className="text-sm font-medium mt-1">Pending</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold text-yellow-300">{stats.pending}</div>
-                <div className="text-sm text-blue-100">Pending</div>
+              <div className="text-white/30">
+                <ClockIcon className="w-8 h-8" />
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold text-green-300">{stats.approved}</div>
-                <div className="text-sm text-blue-100">Approved</div>
+            </div>
+            <div className="bg-green-500 rounded-xl px-6 py-5 text-white flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{stats.approved.toLocaleString()}</div>
+                <div className="text-sm font-medium mt-1">Approved</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center">
-                <div className="text-2xl font-bold text-red-300">{stats.rejected}</div>
-                <div className="text-sm text-blue-100">Rejected</div>
+              <div className="text-white/30">
+                <CheckCircleIcon className="w-8 h-8" />
+              </div>
+            </div>
+            <div className="bg-red-500 rounded-xl px-6 py-5 text-white flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold">{stats.rejected.toLocaleString()}</div>
+                <div className="text-sm font-medium mt-1">Rejected</div>
+              </div>
+              <div className="text-white/30">
+                <XCircleIcon className="w-8 h-8" />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <SubscriptionBanner 
+          subscriptionStatus={subscriptionData?.status}
+          tier={subscriptionData?.tier}
+          storageUsage={subscriptionData?.storageUsage}
+          trialActive={subscriptionData?.trialActive}
+          trialDaysLeft={subscriptionData?.trialDaysLeft}
+        />
         {/* Payment Prompt for Free Users */}
         {showPaymentPrompt && subscription.tier === "free" && (
           <PaymentPrompt onDismiss={() => setShowPaymentPrompt(false)} />
         )}
         
-        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-          {/* Filters and Search */}
-          <div className="bg-gradient-to-r from-blue-50 to-orange-50 p-8 border-b border-gray-100">
-            <div className="space-y-6">
-              {/* Filter Buttons Row */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center space-x-2">
-                    <FunnelIcon className="w-5 h-5 text-blue-600" />
-                    <span className="text-lg font-bold text-gray-800">Filter Reviews</span>
-                  </div>
-                </div>
-                
-                {/* Search and Sort Row */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  {/* Search */}
-                  <div className="relative min-w-[280px]">
-                    <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search by title, reviewer, or content..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm transition-all duration-200 text-sm"
-                    />
-                  </div>
-                  
-                  {/* Sort */}
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm font-medium text-sm min-w-[160px]"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="rating-high">Highest Rating</option>
-                    <option value="rating-low">Lowest Rating</option>
-                  </select>
-                </div>
-              </div>
-              
-              {/* Filter Buttons */}
-              <div className="flex flex-wrap items-center gap-3">
-                {['all', 'pending', 'approved', 'rejected'].map((status) => {
-                  const count = status === 'all' ? stats.total : stats[status];
-                  const isActive = filter === status;
-                  
-                  return (
-                    <button
-                      key={status}
-                      onClick={() => setFilter(status)}
-                      className={`inline-flex items-center px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 ${
-                        isActive
-                          ? 'bg-[#04A4FF] text-white shadow-xl scale-105'
-                          : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200 hover:border-blue-300'
-                      }`}
-                    >
-                      {/* Status Icon */}
-                      {status === 'all' && (
-                        <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {status === 'pending' && <ClockIcon className="w-4 h-4 mr-2" />}
-                      {status === 'approved' && <CheckCircleIcon className="w-4 h-4 mr-2" />}
-                      {status === 'rejected' && <XCircleIcon className="w-4 h-4 mr-2" />}
-                      
-                      {/* Status Text */}
-                      <span>{status === 'all' ? 'All Reviews' : status.charAt(0).toUpperCase() + status.slice(1)}</span>
-                      
-                      {/* Count Badge */}
-                      <span className={`ml-3 px-3 py-1 rounded-full text-xs font-bold ${
-                        isActive 
-                          ? 'bg-white/25 text-white' 
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          {/* Reviews List */}
-          <div className="p-6">
-            {loading ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="animate-pulse bg-gray-100 rounded-xl h-32"></div>
-                ))}
-              </div>
-            ) : filteredReviews.length > 0 ? (
-              <div className="space-y-4">
-                {filteredReviews.map((review, index) => (
-                  <motion.div
-                    key={review.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="bg-white border border-gray-200 rounded-2xl p-6 cursor-pointer transition-all duration-200 hover:shadow-xl hover:border-blue-300 hover:-translate-y-1"
-                    onClick={() => openModal(review)}
-                  >
-                    <div className="flex items-start gap-6">
-                      {/* Review Type Icon */}
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
-                        review.type === 'video' ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' :
-                        review.type === 'audio' ? 'bg-gradient-to-br from-purple-400 to-purple-600 text-white' : 
-                        'bg-gradient-to-br from-green-400 to-green-600 text-white'
-                      }`}>
-                        {review.type === 'video' && <VideoCameraIcon className="w-7 h-7" />}
-                        {review.type === 'audio' && <SpeakerWaveIcon className="w-7 h-7" />}
-                        {review.type === 'text' && <DocumentTextIcon className="w-7 h-7" />}
-                      </div>
-                      {/* Review Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-3">
-                          <h3 className="font-bold text-gray-900 text-xl truncate">{review.title}</h3>
-                          <div className="flex items-center space-x-3">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                              review.status?.toLowerCase() === "pending" ? "bg-yellow-100 text-yellow-800" :
-                              review.status?.toLowerCase() === "approved" ? "bg-green-100 text-green-800" : 
-                              "bg-red-100 text-red-800"
-                            }`}>
-                              {review.status?.toLowerCase() === "pending" && <ClockIcon className="w-4 h-4 mr-1" />}
-                              {review.status?.toLowerCase() === "approved" && <CheckCircleIcon className="w-4 h-4 mr-1" />}
-                              {review.status?.toLowerCase() === "rejected" && <XCircleIcon className="w-4 h-4 mr-1" />}
-                              {review.status}
-                            </span>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); openModal(review); }}
-                              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            >
-                              <EyeIcon className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                          <div className="flex items-center space-x-2 text-gray-600">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">Reviewer</div>
-                              <div className="font-semibold">{review.reviewerName}</div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2 text-gray-600">
-                            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">Submitted</div>
-                              <div className="font-semibold">{new Date(review.submittedAt).toLocaleDateString()}</div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2 text-gray-600">
-                            <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">Rating</div>
-                              <div className="flex items-center space-x-1">
-                                <span className="font-semibold">{review.rating}.0</span>
-                                <div className="flex">
-                                  {[...Array(5)].map((_, i) => (
-                                    <svg key={i} className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
-                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                                    </svg>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        {review.bodyText && (
-                          <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                            <p className="text-gray-700 line-clamp-3 text-sm leading-relaxed">
-                              "{review.bodyText}"
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {/* Action Buttons */}
-                    <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
-                      {review.status?.toLowerCase() === "pending" ? (
-                        <>
-                          <button
-                            onClick={() => updateReview(review.id, "approved")}
-                            className="inline-flex items-center px-6 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                          >
-                            <CheckCircleIcon className="w-5 h-5 mr-2" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => updateReview(review.id, "rejected")}
-                            className="inline-flex items-center px-6 py-3 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                          >
-                            <XCircleIcon className="w-5 h-5 mr-2" />
-                            Reject
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => updateReview(review.id, "hidden")}
-                            className="inline-flex items-center px-6 py-3 bg-gray-500 text-white font-semibold rounded-xl hover:bg-gray-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                          >
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                            </svg>
-                            Hide
-                          </button>
-                          <button
-                            onClick={() => handleDeleteReview(review)}
-                            className="inline-flex items-center px-6 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                          >
-                            <TrashIcon className="w-5 h-5 mr-2" />
-                            Delete Permanently
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    </motion.div>
-                ))}
-              </div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-16"
-              >
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-600 mb-4">
-                  {searchTerm || filter !== 'all' ? 'No Matching Reviews' : 'No Reviews Yet'}
-                </h3>
-                <p className="text-gray-500 mb-8 max-w-md mx-auto">
-                  {searchTerm || filter !== 'all' 
-                    ? 'Try adjusting your search or filter criteria'
-                    : 'When customers submit reviews, they\'ll appear here for moderation'
-                  }
-                </p>
-                {(searchTerm || filter !== 'all') && (
-                  <button
-                    onClick={() => { setSearchTerm(''); setFilter('all'); }}
-                    className="inline-flex items-center px-6 py-3 bg-[#04A4FF] text-white font-semibold rounded-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    Clear Filters
-                  </button>
-                )}
-              </motion.div>
-            )}
-          </div>
+        {/* Page Title */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Review Moderation</h1>
         </div>
-      </div>
-
-      {isModalOpen && selectedReview && (
-        <ReviewPreviewModal review={selectedReview} onClose={closeModal} />
-      )}
-      
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-            <div className="bg-red-600 px-6 py-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Permanent Deletion</h3>
-                  <p className="text-red-100 text-sm">This action cannot be undone</p>
-                </div>
-              </div>
+        
+        {/* Filters and Search Bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full text-sm"
+              />
             </div>
             
-            <div className="p-6">
-              <div className="mb-6">
-                <h4 className="font-semibold text-gray-900 mb-2">Are you sure you want to permanently delete this review?</h4>
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="font-medium text-gray-900">{reviewToDelete?.reviewerName}</span>
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <svg key={i} className={`w-4 h-4 ${i < (reviewToDelete?.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                    </div>
-                  </div>
-                  {reviewToDelete?.title && (
-                    <h5 className="font-medium text-gray-800 mb-1">{reviewToDelete.title}</h5>
-                  )}
-                  {reviewToDelete?.bodyText && (
-                    <p className="text-sm text-gray-600 line-clamp-2">{reviewToDelete.bodyText}</p>
-                  )}
-                </div>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <h5 className="font-medium text-yellow-800 mb-1">GDPR Compliance Notice</h5>
-                      <p className="text-sm text-yellow-700">
-                        This will permanently delete the review and all associated media files. 
-                        A compliance log will be created for audit purposes.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-6 py-3 text-gray-600 font-semibold rounded-xl border-2 border-gray-200 hover:bg-gray-50 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDeleteReview}
-                  className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  Delete Permanently
-                </button>
-              </div>
+            {/* Filter Button and Dropdown */}
+            <div className="flex items-center gap-3">
+              <button className="p-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <FunnelIcon className="w-5 h-5 text-gray-600" />
+              </button>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium text-gray-700"
+              >
+                <option value="all">All Types</option>
+                <option value="video">Video</option>
+                <option value="audio">Audio</option>
+                <option value="text">Text</option>
+              </select>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="lg:ml-auto">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium text-gray-700"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="rating-high">Highest Rating</option>
+                <option value="rating-low">Lowest Rating</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Reviews Grid */}
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : filteredReviews.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="text-gray-400 text-lg mb-2">No reviews found</div>
+            <div className="text-gray-500">Try adjusting your filters or search terms</div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredReviews.map((review) => (
+              <ReviewCard
+                key={review.id}
+                review={review}
+                onViewReview={handleViewReview}
+                onUpdateStatus={handleUpdateStatus}
+                onDeleteReview={handleDeleteReview}
+                onRejectReview={handleRejectReview}
+                isReadOnly={isReadOnly}
+                allowBtn={true}
+                badge={true}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Review Preview Modal */}
+      {isModalOpen && selectedReview && (
+        <ReviewPreviewModal
+          review={selectedReview}
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onApprove={() => updateReview(selectedReview.id, 'approved')}
+          onReject={() => handleRejectReview(selectedReview)}
+          onDelete={() => handleDeleteReview(selectedReview)}
+          isReadOnly={isReadOnly}
+          allowBtn={true}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Review</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete this review? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteReview}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Confirmation Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Reject Review</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to reject and permanently delete this review?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRejectReview}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Reject
+              </button>
             </div>
           </div>
         </div>
@@ -539,5 +654,7 @@ const Moderation = () => {
     </div>
   );
 };
+
+
 
 export default Moderation;

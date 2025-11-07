@@ -26,7 +26,7 @@ export class WidgetsController {
     private readonly businessService: BusinessService,
   ) {}
 
-  // Milestone 7: Create widget
+  //  Create widget
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post()
@@ -85,15 +85,13 @@ export class WidgetsController {
   }
 
   // Get widget embed code
-  @UseGuards(JwtAuthGuard, SubscriptionGuard)
-  @RequireStarterPlan()
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get(':id/embed-code')
   @ApiResponse({ status: 200, description: 'Widget embed code' })
   async getEmbedCode(@Req() req, @Param('id') widgetId: string) {
     const userId = req.userEntity.id;
     const business = await this.businessService.findDefaultForUser(userId);
-    
     if (!business) {
       throw new BadRequestException('Business not found');
     }

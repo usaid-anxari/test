@@ -13,7 +13,6 @@ export class SubscriptionStatusMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
     // Only add subscription status for authenticated API requests
     if (req.path.startsWith('/api/') && req['userEntity']) {
-      console.log('Middleware: Processing subscription status for:', req.path);
       try {
         const business = await this.businessService.findDefaultForUser(req['userEntity'].id);
         if (business) {
@@ -28,12 +27,6 @@ export class SubscriptionStatusMiddleware implements NestMiddleware {
           if (billingInfo.isTrialActive) {
             res.setHeader('X-Trial-Days-Left', billingInfo.daysUntilTrialEnd.toString());
           }
-          
-          console.log('Middleware: Added subscription headers:', {
-            status: billingInfo.billingStatus,
-            tier: billingInfo.pricingTier,
-            storage: `${billingInfo.storageUsageGb}/${billingInfo.storageLimitGb}`
-          });
         }
       } catch (error) {
         // Don't fail the request if subscription status check fails

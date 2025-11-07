@@ -27,6 +27,11 @@ export class CreateReviewDto {
   @IsOptional()
   @IsString()
   reviewerName?: string;
+  
+  @ApiPropertyOptional({ description: 'Reviewer name (optional)' })
+  @IsOptional()
+  @IsString()
+  reviewerContactJson?: string;
 
   @ApiProperty({ description: 'Consent must be checked', example: true })
   @IsBoolean()

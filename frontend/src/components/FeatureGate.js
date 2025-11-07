@@ -20,7 +20,7 @@ const FeatureGate = ({
     return false;
   };
 
-  const hasAccess = subscription.canAccessFeature(feature) && !checkWidgetLimit();
+  const hasAccess = subscription.canAccessFeature && subscription.canAccessFeature(feature) && !checkWidgetLimit();
 
   if (hasAccess) {
     return children;

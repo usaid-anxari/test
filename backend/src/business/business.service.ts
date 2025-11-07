@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, Repository, MoreThan } from 'typeorm';
 import { Business } from './entities/business.entity';
 import { BusinessUser } from './entities/business-user.entity';
 import { User } from '../users/entities/user.entity';
@@ -188,7 +188,7 @@ export class BusinessService {
 
     // Return S3 keys only (frontend will handle URL generation)
     const reviewsWithMedia = reviews.map((review) => {
-      const media = (review.mediaAssets || []).map((asset) => ({
+      const mediaAssets = (review.mediaAssets || []).map((asset) => ({
         id: asset.id,
         type: asset.assetType,
         s3Key: asset.s3Key,
@@ -203,7 +203,7 @@ export class BusinessService {
         rating: review.rating,
         reviewerName: review.reviewerName,
         publishedAt: review.publishedAt,
-        media,
+        mediaAssets,
       };
     });
 
@@ -221,7 +221,7 @@ export class BusinessService {
       rating: review.rating,
       reviewerName: review.reviewerName,
       publishedAt: review.reviewedAt,
-      media: [],
+      mediaAssets: [],
     }));
 
     const allReviews = [...reviewsWithMedia, ...googleReviewsFormatted];
@@ -356,15 +356,8 @@ export class BusinessService {
     }
   }
 
-  // OPTIMIZED: Single query for dashboard instead of separate queries
+  // NO CACHE: Single query for dashboard - immediate updates
   async findDefaultForUserWithReviews(userId: string): Promise<{ business: Business; reviews: any[] } | null> {
-    const cacheKey = `dashboard:${userId}`;
-    const cached = this.getFromCache<{ business: Business; reviews: any[] }>(cacheKey);
-
-    if (cached) {
-      return cached;
-    }
-
     const businessUser = await this.businessUserRepo.findOne({
       where: { userId, isDefault: true },
       relations: ['business'],
@@ -386,7 +379,7 @@ export class BusinessService {
       .leftJoinAndSelect('r.mediaAssets', 'm')
       .where('r.businessId = :businessId', { businessId: business.id })
       .orderBy('r.submittedAt', 'DESC')
-      .limit(100) // Reasonable limit for dashboard
+      .limit(100)
       .getMany();
 
     const formattedReviews = reviews.map((review) => ({
@@ -408,11 +401,7 @@ export class BusinessService {
       })),
     }));
 
-    const result = { business, reviews: formattedReviews };
-   
-    // Cache for 2 minutes (dashboard data changes frequently)
-    this.setInCache(cacheKey, result, 120000);
-    return result;
+    return { business, reviews: formattedReviews };
   }
 
   // Simple in-memory cache helpers
@@ -442,6 +431,61 @@ export class BusinessService {
     }
   }
 
+  // Clear user-specific cache
+  async clearUserCache(userId: string): Promise<void> {
+    const cacheKey = `dashboard:${userId}`;
+    this.cache.delete(cacheKey);
+  }
+
+  // Get fresh unread notification count (no cache)
+  async getFreshUnreadCount(businessId: string, lastViewedAt?: Date): Promise<number> {
+    const count = await this.reviewRepo.count({
+      where: {
+        businessId,
+        status: 'pending',
+        submittedAt: lastViewedAt ? MoreThan(lastViewedAt) : undefined
+      }
+    });
+    return count;
+  }
+
+  // Mark notifications as read
+  async markNotificationsAsRead(businessId: string): Promise<void> {
+    await this.businessRepo.update(businessId, { 
+      lastViewedAt: new Date() 
+    });
+    this.logger.log(`Notifications marked as read for business ${businessId}`);
+  }
+
+  // Get unread notifications (pending reviews only)
+  async getUnreadNotifications(businessId: string, lastViewedAt?: Date) {
+    const reviews = await this.reviewRepo
+      .createQueryBuilder('r')
+      .select([
+        'r.id', 'r.type', 'r.title', 'r.rating',
+        'r.reviewerName', 'r.submittedAt'
+      ])
+      .where('r.businessId = :businessId', { businessId })
+      .andWhere('r.status = :status', { status: 'pending' })
+      .andWhere(lastViewedAt ? 'r.submittedAt > :lastViewedAt' : '1=1', { lastViewedAt })
+      .orderBy('r.submittedAt', 'DESC')
+      .getMany();
+
+    const count = reviews.length;
+
+    return {
+      count,
+      reviews: reviews.map(r => ({
+        id: r.id,
+        type: r.type,
+        title: r.title,
+        rating: r.rating,
+        reviewerName: r.reviewerName,
+        submittedAt: r.submittedAt
+      }))
+    };
+  }
+
   // Right-to-delete functionality (Milestone 9)
   async deleteReviewPermanently(businessId: string, reviewId: string, ip?: string) {
     const review = await this.reviewRepo.findOne({
@@ -463,6 +507,9 @@ export class BusinessService {
       }
     }
 
+    // Delete media assets from database first (foreign key constraint)
+    await this.mediaRepo.delete({ reviewId });
+
     // Log consent deletion
     const consentLog = this.consentRepo.create({
       businessId,
@@ -475,8 +522,8 @@ export class BusinessService {
     });
     await this.consentRepo.save(consentLog);
 
-    // Delete review and related data
-    await this.reviewRepo.remove(review);
+    // Delete review
+    await this.reviewRepo.delete({ id: reviewId });
 
     this.logger.log(`✅ Permanently deleted review ${reviewId} for business ${businessId}`);
     return { message: 'Review permanently deleted' };

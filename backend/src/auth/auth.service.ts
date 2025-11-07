@@ -22,9 +22,7 @@ export class AuthService {
   }
 
   async getUserProfileFromToken(token: string): Promise<any> {
-    const url = `${this.auth0Domain.replace(/\/$/, '')}/userinfo`;
-   console.log(url);
-   
+    const url = `${this.auth0Domain.replace(/\/$/, '')}/userinfo`;   
     try {
       const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },

@@ -13,6 +13,8 @@ export const API_PATHS = {
     GET_PRIVATE_PROFILE: "/api/business/me",
     UPDATE_PRIVATE_PROFILE: "/api/business/me",
     GET_PUBLIC_PROFILE: (slug) => `/business/${slug}`,
+    MARK_AS_READ: "/api/business/mark-notifications-read",
+    GET_NOTIFICATIONS: "/api/business/notifications",
     CREATE_BUSINESS: "/api/business",
     TOGGLE_TEXT_REVIEWS: "/api/business/settings/text-reviews",
     TOGGLE_GOOGLE_REVIEWS: "/api/business/settings/google-reviews",
@@ -64,5 +66,8 @@ export const API_PATHS = {
   VALIDATION: {
     CHECK_SLUG_AVAILABILITY: (slug) => `/api/validation/slug/${slug}`,
     SUGGEST_SLUG: (name) => `/api/validation/suggest-slug?name=${encodeURIComponent(name)}`
+  },
+  FILES: {
+    DELETE_FILE: (type, filename) => `/api/files/${type}/${filename}`
   }
 };

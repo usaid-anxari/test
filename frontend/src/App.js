@@ -12,7 +12,7 @@ import FloatingReviewWidget from "./components/FloatingReviewWidget";
 import EmailVerification from "./components/EmailVerification";
 import ComprehensiveOnboarding from "./components/ComprehensiveOnboarding";
 import Auth0ProtectedRoute from "./components/Auth0ProtectedRoute";
-import PaymentGuard from "./components/PaymentGuard";
+import TrialGuard from "./components/TrialGuard";
 import NotFound from "./pages/NotFound";
 import Testimonial from "./pages/Testimonial";
 
@@ -140,13 +140,13 @@ function App() {
               path="/dashboard"
               element={
                 <Auth0ProtectedRoute>
-                  {/* <PaymentGuard> */}
+                  <TrialGuard>
                     <DashboardLayout />
-                  {/* </PaymentGuard> */}
+                  </TrialGuard>
                 </Auth0ProtectedRoute>
               }
             >
-              <Route index element={<Moderation />} />
+              <Route index element={<Analytics />} />
               <Route path="moderation" element={<Moderation />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="business/me" element={<BusinessDashboard />} />

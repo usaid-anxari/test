@@ -427,10 +427,10 @@ const RecordReview = () => {
           return;
         }
 
-        // Check file size (maximum 2MB limit)
+        // Check file size (maximum 5MB limit)
         const fileSizeMB = file.size / (1024 * 1024);
-        if (fileSizeMB > 2) {
-          toast.error("File too large. Maximum size is 2MB.");
+        if (fileSizeMB > 5) {
+          toast.error("File too large. Maximum size is 5MB.");
           return;
         }
         setMediaFile(file);
@@ -799,7 +799,7 @@ const RecordReview = () => {
                         {mediaType === "video"
                           ? "WEBM, MP4, MOV"
                           : "WEBM, MP3, WAV"}{" "}
-                        up to 60 seconds, max 2MB
+                        up to 60 seconds, max 5MB
                       </p>
                     </>
                   )}

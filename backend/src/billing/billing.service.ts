@@ -288,7 +288,7 @@ export class BillingService {
     const billingAccount = await this.getOrCreateBillingAccount(businessId);
 
     if (!billingAccount.stripeCustomerId) {
-      throw new Error('No Stripe customer found. Please subscribe to a plan first.');
+      throw new BadRequestException('No Stripe customer found. Please subscribe to a plan first.');
     }
 
     // Create Stripe customer portal session

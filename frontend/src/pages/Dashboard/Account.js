@@ -117,7 +117,7 @@ const Account = () => {
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Poppins, system-ui, sans-serif' }}>
       {/* Header */}
-      <div className="bg-[#04A4FF] text-white">
+      {/* <div className="bg-[#04A4FF] text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -130,9 +130,9 @@ const Account = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
-      <div className="max-w-7xl mx-auto px-6 -mt-6 relative z-10">
+      <div className="max-w-7xl mx-auto px-6 -mt-4 relative z-10">
         {/* Profile Information */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -288,55 +288,6 @@ const Account = () => {
           </div>
         </motion.div>
 
-        {/* Security & Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
-        >
-          <div className="bg-white p-6 border-b border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
-              <ShieldCheckIcon className="w-8 h-8 mr-3 text-[#04A4FF]" />
-              Security & Actions
-            </h2>
-            <p className="text-gray-600">
-              Manage your account security and session
-            </p>
-          </div>
-
-          <div className="p-6">
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                    <ArrowRightEndOnRectangleIcon className="w-6 h-6 text-red-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}>
-                      Sign Out
-                    </h3>
-                    <p className="text-gray-600">
-                      Securely sign out of your account. You'll need to log in
-                      again to access your dashboard.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    logout();
-                    navigate("/");
-                    toast.success("Successfully signed out!");
-                  }}
-                  className="inline-flex items-center px-8 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                  style={{ fontFamily: 'Founders Grotesk, system-ui, sans-serif' }}
-                >
-                  <ArrowRightEndOnRectangleIcon className="w-5 h-5 mr-2" />
-                  Sign Out
-                </button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </div>
   );

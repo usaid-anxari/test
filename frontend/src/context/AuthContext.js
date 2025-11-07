@@ -23,6 +23,7 @@ const AuthProvider = ({ children }) => {
   const { isAuthenticated, user: auth0User, getAccessTokenSilently, isLoading } = useAuth0();
   const [tenant, setTenant] = useState("");
   const [user, setUser] = useState("");
+  const [privateInfo, setPrivateInfo] = useState(0);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [subscription, setSubscription] = useState(
@@ -69,18 +70,6 @@ const AuthProvider = ({ children }) => {
       if (isLoading) return;
       
       if (isAuthenticated && auth0User) {
-        // ✅ STEP 1: Email Verification Check
-        // if (!auth0User.email_verified) {
-        //   if (user || tenant || widgets.length > 0) {
-        //     setUser(null);
-        //     setTenant("");
-        //     setWidgets([]);
-        //     setSelectedWidget(null);
-        //   }          
-        //   setLoading(false);
-        //   return;
-        // }
-
         try {
           // ✅ STEP 2: Get token only once and cache it
           const token = await getAccessTokenSilently({
@@ -132,6 +121,7 @@ const AuthProvider = ({ children }) => {
 
   const fetchBusinessInfo = async () => {
     try {
+      refreshNotifications()
       const response = await axiosInstance.get(
         API_PATHS.BUSINESSES?.GET_PRIVATE_PROFILE
       );
@@ -148,6 +138,24 @@ const AuthProvider = ({ children }) => {
       setTenant(businessInfo);
     }
     return businessInfo;
+  };
+
+  const refreshNotifications = async () => {
+    try {
+      const response = await axiosInstance.get(
+        API_PATHS.BUSINESSES?.GET_NOTIFICATIONS
+      );
+      setPrivateInfo(prev => ({
+        ...prev,
+        business: {
+          ...prev?.business,
+          unreadNotifications: response?.data?.count || 0,
+          reviewNotifications: response?.data?.reviews || []
+        }
+      }));
+    } catch (error) {
+      console.error("Failed to refresh notifications:", error);
+    }
   };
 
   // Set The User
@@ -261,7 +269,7 @@ const AuthProvider = ({ children }) => {
     setTenant,
     tenant,
     refreshBusinessInfo,
-    // Provide the new state and functions here
+    refreshNotifications,
     widgets,
     setWidgets,
     selectedWidget,
@@ -269,6 +277,7 @@ const AuthProvider = ({ children }) => {
     fetchWidgets,
     needsOnboarding,
     setNeedsOnboarding,
+    privateInfo
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,221 +1,424 @@
+import  { useState, useRef } from "react";
 import {
-  XMarkIcon,
-  VideoCameraIcon,
+  ArrowLeftIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  XCircleIcon,
   SpeakerWaveIcon,
-  DocumentTextIcon,
-  StarIcon,
-} from "@heroicons/react/16/solid";
+  PlayIcon,
+  PauseIcon,
+} from "@heroicons/react/20/solid";
 import { motion, AnimatePresence } from "framer-motion";
 
-const ReviewPreviewModal = ({ review, onClose }) => {
-  console.log("ReviewPreviewModal - Review data:", review); // Debug
+const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDelete, isReadOnly,allowBtn = false }) => {
+  const [audioDuration, setAudioDuration] = useState('0:00');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [waveformData, setWaveformData] = useState([]);
+  const videoRef = useRef(null);
+  const audioRef = useRef(null);
 
   const getMediaUrl = (mediaAsset) => {
     if (!mediaAsset?.s3Key) return null;
-    const baseUrl =
-      process.env.REACT_APP_S3_BASE_URL ||
-      "https://truetestify.s3.amazonaws.com";
-    return `${baseUrl}/${mediaAsset.s3Key}`;
+    return `${process.env.REACT_APP_S3_BASE_URL}/${mediaAsset.s3Key}`;
   };
 
-  // Try different possible structures for media assets
-  const videoAsset =
-    review.mediaAssets?.find(
-      (asset) => asset.assetType === "video" || asset.type === "video"
-    ) || (review.type === "video" ? review.media?.[0] : null);
+  const videoAsset = review.mediaAssets?.find(asset => asset.assetType === "video" || asset.type === "video") || (review.type === "video" ? review.mediaAssets?.[0] : null);
+  const audioAsset = review.mediaAssets?.find(asset => asset.assetType === "audio" || asset.type === "audio") || (review.type === "audio" ? review.mediaAssets?.[0] : null);
 
-  const audioAsset =
-    review.mediaAssets?.find(
-      (asset) => asset.assetType === "audio" || asset.type === "audio"
-    ) || (review.type === "audio" ? review.media?.[0] : null);
+  const togglePlay = () => {
+    const media = review.type === 'video' ? videoRef.current : audioRef.current;
+    if (media) {
+      if (isPlaying) {
+        media.pause();
+      } else {
+        media.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
 
-  console.log("Video asset:", videoAsset);
-  console.log("Audio asset:", audioAsset);
+  const handleTimeUpdate = () => {
+    const media = review.type === 'video' ? videoRef.current : audioRef.current;
+    if (media) {
+      setCurrentTime(media.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    const media = review.type === 'video' ? videoRef.current : audioRef.current;
+    if (media) {
+      setDuration(media.duration);
+      const minutes = Math.floor(media.duration / 60);
+      const seconds = Math.floor(media.duration % 60);
+      setAudioDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+      
+      if (review.type === 'audio') {
+        generateWaveform(media);
+      }
+    }
+  };
+
+  const generateWaveform = async (audioElement) => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const response = await fetch(audioElement.src);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      const rawData = audioBuffer.getChannelData(0);
+      const samples = 60;
+      const blockSize = Math.floor(rawData.length / samples);
+      const filteredData = [];
+      
+      for (let i = 0; i < samples; i++) {
+        let blockStart = blockSize * i;
+        let sum = 0;
+        for (let j = 0; j < blockSize; j++) {
+          sum += Math.abs(rawData[blockStart + j]);
+        }
+        filteredData.push(sum / blockSize);
+      }
+      
+      const multiplier = Math.pow(Math.max(...filteredData), -1);
+      const normalizedData = filteredData.map(n => n * multiplier);
+      setWaveformData(normalizedData);
+    } catch (error) {
+      console.error('Error generating waveform:', error);
+      setWaveformData(Array(60).fill(0.3));
+    }
+  };
+
+  const handleSeek = (e) => {
+    const media = review.type === 'video' ? videoRef.current : audioRef.current;
+    if (media) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = (e.clientX - rect.left) / rect.width;
+      media.currentTime = pos * media.duration;
+    }
+  };
+
+  const formatTime = (time) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const getStatusBadge = () => {
+    switch (review.status?.toLowerCase()) {
+      case 'approved': 
+        return <div className="bg-green-500 rounded-full p-3 shadow-lg"><CheckCircleIcon className="w-8 h-8 text-white" /></div>;
+      case 'pending': 
+        return <div className="bg-orange-500 rounded-full p-3 shadow-lg"><ClockIcon className="w-8 h-8 text-white" /></div>;
+      case 'rejected': 
+        return <div className="bg-red-500 rounded-full p-3 shadow-lg"><XCircleIcon className="w-8 h-8 text-white" /></div>;
+      case 'hidden':
+        return <div className="bg-gray-500 rounded-full p-3 shadow-lg"><XCircleIcon className="w-8 h-8 text-white" /></div>;
+      default: 
+        return <div className="bg-gray-400 rounded-full p-3 shadow-lg"><ClockIcon className="w-8 h-8 text-white" /></div>;
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-8 right-8 rounded-full text-gray-600 bg-white hover:bg-gray-100 transition-colors p-2 cursor-pointer z-50 shadow-lg border border-gray-200"
-        >
-          <XMarkIcon className="h-5 w-5" />
-        </button>
-        {/* Blurred Background */}
-        <div
-          onClick={onClose}
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-        {/* Modal */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 30 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="relative bg-white border border-gray-200 shadow-2xl w-full max-w-4xl max-h-[90vh] rounded-2xl overflow-hidden flex flex-col"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.2 }}
+          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
         >
-          {/* Content */}
-          <div className="p-6 space-y-6 overflow-y-auto max-h-[85vh]">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <h3 className="text-2xl font-bold text-gray-800 flex items-center">
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${
-                    review.type === "video"
-                      ? "bg-orange-100 text-orange-600"
-                      : review.type === "audio"
-                      ? "bg-purple-100 text-purple-600"
-                      : "bg-green-100 text-green-600"
-                  }`}
-                >
-                  {review.type === "video" && (
-                    <VideoCameraIcon className="w-5 h-5" />
-                  )}
-                  {review.type === "audio" && (
-                    <SpeakerWaveIcon className="w-5 h-5" />
-                  )}
-                  {review.type === "text" && (
-                    <DocumentTextIcon className="w-5 h-5" />
-                  )}
-                </div>
-                {review.title}
-              </h3>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  review.status?.toLowerCase() === "pending"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : review.status?.toLowerCase() === "approved"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                }`}
-              >
-                {review.status}
-              </span>
-            </div>
-
-            {/* Reviewer Info */}
-            <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-orange-50 p-4 rounded-xl border border-gray-100">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-orange-500 text-white flex items-center justify-center font-bold text-lg shadow">
-                {review.reviewerName?.[0]?.toUpperCase() || "?"}
+          {/* Video Review Modal */}
+          {review.type === 'video' && (
+            <>
+              {videoAsset && (
+                <video 
+                  ref={videoRef}
+                  className="w-full h-[500px] object-cover"
+                  src={getMediaUrl(videoAsset)}
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedMetadata={handleLoadedMetadata}
+                  onClick={togglePlay}
+                />
+              )}
+              
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {!isPlaying && (
+                  <button onClick={togglePlay} className="pointer-events-auto w-20 h-20 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-all shadow-xl">
+                    <PlayIcon className="w-10 h-10 text-gray-900 ml-1" />
+                  </button>
+                )}
               </div>
-              <div className="flex-1">
-                <p className="text-lg font-semibold text-gray-900">
-                  {review.reviewerName || "Anonymous"}
-                </p>
-                <p className="text-sm text-gray-500">
-                  Submitted on{" "}
-                  {new Date(review.submittedAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="flex items-center space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <StarIcon
-                    key={i}
-                    className={`w-5 h-5 ${
-                      i < review.rating ? "text-yellow-400" : "text-gray-300"
-                    }`}
-                  />
-                ))}
-                <span className="ml-2 font-semibold text-gray-700">
-                  {review.rating}/5
+              
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
+              
+              <div className="absolute top-6 left-6 z-10 flex items-center gap-3 pointer-events-auto">
+                <button onClick={onClose} className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-all">
+                  <ArrowLeftIcon className="w-6 h-6 text-gray-900" />
+                </button>
+                <span className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-semibold text-gray-900 shadow-md border border-gray-200 max-w-48 truncate">
+                  {review.title}
                 </span>
               </div>
-            </div>
-
-            {/* Media Section */}
-            {review.type === "video" && (
-              <div className="rounded-xl overflow-hidden shadow-lg border border-gray-200">
-                {videoAsset ? (
-                  <video
-                    src={getMediaUrl(videoAsset)}
-                    controls
-                    className="w-full max-h-[400px] object-contain bg-black"
-                    onError={(e) => console.log("Video load error:", e)}
-                  >
-                    Your browser does not support the video tag.
-                  </video>
-                ) : (
-                  <div className="bg-gray-100 p-8 text-center">
-                    <VideoCameraIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-600">Video content not available</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Media assets: {JSON.stringify(review.mediaAssets)}
-                    </p>
-                  </div>
-                )}
+              
+              <div className="absolute top-6 right-6 z-10">
+                {getStatusBadge()}
               </div>
-            )}
-
-            {review.type === "audio" && (
-              <div className="rounded-xl border border-gray-200 p-6 bg-gradient-to-r from-purple-50 to-purple-100">
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                    <SpeakerWaveIcon className="w-6 h-6 text-white" />
+              
+              <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4 pointer-events-auto">
+                <div className="w-full bg-white/20 backdrop-blur-sm rounded-full h-1.5 cursor-pointer" onClick={handleSeek}>
+                  <div className="bg-white rounded-full h-1.5 transition-all" style={{ width: `${(currentTime / duration) * 100}%` }} />
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
+                    <span className="text-xl font-bold text-white">{review.reviewerName?.charAt(0)}</span>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800">
-                      Audio Review
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Click play to listen
-                    </p>
+                  <div className="flex-1">
+                    <div className="text-white font-bold text-lg">{review.reviewerName}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className={`text-sm ${i < review.rating ? 'text-yellow-400' : 'text-white/30'}`}>★</span>
+                        ))}
+                      </div>
+                      <span className="text-white/80 text-sm">•</span>
+                      <span className="text-white/80 text-sm">{new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
                   </div>
                 </div>
-                {audioAsset ? (
-                  <audio
-                    src={getMediaUrl(audioAsset)}
-                    controls
-                    className="w-full"
-                    onError={(e) => console.log("Audio load error:", e)}
-                  >
-                    Your browser does not support the audio tag.
-                  </audio>
-                ) : (
-                  <div className="bg-white p-4 rounded-lg text-center">
-                    <p className="text-gray-600">Audio content not available</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Media assets: {JSON.stringify(review.mediaAssets)}
-                    </p>
+                
+                {allowBtn && !isReadOnly && (
+                  <div className="flex gap-3">
+                    {review.status === 'pending' && (
+                      <>
+                        <button onClick={onApprove} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white transition-all">✓ Approve</button>
+                        <button onClick={onReject} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-600 transition-all">✕ Reject</button>
+                      </>
+                    )}
+                    {review.status === 'approved' && (
+                      <>
+                        <button onClick={() => onApprove()} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-600 transition-all">Hide</button>
+                        <button onClick={onDelete} className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
+                      </>
+                    )}
+                    {review.status === 'hidden' && (
+                      <>
+                        <button onClick={onApprove} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white transition-all">Unhide</button>
+                        <button onClick={onDelete} className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            </>
+          )}
 
-            {/* Text Content - Always show for text reviews or when bodyText exists */}
-            {(review.type === "text" || review.content) && (
-              <div className="p-6 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl">
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <DocumentTextIcon className="w-5 h-5 mr-2 text-gray-600" />
-                  Review Content
-                </h4>
-                {review.content ? (
-                  <p className="text-gray-800 leading-relaxed text-lg">
-                    "{review.content}"
-                  </p>
-                ) : (
-                  <p className="text-gray-500 italic">
-                    No text content available for this review.
-                  </p>
+          {/* Audio Review Modal */}
+          {review.type === 'audio' && (
+            <>
+              <div className="relative bg-gradient-to-br from-purple-500 to-purple-700 h-[500px] flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                  <div className="flex items-end gap-1">
+                    {[3, 5, 4, 6, 3, 7, 4, 5, 3, 6, 4, 5, 3, 4, 5, 6, 4, 3, 5, 4, 6, 5, 3, 4].map((height, i) => (
+                      <div key={i} className="w-2 bg-white rounded-full" style={{ height: `${height * 12}px` }} />
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="relative z-10 flex flex-col items-center">
+                  <button onClick={togglePlay} className="w-32 h-32 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-4 border-white/30 mb-6 hover:bg-white/30 transition-all">
+                    {isPlaying ? <PauseIcon className="w-16 h-16 text-white" /> : <PlayIcon className="w-16 h-16 text-white ml-2" />}
+                  </button>
+                  
+                  <div className="flex items-center gap-1 mb-4">
+                    {waveformData.length > 0 ? (
+                      waveformData.map((amplitude, i) => {
+                        const height = Math.max(amplitude * 80, 4);
+                        const isActive = (i / waveformData.length) <= (currentTime / duration);
+                        return (
+                          <div 
+                            key={i} 
+                            className={`w-1.5 rounded-full transition-all ${isActive ? 'bg-white' : 'bg-white/40'}`} 
+                            style={{ height: `${height}px` }} 
+                          />
+                        );
+                      })
+                    ) : (
+                      [3, 5, 4, 6, 3, 7, 4, 5, 3, 6, 4, 5, 3, 4, 5, 6, 4, 3, 5, 4].map((height, i) => (
+                        <div key={i} className="w-1.5 bg-white/60 rounded-full" style={{ height: `${height * 4}px` }} />
+                      ))
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-3 text-white mb-4">
+                    <span className="text-lg font-medium">{formatTime(currentTime)} / {audioDuration}</span>
+                    <SpeakerWaveIcon className="w-8 h-8" />
+                  </div>
+                  
+                  <div className="w-80 bg-white/20 backdrop-blur-sm rounded-full h-1.5 cursor-pointer" onClick={handleSeek}>
+                    <div className="bg-white rounded-full h-1.5 transition-all" style={{ width: `${(currentTime / duration) * 100}%` }} />
+                  </div>
+                  
+                  {audioAsset && (
+                    <audio 
+                      ref={audioRef}
+                      src={getMediaUrl(audioAsset)} 
+                      onTimeUpdate={handleTimeUpdate}
+                      onLoadedMetadata={handleLoadedMetadata}
+                      className="hidden"
+                    />
+                  )}
+                </div>
+              </div>
+              
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
+              
+              <div className="absolute top-6 left-6 z-10 flex items-center gap-3">
+                <button onClick={onClose} className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white transition-all">
+                  <ArrowLeftIcon className="w-6 h-6 text-gray-900" />
+                </button>
+                <span className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-semibold text-gray-900 shadow-md border border-gray-200 max-w-48 truncate">
+                  {review.title}
+                </span>
+              </div>
+              
+              <div className="absolute top-6 right-6 z-10">
+                {getStatusBadge()}
+              </div>
+              
+              <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
+                    <span className="text-xl font-bold text-white">{review.reviewerName?.charAt(0)}</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-white font-bold text-lg">{review.reviewerName}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i} className={`text-sm ${i < review.rating ? 'text-yellow-400' : 'text-white/30'}`}>★</span>
+                        ))}
+                      </div>
+                      <span className="text-white/80 text-sm">•</span>
+                      <span className="text-white/80 text-sm">{new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {allowBtn && !isReadOnly && (
+                  <div className="flex gap-3">
+                    {review.status === 'pending' && (
+                      <>
+                        <button onClick={onApprove} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white transition-all">✓ Approve</button>
+                        <button onClick={onReject} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-600 transition-all">✕ Reject</button>
+                      </>
+                    )}
+                    {review.status === 'approved' && (
+                      <>
+                        <button onClick={() => onApprove()} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-600 transition-all">Hide</button>
+                        <button onClick={onDelete} className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
+                      </>
+                    )}
+                    {review.status === 'hidden' && (
+                      <>
+                        <button onClick={onApprove} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white transition-all">Unhide</button>
+                        <button onClick={onDelete} className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+            </>
+          )}
 
-            {/* Additional Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-              <div className="bg-blue-50 p-4 rounded-xl">
-                <h5 className="font-semibold text-blue-800 mb-2">
-                  Review Type
-                </h5>
-                <p className="text-blue-600 capitalize">{review.type} Review</p>
+          {/* Text Review Modal */}
+          {review.type === 'text' && (
+            <div className="max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <style>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                  width: 8px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                  background: #f1f1f1;
+                  border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                  background: #888;
+                  border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                  background: #555;
+                }
+              `}</style>
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
+                <div className="flex items-center gap-3">
+                  <button onClick={onClose} className="bg-gray-100 rounded-full p-2 hover:bg-gray-200 transition-all">
+                    <ArrowLeftIcon className="w-6 h-6 text-gray-900" />
+                  </button>
+                  <span className="bg-gray-100 px-4 py-2 rounded-full text-sm font-semibold text-gray-900 max-w-48 truncate">
+                    {review.title}
+                  </span>
+                </div>
+                <div>
+                  {getStatusBadge()}
+                </div>
               </div>
-              <div className="bg-green-50 p-4 rounded-xl">
-                <h5 className="font-semibold text-green-800 mb-2">Status</h5>
-                <p className="text-green-600 capitalize">{review.status}</p>
+              
+              <div className="p-8 space-y-6">
+                <div className="text-center space-y-2">
+                  <div className="text-sm text-gray-500">{new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                  <div className="flex justify-center">
+                    {[...Array(5)].map((_, i) => (
+                      <span key={i} className={`text-2xl ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}>★</span>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4 justify-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-xl font-bold text-blue-600">{review.reviewerName?.charAt(0)}</span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900">{review.reviewerName}</div>
+                </div>
+                
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <p className="text-gray-800 text-base leading-relaxed">{review.bodyText || review.title}</p>
+                </div>
+                
+                {allowBtn && !isReadOnly && (
+                  <div className="flex gap-3 pt-4">
+                    {review.status === 'pending' && (
+                      <>
+                        <button onClick={onApprove} className="flex-1 bg-white text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold border border-gray-200 hover:bg-gray-50 transition-all">✓ Approve</button>
+                        <button onClick={onReject} className="flex-1 bg-red-600 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-700 transition-all">✕ Reject</button>
+                      </>
+                    )}
+                    {review.status === 'approved' && (
+                      <>
+                        <button onClick={() => onApprove()} className="flex-1 bg-red-600 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-700 transition-all">Hide</button>
+                        <button onClick={onDelete} className="flex-1 bg-white border border-gray-200 text-gray-700 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all">Delete</button>
+                      </>
+                    )}
+                    {review.status === 'hidden' && (
+                      <>
+                        <button onClick={onApprove} className="flex-1 bg-white text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold border border-gray-200 hover:bg-gray-50 transition-all">Unhide</button>
+                        <button onClick={onDelete} className="flex-1 bg-white border border-gray-200 text-gray-700 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all">Delete</button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
+
         </motion.div>
       </div>
     </AnimatePresence>

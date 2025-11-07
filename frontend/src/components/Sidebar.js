@@ -9,222 +9,193 @@ import {
   UserIcon,
   XMarkIcon,
   StarIcon,
-  ShieldCheckIcon,
+  Squares2X2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
-} from "@heroicons/react/16/solid";
-import { Link } from "react-router-dom";
-import NavLink from "./NavLink";  
+} from "@heroicons/react/24/outline";
+import { Link, useLocation } from "react-router-dom";
 import { useContext, useState } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { UserCircleIcon } from "@heroicons/react/20/solid";
 import { useAuth0 } from "@auth0/auth0-react";
 import { assest } from "../assets/mockData";
+import LogoutModal from "./LogoutModal";
 
-const Sidebar = ({ setIsSidebarOpen }) => {
-  const { logout,user } = useContext(AuthContext);
-  const {logout: auth0Logout,isAuthenticated} = useAuth0();
+const Sidebar = ({ setIsSidebarOpen, isLogoutModalOpen, setIsLogoutModalOpen }) => {
+  const { logout, user } = useContext(AuthContext);
+  const { logout: auth0Logout, isAuthenticated } = useAuth0();
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = () => {
     logout();
     auth0Logout({ returnTo: window.location.origin });
   };
+
+  const NavItem = ({ to, icon, label, onClick }) => {
+    const isActive = location.pathname === to;
+    
+    return (
+      <Link
+        to={to}
+        onClick={onClick}
+        className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+          isActive 
+            ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' 
+            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+        }`}
+        title={isCollapsed ? label : ''}
+      >
+        <span className={`${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+          {icon}
+        </span>
+        {!isCollapsed && <span>{label}</span>}
+      </Link>
+    );
+  };
+
   return (
-    <div className={`${isCollapsed ? 'w-16' : 'w-64'} sidebar-professional text-gray-800 p-6 flex flex-col h-full transition-all duration-300`}>
+    <>
+    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-gray-200 flex flex-col h-full transition-all duration-300`}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-10">
-        <Link
-          to="/dashboard"
-          className="flex items-center gap-3 group"
-          onClick={() => setIsSidebarOpen(false)}
-        >
-          <img 
-            src={assest.Logo} 
-            alt="TrueTestify" 
-            className={`${isCollapsed ? 'h-8 w-8' : 'h-12 w-auto'} group-hover:scale-105 transition-all duration-300`}
-          />
-        </Link>
+      <div className={`flex items-center ${isCollapsed ? 'justify-center p-4' : 'justify-between p-6'} border-b border-gray-200`}>
+        {!isCollapsed && (
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-3"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <img 
+              src={assest.Logo} 
+              alt="TrueTestify" 
+              className="h-8 w-auto"
+            />
+          </Link>
+        )}
         <div className="flex items-center gap-2">
           <button
-            className="hidden md:block p-2 rounded-xl hover:bg-gray-100 transition-colors"
+            className="hidden md:block p-1 rounded-lg hover:bg-gray-100 transition-colors"
             onClick={() => setIsCollapsed(!isCollapsed)}
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? (
-              <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+              <ChevronRightIcon className="h-5 w-5 text-gray-500" />
             ) : (
-              <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+              <ChevronLeftIcon className="h-5 w-5 text-gray-500" />
             )}
           </button>
           <button
-            className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors"
+            className="md:hidden p-1 rounded-lg hover:bg-gray-100"
             onClick={() => setIsSidebarOpen(false)}
           >
-            <XMarkIcon className="h-5 w-5 text-gray-600" />
+            <XMarkIcon className="h-5 w-5 text-gray-500" />
           </button>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-grow">
-        {/* Main Navigation */}
-        <div className="mb-8">
-          {!isCollapsed && <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3">Main Menu</h3>}
-          <ul className="space-y-2">
-            <li>
-              <NavLink
-                to="/dashboard/business/me"
-                icon={<UserCircleIcon className="h-5 w-5" />}
-                label="Business Profile"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-            <li>
-              <NavLink
-                to="/dashboard/moderation"
-                icon={<PhotoIcon className="h-5 w-5" />}
-                label="Review Moderation"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-            <li>
-              <NavLink
-                to="/dashboard/widgets"
-                icon={<PuzzlePieceIcon className="h-5 w-5" />}
-                label="Widget Manager"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-            <li>
-              <NavLink
-                to="/dashboard/analytics"
-                icon={<ChartBarIcon className="h-5 w-5" />}
-                label="Analytics & Reports"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-          </ul>
+      <nav className={`flex-1 ${isCollapsed ? 'px-2' : 'px-4'} py-6 overflow-y-auto custom-scrollbar`}>
+        <div className="space-y-1">
+          <NavItem
+            to="/dashboard"
+            icon={<Squares2X2Icon className="h-5 w-5" />}
+            label="Dashboard"
+            onClick={() => setIsSidebarOpen(false)}
+          />
         </div>
-        
-        {/* Business Management */}
-        <div className="mb-8">
-          {!isCollapsed && <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3">Business</h3>}
-          <ul className="space-y-2">
-            <li>
-              <NavLink
-                to="/dashboard/billing"
-                icon={<CreditCardIcon className="h-5 w-5" />}
-                label="Billing & Plans"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-            <li>
-              <NavLink
-                to="/dashboard/settings"
-                icon={<CogIcon className="h-5 w-5" />}
-                label="Settings"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-            <li>
-              <NavLink
-                to="/dashboard/google-reviews"
-                icon={<StarIcon className="h-5 w-5" />}
-                label="Google Reviews"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-            <li>
-              <NavLink
-                to="/dashboard/compliance"
-                icon={<ShieldCheckIcon className="h-5 w-5" />}
-                label="Privacy & Compliance"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-          </ul>
+
+        <div className="mt-8">
+          {!isCollapsed && (
+            <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              MAIN MENU
+            </h3>
+          )}
+          {isCollapsed && <div className="h-4 border-t border-gray-200 mx-2 mb-3"></div>}
+          <div className="space-y-1">
+            <NavItem
+              to="/dashboard/business/me"
+              icon={<UserCircleIcon className="h-5 w-5" />}
+              label="Business Profile"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            <NavItem
+              to="/dashboard/moderation"
+              icon={<PhotoIcon className="h-5 w-5" />}
+              label="Review Moderation"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            <NavItem
+              to="/dashboard/analytics"
+              icon={<ChartBarIcon className="h-5 w-5" />}
+              label="Analytics & Reports"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          </div>
         </div>
-        
-        {/* Account Management */}
-        <div className="mb-8">
-          {!isCollapsed && <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-3">Account</h3>}
-          <ul className="space-y-2">
-            <li>
-              <NavLink
-                to="/dashboard/account"
-                icon={<UserIcon className="h-5 w-5" />}
-                label="My Account"
-                onClick={() => setIsSidebarOpen(false)}
-                isCollapsed={isCollapsed}
-              />
-            </li>
-            {isAuthenticated ? (
-              <li>
-                <button
-                  onClick={() => { handleLogout(); setIsSidebarOpen(false); }}
-                  className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-all duration-200 group`}
-                  title={isCollapsed ? 'Sign Out' : undefined}
-                >
-                  <ArrowRightEndOnRectangleIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                  {!isCollapsed && <span>Sign Out</span>}
-                </button>
-              </li>
-            ) : (
-              <li>
-                <NavLink
-                  to="/"
-                  icon={<UserIcon className="h-5 w-5" />}
-                  label="Sign In"
-                  isCollapsed={isCollapsed}
-                />
-              </li>
-            )}
-          </ul>
+
+        <div className="mt-8">
+          {!isCollapsed && (
+            <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              BUSINESS
+            </h3>
+          )}
+          {isCollapsed && <div className="h-4 border-t border-gray-200 mx-2 mb-3"></div>}
+          <div className="space-y-1">
+            <NavItem
+              to="/dashboard/billing"
+              icon={<CreditCardIcon className="h-5 w-5" />}
+              label="Billing & Plans"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            <NavItem
+              to="/dashboard/google-reviews"
+              icon={<StarIcon className="h-5 w-5" />}
+              label="Google Reviews"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          </div>
+        </div>
+
+        <div className="mt-8">
+          {!isCollapsed && (
+            <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              SETTINGS
+            </h3>
+          )}
+          {isCollapsed && <div className="h-4 border-t border-gray-200 mx-2 mb-3"></div>}
+          <div className="space-y-1">
+            <NavItem
+              to="/dashboard/widgets"
+              icon={<PuzzlePieceIcon className="h-5 w-5" />}
+              label="Widget Manager"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            <NavItem
+              to="/dashboard/settings"
+              icon={<CogIcon className="h-5 w-5" />}
+              label="Settings"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          </div>
         </div>
       </nav>
+
       {/* Footer */}
-      <div className="mt-auto pt-6 border-t border-gray-200">
-        <Link
-          to="/"
-          className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-xl transition-all duration-200 group`}
-          title={isCollapsed ? 'Back to Website' : undefined}
-        >
-          <HomeIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
-          {!isCollapsed && <span>Back to Website</span>}
-        </Link>
-        
-        {/* User Info */}
-        {user && (
-          <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-bold">
-                  {user.name?.[0]?.toUpperCase() || 'U'}
-                </span>
-              </div>
-              {!isCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">
-                    {user.name || 'User'}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {user.email}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+      <div className={`${isCollapsed ? 'p-2' : 'p-4'} border-t border-gray-200`}>
+        {isAuthenticated && (
+          <button
+            onClick={() => setIsLogoutModalOpen(true)}
+            className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'gap-3 px-4'} py-3 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200`}
+            title={isCollapsed ? 'Log out' : ''}
+          >
+            <ArrowRightEndOnRectangleIcon className="h-5 w-5" />
+            {!isCollapsed && <span>Log out</span>}
+          </button>
         )}
       </div>
+
     </div>
+    </>
   );
 };
 

@@ -10,6 +10,7 @@ import {
   NotFoundException,
   BadRequestException,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   Logger,
   Delete,
@@ -28,7 +29,7 @@ import { RequireEnterprisePlan, RequireFeature, RequireProfessionalPlan } from '
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { UsersService } from 'src/users/users.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { S3Service } from '../common/s3/s3.service';
 import { Readable } from 'stream';
@@ -119,7 +120,7 @@ export class BusinessController {
   @ApiResponse({ status: 400, description: 'Bad request - validation failed or slug already exists' })
   @ApiResponse({ status: 401, description: 'Unauthorized - invalid JWT token' })
   @ApiBody({
-    description: 'Business creation data with optional logo file',
+    description: 'Business creation data with optional logo and banner files',
     schema: {
       type: 'object',
       properties: {
@@ -127,6 +128,11 @@ export class BusinessController {
           type: 'string',
           format: 'binary',
           description: 'Logo image file (max 5MB)'
+        },
+        bannerFile: {
+          type: 'string',
+          format: 'binary',
+          description: 'Banner image file (max 10MB)'
         },
         slug: { type: 'string', example: 'my-business', description: 'Unique URL slug' },
         name: { type: 'string', example: 'My Business', description: 'Business name' },
@@ -159,15 +165,17 @@ export class BusinessController {
     }
   })
   @UseInterceptors(
-    FileInterceptor('logoFile', {
-      storage: memoryStorage(), // Use memory storage instead of multer-s3
+    AnyFilesInterceptor({
+      storage: memoryStorage(),
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB max for logo
+        fileSize: 10 * 1024 * 1024, // 10MB max per file
+        files: 2, // Max 2 files (logo + banner)
       },
       fileFilter: (req, file, cb) => {
-        // Only allow image files
         if (!file.mimetype.startsWith('image/')) {
           cb(new BadRequestException('Only image files are allowed'), false);
+        } else if (!['logoFile', 'bannerFile'].includes(file.fieldname)) {
+          cb(new BadRequestException('Only logoFile and bannerFile are allowed'), false);
         } else {
           cb(null, true);
         }
@@ -176,7 +184,7 @@ export class BusinessController {
   )
   async createBusiness(
     @Req() req,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
     @Body() body: CreateBusinessDto,
   ) {
     try {
@@ -207,30 +215,43 @@ export class BusinessController {
         throw new BadRequestException('Contact email must match your account email.');
       }
 
-      // Handle logo upload (file OR URL)
+      // Handle logo and banner uploads
       let logoUrl = body.logoUrl;
+      let bannerUrl = body.bannerUrl;
       
-      if (file) {
-        // Upload logo to S3 using the S3Service
-        const timestamp = Date.now();
-        const safeFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const s3Key = `businesses/logos/${timestamp}-${safeFilename}`;
-        
-        // Convert buffer to stream
-        const stream = Readable.from(file.buffer);
-        
-        // Upload to S3
-        const uploadResult = await this.s3Service.uploadStream(
-          s3Key,
-          stream,
-          file.size,
-          file.mimetype
-        );
-        
-        // Get signed URL for the logo
-        logoUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7); // 7 days expiry
-        
-        this.logger.log(`Logo uploaded to S3: ${s3Key}`);
+      if (files && files.length > 0) {
+        for (const file of files) {
+          const timestamp = Date.now();
+          const safeFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+          
+          if (file.fieldname === 'logoFile') {
+            const s3Key = `businesses/logos/${timestamp}-${safeFilename}`;
+            const stream = Readable.from(file.buffer);
+            
+            await this.s3Service.uploadStream(
+              s3Key,
+              stream,
+              file.size,
+              file.mimetype
+            );
+            
+            logoUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+            this.logger.log(`Logo uploaded to S3: ${s3Key}`);
+          } else if (file.fieldname === 'bannerFile') {
+            const s3Key = `businesses/banners/${timestamp}-${safeFilename}`;
+            const stream = Readable.from(file.buffer);
+            
+            await this.s3Service.uploadStream(
+              s3Key,
+              stream,
+              file.size,
+              file.mimetype
+            );
+            
+            bannerUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+            this.logger.log(`Banner uploaded to S3: ${s3Key}`);
+          }
+        }
       }
 
       // Create business with comprehensive info
@@ -250,7 +271,7 @@ export class BusinessController {
         companySize: body.companySize,
         foundedYear: body.foundedYear,
         logoUrl,
-        bannerUrl: body.bannerUrl,
+        bannerUrl,
         brandColor: body.brandColor || '#ef7c00',
         businessHours: body.businessHours,
         socialLinks: body.socialLinks,
@@ -282,6 +303,48 @@ export class BusinessController {
       
       throw new BadRequestException('Failed to create business: ' + err.message);
     }
+  }
+
+  // Mark notifications as read
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('api/business/mark-notifications-read')
+  @ApiResponse({ status: 200, description: 'Notifications marked as read' })
+  async markNotificationsRead(@Req() req) {
+    const userId = req.userEntity.id;
+    const business = await this.bizService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    await this.bizService.markNotificationsAsRead(business.id);
+    
+    return { 
+      message: 'Notifications marked as read',
+      success: true 
+    };
+  }
+
+  // Get notifications only (lightweight endpoint)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('api/business/notifications')
+  @ApiResponse({ status: 200, description: 'Get unread notifications' })
+  async getNotifications(@Req() req) {
+    const userId = req.userEntity.id;
+    const business = await this.bizService.findDefaultForUser(userId);
+    
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const notifications = await this.bizService.getUnreadNotifications(
+      business.id,
+      business.lastViewedAt
+    );
+    
+    return notifications;
   }
 
   // Right-to-delete endpoint (Milestone 9 - GDPR compliance)
@@ -328,7 +391,7 @@ export class BusinessController {
   async myBusiness(@Req() req) {
     const userId = req.userEntity.id;
     
-    // OPTIMIZED: Single query with joins instead of separate queries
+    // Smart cache: Cache business data but get fresh notification count
     const businessWithReviews = await this.bizService.findDefaultForUserWithReviews(userId);
     
     if (!businessWithReviews) {
@@ -341,7 +404,16 @@ export class BusinessController {
     
     const { business, reviews } = businessWithReviews;
     
-    return {  business, reviews    };
+    // Always get fresh notification count (no cache)
+    const unreadCount = await this.bizService.getFreshUnreadCount(business.id, business.lastViewedAt);
+
+    return { 
+      business: {
+        ...business,
+        unreadNotifications: unreadCount
+      }, 
+      reviews 
+    };
   }
 
   // Update business information (excluding slug)
@@ -367,14 +439,19 @@ export class BusinessController {
   @ApiResponse({ status: 401, description: 'Unauthorized - invalid JWT token' })
   @ApiResponse({ status: 404, description: 'Business not found' })
   @ApiBody({
-    description: 'Business update data with optional logo file (slug cannot be updated)',
+    description: 'Business update data with optional logo and banner files (slug cannot be updated)',
     schema: {
       type: 'object',
       properties: {
-        logo: {
+        logoFile: {
           type: 'string',
           format: 'binary',
           description: 'Logo image file (max 5MB)'
+        },
+        bannerFile: {
+          type: 'string',
+          format: 'binary',
+          description: 'Banner image file (max 10MB)'
         },
         name: { type: 'string', example: 'Updated Business Name', description: 'Business name' },
         description: { type: 'string', example: 'Updated business description', description: 'Business description' },
@@ -390,6 +467,7 @@ export class BusinessController {
         companySize: { type: 'string', example: '11-50 employees', description: 'Company size' },
         foundedYear: { type: 'number', example: 2019, description: 'Year founded' },
         brandColor: { type: 'string', example: '#3b82f6', description: 'Brand color (hex)' },
+        logoUrl: { type: 'string', example: 'https://example.com/new-logo.png', description: 'Logo image URL' },
         bannerUrl: { type: 'string', example: 'https://example.com/new-banner.jpg', description: 'Banner image URL' },
         businessHours: { 
           type: 'object', 
@@ -405,14 +483,17 @@ export class BusinessController {
     }
   })
   @UseInterceptors(
-    FileInterceptor('logo', {
+    AnyFilesInterceptor({
       storage: memoryStorage(),
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB max for logo
+        fileSize: 10 * 1024 * 1024, // 10MB max per file
+        files: 2, // Max 2 files (logo + banner)
       },
       fileFilter: (req, file, cb) => {
         if (!file.mimetype.startsWith('image/')) {
           cb(new BadRequestException('Only image files are allowed'), false);
+        } else if (!['logoFile', 'bannerFile'].includes(file.fieldname)) {
+          cb(new BadRequestException('Only logoFile and bannerFile are allowed'), false);
         } else {
           cb(null, true);
         }
@@ -421,7 +502,7 @@ export class BusinessController {
   )
   async updateMyBusiness(
     @Req() req,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
     @Body() body: UpdateBusinessDto,
   ) {
     const userId = req.userEntity.id;
@@ -451,25 +532,42 @@ export class BusinessController {
     if (body.businessHours) updateData.businessHours = body.businessHours;
     if (body.socialLinks) updateData.socialLinks = body.socialLinks;
     if (body.bannerUrl) updateData.bannerUrl = body.bannerUrl;
+    if (body.logoUrl) updateData.logoUrl = body.logoUrl;
 
-    // Handle logo upload if provided
-    if (file) {
-      const timestamp = Date.now();
-      const safeFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const s3Key = `businesses/logos/${timestamp}-${safeFilename}`;
-      
-      const stream = Readable.from(file.buffer);
-      
-      await this.s3Service.uploadStream(
-        s3Key,
-        stream,
-        file.size,
-        file.mimetype
-      );
-      
-      updateData.logoUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
-      
-      this.logger.log(`Logo updated for business: ${business.id}`);
+    // Handle logo and banner uploads if provided
+    if (files && files.length > 0) {
+      for (const file of files) {
+        const timestamp = Date.now();
+        const safeFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        
+        if (file.fieldname === 'logoFile') {
+          const s3Key = `businesses/logos/${timestamp}-${safeFilename}`;
+          const stream = Readable.from(file.buffer);
+          
+          await this.s3Service.uploadStream(
+            s3Key,
+            stream,
+            file.size,
+            file.mimetype
+          );
+          
+          updateData.logoUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+          this.logger.log(`Logo updated for business: ${business.id}`);
+        } else if (file.fieldname === 'bannerFile') {
+          const s3Key = `businesses/banners/${timestamp}-${safeFilename}`;
+          const stream = Readable.from(file.buffer);
+          
+          await this.s3Service.uploadStream(
+            s3Key,
+            stream,
+            file.size,
+            file.mimetype
+          );
+          
+          updateData.bannerUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+          this.logger.log(`Banner updated for business: ${business.id}`);
+        }
+      }
     }
 
     // Update business (slug is intentionally excluded from updateData)
@@ -486,10 +584,10 @@ export class BusinessController {
       business: finalBusiness
     };
   }
+  
 
   //  Toggle text reviews setting
-  @UseGuards(JwtAuthGuard, SubscriptionGuard)
-  @RequireFeature(['priority_support'])
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post('api/business/settings/text-reviews')
   @ApiBody({ 

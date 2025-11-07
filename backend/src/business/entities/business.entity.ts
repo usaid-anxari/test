@@ -79,6 +79,9 @@ export class Business {
   @Column({ name: 'settings_json', type: 'json', nullable: true })
   settingsJson: any;
 
+  @Column({ name: 'last_viewed_at', type: 'timestamp', nullable: true })
+  lastViewedAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

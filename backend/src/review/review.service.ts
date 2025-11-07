@@ -200,6 +200,12 @@ export class ReviewsService {
       }
     }
 
+    // Delete media assets from database first (foreign key constraint)
+    await this.mediaRepo.delete({ reviewId });
+
+    // Delete transcode jobs
+    await this.jobsRepo.delete({ reviewId });
+
     // Log consent deletion
     const consentLog = this.consentRepo.create({
       businessId,
@@ -211,8 +217,8 @@ export class ReviewsService {
     });
     await this.consentRepo.save(consentLog);
 
-    // Delete review and related data
-    await this.reviewsRepo.remove(review);
+    // Delete review
+    await this.reviewsRepo.delete({ id: reviewId });
 
     this.logger.log(`✅ Permanently deleted review ${reviewId} for business ${businessId}`);
     return { message: 'Review permanently deleted' };

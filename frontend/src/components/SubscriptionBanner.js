@@ -2,14 +2,11 @@ import { useNavigate } from 'react-router-dom';
 
 const SubscriptionBanner = ({ subscriptionStatus, tier, storageUsage, trialActive, trialDaysLeft }) => {
   const navigate = useNavigate();
+   
+  // Only show banner for free tier users or when trial is ending soon (within 3 days)
+  const shouldShowBanner = tier === 'FREE' || tier === 'free' || (trialActive && trialDaysLeft <= 3);
   
-  // Don't show banner for active paid subscriptions
-  if (subscriptionStatus === 'ACTIVE' && tier !== 'FREE') {
-    return null;
-  }
-
-  // Don't show upgrade prompt if user has paid plan (even if trialing)
-  if (tier !== 'FREE' && subscriptionStatus !== 'PAST_DUE' && subscriptionStatus !== 'CANCELED') {
+  if (!shouldShowBanner) {
     return null;
   }
 
@@ -73,10 +70,10 @@ const SubscriptionBanner = ({ subscriptionStatus, tier, storageUsage, trialActiv
       };
     }
 
-    if (tier === 'FREE') {
+    if (shouldShowBanner) {
       return {
         type: 'info',
-        title: 'Free Plan',
+        title: tier === 'FREE' || tier === 'free' ? 'Upgrade Your Plan' : 'Consider Upgrading',
         message: 'Upgrade to unlock advanced features, more storage, and priority support.',
         action: 'View Plans',
         bgColor: 'bg-blue-50',

@@ -56,6 +56,8 @@ const useSubscription = () => {
         return tier === 'ENTERPRISE';
       case 'priority_support':
         return tier !== 'FREE';
+      case 'unlimited_widgets':
+        return tier !== 'FREE';
       default:
         return true;
     }
@@ -73,7 +75,8 @@ const useSubscription = () => {
     error,
     canAccessFeature,
     isStorageExceeded,
-    refetch: fetchSubscriptionData
+    refetch: fetchSubscriptionData,
+    tier: subscriptionData?.tier?.toLowerCase() || 'free'
   };
 };
 

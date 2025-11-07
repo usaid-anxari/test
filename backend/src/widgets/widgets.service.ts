@@ -18,7 +18,7 @@ export class WidgetsService {
     private embedTokenRepo: Repository<EmbedToken>,
   ) {}
 
-  // Milestone 7: Create widget
+  // Create widget
   async createWidget(businessId: string, dto: CreateWidgetDto) {
     // Parse settings if it's a string
     let settingsJson = dto.settingsJson;

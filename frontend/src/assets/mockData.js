@@ -1,4 +1,7 @@
 import Logo from './TrueTestify.png'
+import Icon from './favicon.ico'
+import Card from './debit-card.png'
+
 export const MOCK_REVIEWS = [
   {
     id: "13cd4d7f-0f97-426a-846e-eadd805745a1",
@@ -155,5 +158,7 @@ export const MOCK_GOOGLE_REVIEWS = [
 ];
 
 export const assest = {
-  Logo
+  Logo,
+  Icon,
+  Card
 }
