@@ -1,4 +1,4 @@
-import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import compression from 'compression';
@@ -29,40 +29,76 @@ import { ValidationModule } from './validation/validation.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get("DB_HOST"),
-        port: +configService.get('DB_PORT'),
-        username: configService.get('DB_USERNAME'),
-        password: configService.get("DB_PASSWORD"),
-        database: configService.get('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // CRITICAL: Never use true in production
-        autoLoadEntities: true,
-        logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn'] : false,
+      useFactory: (configService: ConfigService) => {
+        const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+        const isProduction = configService.get('NODE_ENV') === 'production';
+        const isRDS = configService.get('DB_HOST')?.includes('.rds.amazonaws.com');
+        
+        // Lambda-optimized connection pool (smaller pool, faster timeouts)
+        const lambdaPoolConfig = {
+          max: 2, // Smaller pool for Lambda (each instance gets its own)
+          min: 1,
+          acquire: 10000,
+          idle: 5000,
+          connectionTimeoutMillis: 5000,
+          idleTimeoutMillis: 10000,
+          statement_timeout: 10000,
+          query_timeout: 10000,
+        };
 
-        // PERFORMANCE OPTIMIZATIONS
-        extra: {
-          max: 20, // Connection pool size
-          min: 5,
-          acquire: 30000,
+        // Traditional server pool config (local development)
+        const serverPoolConfig = {
+          max: 10,
+          min: 2,
+          acquire: 10000,
           idle: 10000,
-          connectionTimeoutMillis: 2000,
-          idleTimeoutMillis: 30000,
-          statement_timeout: 30000,
-          query_timeout: 30000,
-        },
+          connectionTimeoutMillis: 5000,
+          idleTimeoutMillis: 10000,
+          statement_timeout: 10000,
+          query_timeout: 10000,
+        };
 
-        // Query optimization
-        cache: {
-          duration: 30000, // 30 seconds default cache
-        },
+        // SSL configuration for RDS (at root level, not in extra)
+        const sslConfig = isRDS ? {
+          ssl: {
+            rejectUnauthorized: false, // RDS uses AWS-managed certificates
+          },
+        } : {};
 
-        // Connection optimization
-        keepConnectionAlive: true,
-        retryAttempts: 3,
-        retryDelay: 3000,
-      }),
+        const dbHost = configService.get("DB_HOST");
+        const dbPort = +configService.get('DB_PORT') || 5432;
+        const dbUsername = configService.get('DB_USERNAME');
+        const dbPassword = configService.get("DB_PASSWORD");
+        const dbName = configService.get('DB_NAME');
+        return {
+          type: 'postgres',
+          host: dbHost,
+          port: dbPort,
+          username: dbUsername,
+          password: dbPassword,
+          database: dbName,
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          synchronize: !isProduction && !isLambda, // CRITICAL: Never use true in production/Lambda
+          autoLoadEntities: true,
+          logging: configService.get('NODE_ENV') === 'development' ? ['error', 'warn', 'query'] : false,
+
+          // Connection pool: Lambda uses smaller pools, servers use larger
+          extra: isLambda ? lambdaPoolConfig : serverPoolConfig,
+
+          // SSL configuration for RDS
+          ...sslConfig,
+
+          // Query optimization
+          cache: {
+            duration: 30000, // 30 seconds default cache
+          },
+
+          // Connection optimization
+          keepConnectionAlive: !isLambda, // Lambda should close connections between invocations
+          retryAttempts: 3,
+          retryDelay: 3000,
+        };
+      },
     }),
     UsersModule,
     BusinessModule,
@@ -85,9 +121,4 @@ import { ValidationModule } from './validation/validation.module';
     },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(compression()).forRoutes('*');
-    consumer.apply(SubscriptionStatusMiddleware).forRoutes('api/*');
-  }
-}
+export class AppModule {}

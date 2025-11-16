@@ -125,8 +125,8 @@ function App() {
             <Route path="/services/text-reviews" element={<TextReviews />} />
             <Route path="/services/video-reviews" element={<VideoReviews />} />
             {/* Auth Routes */}
-            <Route path="/auth0-login" element={<Auth0Login />} />
-            <Route path="/auth0-signup" element={<Auth0Signup />} />
+            {/* <Route path="/auth0-login" element={<Auth0Login />} />
+            <Route path="/auth0-signup" element={<Auth0Signup />} /> */}
             
             {/* Onboarding Flow */}
             <Route path="/create-business" element={<ComprehensiveOnboarding />} />
@@ -154,7 +154,7 @@ function App() {
               <Route path="billing" element={<Billing />} />
               <Route path="account" element={<Account />} />
               <Route path="settings" element={<AdminSettings />} />
-              <Route path="google-reviews" element={<GoogleReviews />} />
+              {/* <Route path="google-reviews" element={<GoogleReviews />} /> */}
               <Route path="compliance" element={<Compliance />} />
             </Route>
 

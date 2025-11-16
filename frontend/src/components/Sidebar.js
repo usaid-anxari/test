@@ -147,12 +147,12 @@ const Sidebar = ({ setIsSidebarOpen, isLogoutModalOpen, setIsLogoutModalOpen }) 
               label="Billing & Plans"
               onClick={() => setIsSidebarOpen(false)}
             />
-            <NavItem
+            {/* <NavItem
               to="/dashboard/google-reviews"
               icon={<StarIcon className="h-5 w-5" />}
               label="Google Reviews"
               onClick={() => setIsSidebarOpen(false)}
-            />
+            /> */}
           </div>
         </div>
 

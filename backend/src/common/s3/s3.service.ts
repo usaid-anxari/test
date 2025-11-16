@@ -18,12 +18,19 @@ export class S3Service {
 
   constructor(private config: ConfigService) {
     this.bucket = this.config.get('AWS_S3_BUCKET') || '';
+    const region = this.config.get('AWS_REGION') || 'us-east-1';
+    const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+    
+    // In Lambda, use IAM role credentials (don't specify credentials)
+    // In local dev, use explicit credentials from env
     this.client = new S3Client({
-      region: this.config.get('AWS_REGION') || 'us-east-1',
-      credentials: {
-        accessKeyId: this.config.get('AWS_ACCESS_KEY_ID') || '',
-        secretAccessKey: this.config.get('AWS_SECRET_ACCESS_KEY') || '',
-      },
+      region,
+      ...(isLambda ? {} : {
+        credentials: {
+          accessKeyId: this.config.get('AWS_ACCESS_KEY_ID') || '',
+          secretAccessKey: this.config.get('AWS_SECRET_ACCESS_KEY') || '',
+        }
+      })
     });
   }
 

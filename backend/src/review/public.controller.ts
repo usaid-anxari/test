@@ -4,11 +4,11 @@ import { ReviewsService } from './review.service';
 import { ReviewResponseDto } from './dto/response-review.dto';
 
 @ApiTags('Public Reviews')
-@Controller('public/:slug/reviews')
+@Controller('public')
 export class PublicReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
-  @Get()
+  @Get(':slug/reviews')
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
   @ApiResponse({ status: 200, type: [ReviewResponseDto] })

@@ -184,7 +184,7 @@ export class BusinessController {
   )
   async createBusiness(
     @Req() req,
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles() files: any,
     @Body() body: CreateBusinessDto,
   ) {
     try {
@@ -502,7 +502,7 @@ export class BusinessController {
   )
   async updateMyBusiness(
     @Req() req,
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles() files: any,
     @Body() body: UpdateBusinessDto,
   ) {
     const userId = req.userEntity.id;

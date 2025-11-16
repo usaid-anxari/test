@@ -18,12 +18,12 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ReviewsService } from './review.service';
 import { CreateReviewDto } from './dto/create-review.dto';
-import { diskStorage } from 'multer';
 import { multerOptionsMemory } from '../common/multer/memory-storage';
 import { Readable } from 'stream';
 import { ApiConsumes, ApiBody, ApiTags } from '@nestjs/swagger';
 import { MediaAsset } from './entities/media-asset.entity';
 import { BillingService } from '../billing/billing.service';
+
 
 @ApiTags('public-reviews')
 @Controller('api/public')
@@ -61,7 +61,7 @@ export class ReviewsController {
   async submitReview(
     @Param('slug') slug: string,
     @Body() body: CreateReviewDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() file?: any,
     @Req() req?: any,
   ) {
     // 1) find business by slug (tenant resolver)

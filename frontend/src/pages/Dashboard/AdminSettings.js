@@ -263,7 +263,7 @@ const AdminSettings = () => {
           
 
           {/* Google Reviews Toggle */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          {/* <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center space-x-4">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                 <span className="text-xl font-bold text-[#04A4FF]">G</span>
@@ -303,7 +303,7 @@ const AdminSettings = () => {
                 </span>
               </button>
             </div>
-          </div>
+          </div> */}
           </div>
         </div>
       </div>

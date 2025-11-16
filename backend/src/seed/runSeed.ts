@@ -22,9 +22,20 @@ import { EmailPreference } from '../email/entities/email-preference.entity';
 
 dotenv.config();
 
+// Check if connecting to RDS (requires SSL)
+const dbHost = process.env.DB_HOST || 'localhost';
+const isRDS = dbHost.includes('.rds.amazonaws.com');
+
+// SSL configuration for RDS
+const sslConfig = isRDS ? {
+  ssl: {
+    rejectUnauthorized: false, // RDS uses AWS-managed certificates
+  },
+} : {};
+
 const dataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
+  host: dbHost,
   port: Number(process.env.DB_PORT || 5432),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
@@ -48,11 +59,26 @@ const dataSource = new DataSource({
   ],
   synchronize: true,
   logging: false,
+  // SSL configuration for RDS
+  ...sslConfig,
+  // Connection pool options for better reliability
+  extra: {
+    connectionTimeoutMillis: 30000,
+    max: 10,
+  },
 });
 
 async function runSeed() {
   try {
     console.log('🚀 Initializing database connection...');
+    console.log('📊 Database configuration:', {
+      host: dbHost,
+      port: Number(process.env.DB_PORT || 5432),
+      database: process.env.DB_NAME,
+      username: process.env.DB_USERNAME,
+      isRDS: isRDS,
+      sslEnabled: !!sslConfig.ssl,
+    });
     await dataSource.initialize();
     
     console.log('🌱 Running comprehensive seed...');

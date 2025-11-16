@@ -24,16 +24,32 @@ export class EmailService {
   }
 
   private initializeTransporter() {
-    // For development, use Ethereal Email (fake SMTP)
-    // In production, use real SMTP service like SendGrid, AWS SES, etc.
-    this.transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      auth: {
-        user: 'ethereal.user@ethereal.email',
-        pass: 'ethereal.pass'
-      }
-    });
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const smtpHost = this.configService.get('SMTP_HOST');
+    const smtpUser = this.configService.get('SMTP_USER');
+    
+    if (isProduction && smtpHost && smtpUser) {
+      // Production: Use AWS SES or configured SMTP
+      this.transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(this.configService.get('SMTP_PORT') || '587'),
+        secure: false,
+        auth: {
+          user: smtpUser,
+          pass: this.configService.get('SMTP_PASS'),
+        },
+      });
+    } else {
+      // Development: Use Ethereal Email (fake SMTP)
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        auth: {
+          user: 'ethereal.user@ethereal.email',
+          pass: 'ethereal.pass'
+        }
+      });
+    }
   }
 
   async sendEmail(sendEmailDto: SendEmailDto): Promise<EmailLog> {
@@ -90,17 +106,28 @@ export class EmailService {
   }
 
   private async simulateEmailSend(mailOptions: any): Promise<any> {
-    // For MVP, simulate email sending
-    console.log('📧 Email sent (simulated):');
-    console.log(`To: ${mailOptions.to}`);
-    console.log(`Subject: ${mailOptions.subject}`);
-    console.log('✅ Email delivery simulated successfully');
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const smtpHost = this.configService.get('SMTP_HOST');
     
-    return {
-      messageId: `simulated-${Date.now()}@truetestify.com`,
-      accepted: [mailOptions.to],
-      rejected: []
-    };
+    if (isProduction && smtpHost) {
+      // Production: Actually send email
+      return await this.transporter.sendMail({
+        from: this.configService.get('FROM_EMAIL') || 'noreply@truetestify.com',
+        ...mailOptions,
+      });
+    } else {
+      // Development: Simulate email sending
+      console.log('📧 Email sent (simulated):');
+      console.log(`To: ${mailOptions.to}`);
+      console.log(`Subject: ${mailOptions.subject}`);
+      console.log('✅ Email delivery simulated successfully');
+      
+      return {
+        messageId: `simulated-${Date.now()}@truetestify.com`,
+        accepted: [mailOptions.to],
+        rejected: []
+      };
+    }
   }
 
   private async generateEmailContent(
