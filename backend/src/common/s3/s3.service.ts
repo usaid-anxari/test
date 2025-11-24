@@ -21,7 +21,9 @@ export class S3Service {
     const region = this.config.get('AWS_REGION') || 'us-east-1';
     const isLambda = !!process.env.AWS_LAMBDA_FUNCTION_NAME;
     
-    // In Lambda, use IAM role credentials (don't specify credentials)
+    this.logger.log(`S3 Service initialized - Bucket: ${this.bucket}, Region: ${region}, IsLambda: ${isLambda}`);
+    
+    // In Lambda, use IAM role (no explicit credentials needed)
     // In local dev, use explicit credentials from env
     this.client = new S3Client({
       region,
@@ -32,6 +34,57 @@ export class S3Service {
         }
       })
     });
+    
+    this.logger.log(`S3 Client configured for ${isLambda ? 'Lambda (IAM Role)' : 'Local (Explicit Credentials)'}`);
+    
+    if (!this.bucket) {
+      this.logger.error('AWS_S3_BUCKET not configured!');
+    }
+  }
+
+  async uploadBuffer(
+    s3Key: string,
+    buffer: Buffer,
+    contentType?: string
+  ) {
+    try {
+      this.logger.log(`🔥🔥🔥 S3 BUFFER UPLOAD START: ${s3Key}`);
+      this.logger.log(`🔥🔥🔥 Buffer type: ${typeof buffer}, isBuffer: ${Buffer.isBuffer(buffer)}, length: ${buffer?.length}`);
+      
+      if (!buffer || buffer.length === 0) {
+        throw new Error('Buffer is empty or null');
+      }
+      
+      // Log first 100 bytes to verify buffer has data
+      this.logger.log(`🔥🔥🔥 Buffer first 100 bytes: ${buffer.slice(0, 100).toString('hex')}`);
+      
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: s3Key,
+        Body: buffer,
+        ContentType: contentType,
+        ContentLength: buffer.length,
+      });
+      
+      const result = await this.client.send(command);
+      this.logger.log(`🔥🔥🔥 S3 upload SUCCESS: ${s3Key}, ETag: ${result.ETag}`);
+      
+      const metadata = await this.getObjectMetadata(s3Key);
+      this.logger.log(`🔥🔥🔥 File verified: size=${metadata?.contentLength}, type=${metadata?.contentType}`);
+      
+      if (metadata?.contentLength !== buffer.length) {
+        this.logger.error(`🔥🔥🔥 SIZE MISMATCH: Uploaded ${buffer.length}, S3 has ${metadata?.contentLength}`);
+      }
+      
+      return { 
+        bucket: this.bucket, 
+        key: s3Key,
+        url: `https://${this.bucket}.s3.us-east-1.amazonaws.com/${s3Key}`
+      };
+    } catch (err) {
+      this.logger.error(`🔥🔥🔥 S3 upload FAILED: ${err.message}`);
+      throw new InternalServerErrorException(`Failed to upload file to S3: ${err.message}`);
+    }
   }
 
   async uploadStream(
@@ -41,26 +94,50 @@ export class S3Service {
     contentType?: string
   ) {
     try {
+      this.logger.log(`🔥🔥🔥 S3 UPLOAD START: ${s3Key} to bucket: ${this.bucket}`);
+      this.logger.log(`🔥🔥🔥 Stream details - ContentLength: ${contentLength}, ContentType: ${contentType}`);
+      this.logger.log(`🔥🔥🔥 Stream readable: ${stream.readable}, destroyed: ${stream.destroyed}`);
+      
       const command = new PutObjectCommand({
         Bucket: this.bucket,
         Key: s3Key,
         Body: stream,
         ContentLength: contentLength,
         ContentType: contentType,
-        ServerSideEncryption: 'AES256', // Added encryption
+        ServerSideEncryption: 'AES256',
       });
       
-      await this.client.send(command);
-      this.logger.log(`File uploaded to S3: ${s3Key}`);
+      const result = await this.client.send(command);
+      this.logger.log(`🔥🔥🔥 S3 upload SUCCESS: ${s3Key}, ETag: ${result.ETag}`);
+      
+      // Verify file actually exists and get metadata
+      try {
+        const metadata = await this.getObjectMetadata(s3Key);
+        this.logger.log(`🔥🔥🔥 File verified on S3: ${s3Key}, size: ${metadata?.contentLength}, type: ${metadata?.contentType}`);
+        
+        // Check if file size matches expected
+        if (contentLength && metadata?.contentLength !== contentLength) {
+          this.logger.warn(`🔥🔥🔥 SIZE MISMATCH: Expected ${contentLength}, got ${metadata?.contentLength}`);
+        }
+      } catch (verifyError) {
+        this.logger.error(`🔥🔥🔥 File upload succeeded but verification failed: ${s3Key}`, verifyError);
+        throw new InternalServerErrorException('File upload verification failed');
+      }
       
       return { 
         bucket: this.bucket, 
         key: s3Key,
-        url: await this.getSignedUrl(s3Key) 
+        url: `https://${this.bucket}.s3.us-east-1.amazonaws.com/${s3Key}`
       };
     } catch (err) {
-      this.logger.error('S3 upload error', err);
-      throw new InternalServerErrorException('Failed to upload file to S3');
+      this.logger.error(`🔥🔥🔥 S3 upload FAILED for ${s3Key}:`, {
+        error: err.message,
+        code: err.Code,
+        statusCode: err.$metadata?.httpStatusCode,
+        bucket: this.bucket,
+        region: this.config.get('AWS_REGION')
+      });
+      throw new InternalServerErrorException(`Failed to upload file to S3: ${err.message}`);
     }
   }
 

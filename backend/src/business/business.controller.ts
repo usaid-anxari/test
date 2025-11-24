@@ -59,6 +59,16 @@ export class BusinessController {
     return result;
   }
 
+  @Get('api/business/all-businesses')
+  @ApiResponse({ 
+    status: 200, 
+    description: 'List of all businesses' 
+  })
+  async getAllBusinesses() {
+    const businesses = await this.bizService.getAllBusinesses();
+    return { businesses, total: businesses.length };
+  }
+
   // Public reviews endpoint - Milestone 4
   @Get('business/:slug/reviews')
   @ApiResponse({ 
@@ -189,6 +199,12 @@ export class BusinessController {
   ) {
     try {
       const userId = req.userEntity.id;
+      
+      // Validate required fields
+      if (!body.name || !body.slug) {
+        throw new BadRequestException('Business name and slug are required fields.');
+      }
+      
       const slug = (body.slug || body.name).toLowerCase().replace(/\s+/g, '-');
 
       // Parallel validation checks
@@ -226,31 +242,49 @@ export class BusinessController {
           
           if (file.fieldname === 'logoFile') {
             const s3Key = `businesses/logos/${timestamp}-${safeFilename}`;
-            const stream = Readable.from(file.buffer);
             
-            await this.s3Service.uploadStream(
+            await this.s3Service.uploadBuffer(
               s3Key,
-              stream,
-              file.size,
+              file.buffer,
               file.mimetype
             );
             
-            logoUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+            logoUrl = s3Key;
             this.logger.log(`Logo uploaded to S3: ${s3Key}`);
           } else if (file.fieldname === 'bannerFile') {
             const s3Key = `businesses/banners/${timestamp}-${safeFilename}`;
-            const stream = Readable.from(file.buffer);
             
-            await this.s3Service.uploadStream(
+            await this.s3Service.uploadBuffer(
               s3Key,
-              stream,
-              file.size,
+              file.buffer,
               file.mimetype
             );
             
-            bannerUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+            bannerUrl = s3Key;
             this.logger.log(`Banner uploaded to S3: ${s3Key}`);
           }
+        }
+      }
+
+      // Parse JSON strings from FormData with error handling
+      let businessHours = {};
+      let socialLinks = {};
+      
+      if (body.businessHours) {
+        try {
+          businessHours = typeof body.businessHours === 'string' ? JSON.parse(body.businessHours) : body.businessHours;
+        } catch (e) {
+          this.logger.warn('Invalid businessHours JSON, using empty object');
+          businessHours = {};
+        }
+      }
+      
+      if (body.socialLinks) {
+        try {
+          socialLinks = typeof body.socialLinks === 'string' ? JSON.parse(body.socialLinks) : body.socialLinks;
+        } catch (e) {
+          this.logger.warn('Invalid socialLinks JSON, using empty object');
+          socialLinks = {};
         }
       }
 
@@ -273,8 +307,8 @@ export class BusinessController {
         logoUrl,
         bannerUrl,
         brandColor: body.brandColor || '#ef7c00',
-        businessHours: body.businessHours,
-        socialLinks: body.socialLinks,
+        businessHours,
+        socialLinks,
         settingsJson: body.settingsJson || { textReviewsEnabled: true },
       });
 
@@ -542,29 +576,25 @@ export class BusinessController {
         
         if (file.fieldname === 'logoFile') {
           const s3Key = `businesses/logos/${timestamp}-${safeFilename}`;
-          const stream = Readable.from(file.buffer);
           
-          await this.s3Service.uploadStream(
+          await this.s3Service.uploadBuffer(
             s3Key,
-            stream,
-            file.size,
+            file.buffer,
             file.mimetype
           );
           
-          updateData.logoUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+          updateData.logoUrl = s3Key;
           this.logger.log(`Logo updated for business: ${business.id}`);
         } else if (file.fieldname === 'bannerFile') {
           const s3Key = `businesses/banners/${timestamp}-${safeFilename}`;
-          const stream = Readable.from(file.buffer);
           
-          await this.s3Service.uploadStream(
+          await this.s3Service.uploadBuffer(
             s3Key,
-            stream,
-            file.size,
+            file.buffer,
             file.mimetype
           );
           
-          updateData.bannerUrl = await this.s3Service.getSignedUrl(s3Key, 3600 * 24 * 7);
+          updateData.bannerUrl = s3Key;
           this.logger.log(`Banner updated for business: ${business.id}`);
         }
       }

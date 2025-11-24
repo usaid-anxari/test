@@ -287,22 +287,18 @@ export class EmbedController {
       .map((review) => {
         let mediaContent = '';
 
-        if (review.type === 'video' && review.media && review.media.length > 0) {
-          const videoAsset = review.media[0];
+        if (review.type === 'video' && review.mediaAssets && review.mediaAssets.length > 0) {
+          const videoAsset = review.mediaAssets[0];
           mediaContent = `
             <div class="tt-video-container">
               <video class="tt-video-player" controls ${autoplay ? 'autoplay muted' : ''}>
                 <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
                 Your browser does not support video.
               </video>
-              <div class="tt-media-label">
-                <span class="tt-media-icon">🎬</span>
-                <span>Video Review</span>
-              </div>
             </div>
           `;
-        } else if (review.type === 'audio' && review.media && review.media.length > 0) {
-          const audioAsset = review.media[0];
+        } else if (review.type === 'audio' && review.mediaAssets && review.mediaAssets.length > 0) {
+          const audioAsset = review.mediaAssets[0];
           mediaContent = `
             <div class="tt-audio-container">
               <div class="tt-audio-header">
@@ -582,22 +578,18 @@ export class EmbedController {
         console.log(`Processing review ${index + 1}:`, { type: review.type, title: review.title, index });
         let mediaContent = '';
 
-        if (review.type === 'video' && review.media && review.media.length > 0) {
-          const videoAsset = review.media[0];
+        if (review.type === 'video' && review.mediaAssets && review.mediaAssets.length > 0) {
+          const videoAsset = review.mediaAssets[0];
           mediaContent = `
           <div class="tt-video-container">
             <video class="tt-video-player" controls ${autoplay ? 'autoplay muted' : ''}>
               <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
               Your browser does not support video.
             </video>
-            <div class="tt-media-label">
-              <span class="tt-media-icon">🎬</span>
-              <span>Video Review</span>
-            </div>
           </div>
         `;
-        } else if (review.type === 'audio' && review.media && review.media.length > 0) {
-          const audioAsset = review.media[0];
+        } else if (review.type === 'audio' && review.mediaAssets && review.mediaAssets.length > 0) {
+          const audioAsset = review.mediaAssets[0];
           mediaContent = `
           <div class="tt-audio-container">
             <div class="tt-audio-header">
@@ -925,22 +917,18 @@ export class EmbedController {
     const reviewItems = reviewsToShow
       .map((review, index) => {
         let mediaContent = '';
-        if (review.type === 'video' && review.media && review.media.length > 0) {
-          const videoAsset = review.media[0];
+        if (review.type === 'video' && review.mediaAssets && review.mediaAssets.length > 0) {
+          const videoAsset = review.mediaAssets[0];
           mediaContent = `
             <div class="tt-video-container">
               <video class="tt-video-player" controls ${autoplay ? 'autoplay muted' : ''}>
                 <source src="${this.configService.get('AWS_DOMAIN_URL')}/${videoAsset.s3Key}" type="video/mp4">
                 Your browser does not support video.
               </video>
-              <div class="tt-media-label">
-                <span class="tt-media-icon">🎬</span>
-                <span>Video Review</span>
-              </div>
             </div>
           `;
-        } else if (review.type === 'audio' && review.media && review.media.length > 0) {
-          const audioAsset = review.media[0];
+        } else if (review.type === 'audio' && review.mediaAssets && review.mediaAssets.length > 0) {
+          const audioAsset = review.mediaAssets[0];
           mediaContent = `
             <div class="tt-audio-container">
               <div class="tt-audio-header">

@@ -1,9 +1,11 @@
 service: truetestify-backend
 
-frameworkVersion: '3.38.0'
+# plugins:
+  # - serverless-domain-manager
 
 provider:
   name: aws
+  runtime: provided.al2
   region: ${opt:region, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
   memorySize: 2048
@@ -12,6 +14,14 @@ provider:
     images:
       appimage:
         path: ./
+        platform: linux/amd64
+  apiGateway:
+    binaryMediaTypes:
+      - 'multipart/form-data' 
+      - 'image/jpeg'
+      - 'image/png'
+      - 'application/octet-stream'
+
   environment:
     NODE_ENV: production
     DB_HOST: ${env:DB_HOST}
@@ -22,6 +32,7 @@ provider:
     AUTH0_DOMAIN: ${env:AUTH0_DOMAIN}
     AUTH0_AUDIENCE: ${env:AUTH0_AUDIENCE}
     AWS_S3_BUCKET: ${env:AWS_S3_BUCKET}
+    AWS_DOMAIN_URL: ${env:AWS_DOMAIN_URL , 'https://truetestify.s3.us-east-1.amazonaws.com'}
     STRIPE_SECRET_KEY: ${env:STRIPE_SECRET_KEY}
     STRIPE_WEBHOOK_SECRET: ${env:STRIPE_WEBHOOK_SECRET}
     SMTP_HOST: ${env:SMTP_HOST, ''}
@@ -32,7 +43,8 @@ provider:
     GOOGLE_CLIENT_ID: ${env:GOOGLE_CLIENT_ID, ''}
     GOOGLE_CLIENT_SECRET: ${env:GOOGLE_CLIENT_SECRET, ''}
     GOOGLE_API_KEY: ${env:GOOGLE_API_KEY, ''}
-    FRONTEND_URL: ${env:FRONTEND_URL, 'https://truetestify.com'}
+    FRONTEND_URL: ${env:FRONTEND_URL, 'https://www.truetestify.com'}
+    BACKEND_URL: ${env:BACKEND_URL, 'https://api.truetestify.com'}
     ENABLE_SWAGGER: ${env:ENABLE_SWAGGER, 'false'}
   iam:
     role:
@@ -43,6 +55,7 @@ provider:
             - s3:PutObject
             - s3:DeleteObject
             - s3:ListBucket
+
           Resource:
             - arn:aws:s3:::${env:AWS_S3_BUCKET}
             - arn:aws:s3:::${env:AWS_S3_BUCKET}/*
@@ -52,7 +65,8 @@ functions:
     image:
       name: appimage
     memorySize: 2048
-    timeout: 60
+    timeout: 29
+    url: true
     events:
       - http:
           path: /{proxy+}

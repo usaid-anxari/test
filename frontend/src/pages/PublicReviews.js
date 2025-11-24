@@ -6,10 +6,10 @@ import toast from "react-hot-toast";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import ContactInfoCard from "../components/ContactInfoCard";
-import ReviewPreviewModal from "../components/ReviewPreviewModal";
 import HeaderSocialIcons from "../components/HeaderSocialIcons";
 import StarRating from "../components/StarRating";
-import ReviewCard from "../components/ReviewCard";
+import PublicReviewCard from "../components/PublicReviewCard";
+import PublicReviewPreviewModal from "../components/PublicReviewPreviewModal";
 
 const PublicReviews = ({ businessSlug }) => {
   const { businessName } = useParams();
@@ -31,6 +31,8 @@ const PublicReviews = ({ businessSlug }) => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(API_PATHS.BUSINESSES.GET_PUBLIC_PROFILE(businessName || businessSlug));
+      console.log(response.data);
+      
        setBusiness(response.data.business || null);
        console.log(response);
       const allReviewsData = response.data.reviews || [];
@@ -130,110 +132,6 @@ const PublicReviews = ({ businessSlug }) => {
     fetchData(); // eslint-disable-next-line
   }, [businessName, businessSlug]);
 
-  // Render review form based on active widgets
-  // const renderReviewForm = () => {
-  //   if (!showReviewForm) return null;
-    
-  //   const activeWidgets = widgets.filter(w => w.active);
-    
-  //   return (
-  //     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9999] p-4">
-  //       <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
-  //         {/* Header */}
-  //         <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-  //           <div className="flex items-center justify-between">
-  //             <div className="flex items-center space-x-3">
-  //               <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-  //                 <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-  //                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z" />
-  //                 </svg>
-  //               </div>
-  //               <div>
-  //                 <h3 className="text-xl font-bold text-white">Write a Review</h3>
-  //                 <p className="text-green-100 text-sm">Share your experience with {business?.name}</p>
-  //               </div>
-  //             </div>
-  //             <button
-  //               onClick={() => setShowReviewForm(false)}
-  //               className="text-white hover:text-green-100 transition-colors"
-  //             >
-  //               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-  //                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-  //               </svg>
-  //             </button>
-  //           </div>
-  //         </div>
-          
-  //         {/* Content */}
-  //         <div className="p-6">
-  //           <p className="text-gray-600 text-sm mb-6 text-center">
-  //             Choose how you'd like to share your review
-  //           </p>
-            
-  //           <div className="space-y-3">
-  //             {activeWidgets.map((widget) => (
-  //               <Link
-  //                 key={widget.type}
-  //                 to={`/record/${business?.slug}?type=${widget.type}`}
-  //                 className="group block p-4 border-2 border-gray-200 rounded-xl hover:border-green-300 hover:shadow-lg transition-all duration-200 hover:bg-green-50"
-  //                 onClick={() => setShowReviewForm(false)}
-  //               >
-  //                 <div className="flex items-center space-x-4">
-  //                   <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-colors ${
-  //                     widget.type === 'video' ? 'bg-orange-100 group-hover:bg-orange-200' :
-  //                     widget.type === 'audio' ? 'bg-purple-100 group-hover:bg-purple-200' : 
-  //                     'bg-green-100 group-hover:bg-green-200'
-  //                   }`}>
-  //                     {widget.type === 'video' && (
-  //                       <svg className="w-7 h-7 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-  //                         <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-  //                       </svg>
-  //                     )}
-  //                     {widget.type === 'audio' && (
-  //                       <svg className="w-7 h-7 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-  //                         <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-  //                       </svg>
-  //                     )}
-  //                     {widget.type === 'text' && (
-  //                       <svg className="w-7 h-7 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-  //                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-  //                       </svg>
-  //                     )}
-  //                   </div>
-  //                   <div className="flex-1">
-  //                     <h4 className="font-semibold text-gray-900 capitalize group-hover:text-green-700 transition-colors">
-  //                       {widget.type} Review
-  //                     </h4>
-  //                     <p className="text-sm text-gray-600 mt-1">
-  //                       {widget.type === 'video' && 'Record a video testimonial (up to 60 seconds)'}
-  //                       {widget.type === 'audio' && 'Record an audio message (up to 60 seconds)'}
-  //                       {widget.type === 'text' && 'Write a detailed text review'}
-  //                     </p>
-  //                   </div>
-  //                   <div className="text-gray-400 group-hover:text-green-500 transition-colors">
-  //                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-  //                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-  //                     </svg>
-  //                   </div>
-  //                 </div>
-  //               </Link>
-  //             ))}
-  //           </div>
-            
-  //           {/* Footer */}
-  //           <div className="mt-6 pt-4 border-t border-gray-100">
-  //             <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
-  //               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-  //                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-  //               </svg>
-  //               <span>Your review will be published after verification</span>
-  //             </div>
-  //           </div>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // };
 
  const calculateAverageRating = () => {
     if (allReviews.length === 0) return '0.0';
@@ -245,6 +143,15 @@ const PublicReviews = ({ businessSlug }) => {
   useEffect(() => {
     fetchData();
   }, []);
+
+
+  const getS3Url = (s3Key) => {
+    if (!s3Key) return null;
+    if (s3Key.startsWith('http')) return s3Key;
+    return `https://truetestify.s3.us-east-1.amazonaws.com/${s3Key}`;
+  };
+
+  
   return (
     <div className={`min-h-screen bg-gray-50`} style={{ fontFamily: 'Inter, Poppins, system-ui, sans-serif' }}>
       
@@ -257,7 +164,7 @@ const PublicReviews = ({ businessSlug }) => {
             <div 
                 className="h-48 md:h-64 bg-gray-300 relative group cursor-pointer"
                 style={{
-                backgroundImage: business?.bannerUrl ? `url(${business.bannerUrl})` : 'linear-gradient(to right, #6366f1, #a855f7)',
+                backgroundImage: business?.bannerUrl ? `url(${getS3Url(business.bannerUrl)})` : 'linear-gradient(to right, #6366f1, #a855f7)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center'
                 }}
@@ -281,7 +188,7 @@ const PublicReviews = ({ businessSlug }) => {
                       <Skeleton circle width={80} height={80} />
                     ) : business?.logoUrl ? (
                       <img
-                        src={business.logoUrl}
+                        src={getS3Url(business.logoUrl)}
                         alt={business.name}
                         className="w-20 h-20 rounded-full object-cover border-4 border-white"
                       />
@@ -305,7 +212,7 @@ const PublicReviews = ({ businessSlug }) => {
                     ) : (
                       <>
                         {/* Business Name */}
-                        <h1 className="text-2xl font-bold text-gray-900">{business.name}</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">{business?.name}</h1>
                         
                         {/* Business Category */}
                         <span className="text-sm text-gray-600 mb-2 block">{business?.industry || 'Business Category'}</span>
@@ -451,7 +358,7 @@ const PublicReviews = ({ businessSlug }) => {
                   ))
                 ) : displayedReviews.length > 0 ? (
                   displayedReviews.map((review) => (
-                    <ReviewCard
+                    <PublicReviewCard
                       key={review.id}
                       review={review}
                       onViewReview={handleViewReview}
@@ -493,7 +400,7 @@ const PublicReviews = ({ businessSlug }) => {
 
       {/* Review Preview Modal */}
       {isModalOpen && selectedReview && (
-        <ReviewPreviewModal
+        <PublicReviewPreviewModal
           review={selectedReview}
           isOpen={isModalOpen}
           onClose={closeModal}

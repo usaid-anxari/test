@@ -1,110 +1,125 @@
 import { useAuth0 } from '@auth0/auth0-react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import axiosInstance from '../service/axiosInstanse';
-import { API_PATHS } from '../service/apiPaths';
 
 const Auth0ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading, user, getAccessTokenSilently } = useAuth0();
-  const [businessStatus, setBusinessStatus] = useState('loading'); // loading, exists, missing, error
-  const [userStatus, setUserStatus] = useState('loading'); // loading, active, inactive
+  const { isAuthenticated, isLoading, getAccessTokenSilently } = useAuth0();
+  
+  // States: 'LOADING' | 'AUTHORIZED' | 'NEEDS_SETUP' | 'ERROR'
+  const [status, setStatus] = useState('LOADING'); 
   const [retryCount, setRetryCount] = useState(0);
-  const timeoutRef = useRef(null);
-  const maxRetries = 2;
 
   useEffect(() => {
-    const checkUserAndBusiness = async () => {
-      if (!isAuthenticated || isLoading) return;
+    let isMounted = true;
+    const MAX_RETRIES = 2;
 
-      let token;
-      try {
-        // Try to get token with longer timeout and fallback
-        token = await getAccessTokenSilently({
-          authorizationParams: {
-            audience: process.env.REACT_APP_AUTH0_AUDIENCE,
-          },
-          timeoutInSeconds: 30, // Auth0 built-in timeout
-        });
-      } catch (tokenError) {
-        console.error('Token error:', tokenError);
-        // If token fails, assume user needs to create business
-        setBusinessStatus('missing');
-        setUserStatus('inactive');
+    const verifyUserStatus = async (currentRetry = 0) => {
+      // 1. If Auth0 is still loading, wait.
+      if (isLoading) return;
+
+      // 2. If not authenticated, we stop (render will handle redirect).
+      if (!isAuthenticated) {
+        if (isMounted) setStatus('UNAUTHORIZED');
         return;
       }
 
-      // Set token immediately after getting it
-      axiosInstance.defaults.headers.Authorization = `Bearer ${token}`;
-      
       try {
-        // Simple API call without AbortController to avoid interceptor issues
-        const response = await axiosInstance({
-          method: 'GET',
-          url: '/auth/profile',
-          timeout: 15000
+        // 3. Get Token
+        const token = await getAccessTokenSilently({
+          authorizationParams: {
+            audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+          },
         });
-        
+
+        // 4. Call API (Pass token explicitly here, don't set global default)
+        const response = await axiosInstance.get('/auth/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000, // 10s timeout
+        });
+
+        if (!isMounted) return;
+
+        // 5. Check Business Logic
         if (response.data.user?.isActive === true) {
-          setBusinessStatus('exists');
-          setUserStatus('active');
+          setStatus('AUTHORIZED');
         } else {
-          setBusinessStatus('missing');
-          setUserStatus('inactive');
+          setStatus('NEEDS_SETUP');
         }
-      } catch (apiError) {
-        console.error('API check error:', apiError);
-        
-        if (apiError.response?.status === 401 || apiError.response?.status === 404) {
-          setBusinessStatus('missing');
-          setUserStatus('inactive');
-        } else if (retryCount < maxRetries && (apiError.name === 'AbortError' || apiError.code === 'ECONNABORTED')) {
-          // Retry on timeout/network errors
-          setRetryCount(prev => prev + 1);
-          timeoutRef.current = setTimeout(() => {
-            checkUserAndBusiness();
-          }, 2000 * (retryCount + 1)); // Longer exponential backoff
+
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('Profile Check Error:', error);
+
+        // 6. Handle Specific Errors
+        const status = error.response?.status;
+
+        // If 404 (Not Found) or 401 (Unauthorized API), assume user needs setup
+        if (status === 404 || status === 401) {
+          setStatus('NEEDS_SETUP');
+          return;
+        }
+
+        // If Network Error or Timeout, Try Again
+        if (currentRetry < MAX_RETRIES) {
+          setRetryCount(currentRetry + 1);
+          setTimeout(() => verifyUserStatus(currentRetry + 1), 2000);
         } else {
-          // After max retries, assume user needs business setup
-          setBusinessStatus('missing');
-          setUserStatus('inactive');
+          // If we exhausted retries, show error screen (don't redirect blindly)
+          setStatus('ERROR'); 
         }
       }
     };
 
-    checkUserAndBusiness();
-    
+    verifyUserStatus();
+
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      isMounted = false; // Cleanup to prevent memory leaks
     };
-  }, [isAuthenticated, isLoading, getAccessTokenSilently, retryCount]);
+  }, [isAuthenticated, isLoading, getAccessTokenSilently]);
 
-  // Show loading spinner with retry info
-  if (isLoading || businessStatus === 'loading') {
+  // --- RENDER LOGIC ---
+
+  // 1. Loading State (Auth0 loading OR API checking)
+  if (isLoading || status === 'LOADING') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+        <p className="text-gray-600 font-medium">Verifying account...</p>
         {retryCount > 0 && (
-          <p className="text-gray-600">Retrying connection... ({retryCount}/{maxRetries})</p>
+           <span className="text-xs text-orange-500 mt-2">Taking longer than usual...</span>
         )}
       </div>
     );
   }
 
-  // Not authenticated - redirect to home
-  if (!isAuthenticated) {
+  // 2. Not Logged In -> Go to Home
+  if (!isAuthenticated || status === 'UNAUTHORIZED') {
     return <Navigate to="/" replace />;
   }
 
-
-
-  // User authenticated but no business - redirect to create business
-  if (businessStatus === 'missing' || userStatus === 'inactive') {
+  // 3. Logged In but No Business/Inactive -> Go to Create Business
+  if (status === 'NEEDS_SETUP') {
     return <Navigate to="/create-business" replace />;
   }
 
-  // User has business - render protected content
+  // 4. Fatal Error (Server down, etc) -> Don't redirect, show message
+  if (status === 'ERROR') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-center p-4">
+        <h2 className="text-xl font-bold text-red-600 mb-2">Connection Error</h2>
+        <p className="text-gray-600 mb-4">We couldn't verify your account status. Please check your internet.</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // 5. Success -> Render the Protected Page
   return children;
 };
 

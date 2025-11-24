@@ -19,7 +19,6 @@ const Header = () => {
   const { user, privateInfo,tenant, refreshBusinessInfo, refreshNotifications } = useContext(AuthContext);
   const { logout } = useAuth0();
   const navigate = useNavigate();
-console.log(tenant);
 
   const notifications = privateInfo?.business?.unreadNotifications || 0;
   const pendingReviews = privateInfo?.business?.reviewNotifications || [];
@@ -141,24 +140,20 @@ console.log(tenant);
             onClick={() => setIsAvatarOpen(!isAvatarOpen)}
             className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full"
           >
-            <img
-              className="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
-              src={
-                user?.picture ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  user?.name || user?.email || "User"
-                )}&background=04A4FF&color=fff&size=128`
-              }
-              alt={user?.name || "User"}
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                  user?.name || user?.email || "User"
-                )}&background=04A4FF&color=fff&size=128`;
-              }}
-            />
+            {user?.picture ? (
+              <img
+                className="w-10 h-10 rounded-full cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                src={user.picture}
+                alt={user?.name || "User"}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all">
+                <span className="text-white text-sm font-bold">
+                  {(user?.name || user?.email || "U")[0].toUpperCase()}
+                </span>
+              </div>
+            )}
           </button>
 
           {isAvatarOpen && (
@@ -166,18 +161,20 @@ console.log(tenant);
               {/* Avatar Header */}
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
                 <div className="flex items-center gap-3">
-                  <img
-                    className="w-16 h-16 rounded-full border-2 border-white shadow-md"
-                    src={
-                      user?.picture ||
-                      `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                        user?.name || user?.email || "User"
-                      )}&background=04A4FF&color=fff&size=128`
-                    }
-                    alt={user?.name || "User"}
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
-                  />
+                  {user?.picture ? (
+                    <img
+                      className="w-16 h-16 rounded-full border-2 border-white shadow-md"
+                      src={user.picture}
+                      alt={user?.name || "User"}
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center border-2 border-white shadow-md">
+                      <span className="text-white text-xl font-bold">
+                        {(user?.name || user?.email || "U")[0].toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex-1">
                     <h3 className="text-sm font-bold text-gray-900">{user?.name || "User"}</h3>
                     <p className="text-xs text-gray-600">{user?.email}</p>

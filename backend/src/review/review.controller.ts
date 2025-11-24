@@ -102,18 +102,32 @@ export class ReviewsController {
     // 5) if file present -> upload & attach
     let mediaAsset: MediaAsset | null = null;
     if (file) {
+      console.log(`🔥 FILE DETECTED: ${file.originalname}, size: ${file.size}, type: ${file.mimetype}`);
+      console.log(`🔥 File buffer length: ${file.buffer?.length || 'NO BUFFER'}`);
+      
       // file.buffer is available because multer memory storage is used
-      const stream = Readable.from(file.buffer);
-      mediaAsset = await this.reviewsService.uploadFileAndAttach(
-        biz,
-        review,
-        stream,
-        {
-          originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
-        },
-      );
+      // Pass buffer directly instead of stream for Lambda
+      console.log(`🔥 About to call uploadFileAndAttach with buffer`);
+      
+      try {
+        mediaAsset = await this.reviewsService.uploadFileAndAttach(
+          biz,
+          review,
+          file.buffer,
+          {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+          },
+        );
+        console.log(`🔥 uploadFileAndAttach completed, mediaAsset ID: ${mediaAsset?.id}`);
+      } catch (error) {
+        console.log(`🔥 ERROR in uploadFileAndAttach: ${error.message}`);
+        console.log(`🔥 ERROR stack: ${error.stack}`);
+        throw error;
+      }
+    } else {
+      console.log(`🔥 NO FILE DETECTED for review type: ${body.type}`);
     }
 
     return {

@@ -148,11 +148,11 @@ const ComprehensiveOnboarding = () => {
 
   const validateStep = (stepIndex) => {
     if (stepIndex === 0) {
-      return formData.name && 
-             formData.slug && 
-             formData.contactEmail && 
-             slugStatus.available === true && 
-             !slugStatus.checking;
+      const hasRequiredFields = formData.name && formData.name.trim() && 
+                               formData.slug && formData.slug.trim() && 
+                               formData.contactEmail && formData.contactEmail.trim();
+      const slugIsValid = slugStatus.available === true && !slugStatus.checking;      
+      return hasRequiredFields && slugIsValid;
     }
     return true;
   };
@@ -176,6 +176,13 @@ const handlePre = () => {
     setLoading(true);
 
     try {
+      // Validate required fields
+      if (!formData.name || !formData.slug) {
+        toast.error('Business name and slug are required');
+        setLoading(false);
+        return;
+      }
+      
       const token = await getAccessTokenSilently({
         authorizationParams: {
           audience: process.env.REACT_APP_AUTH0_AUDIENCE,
@@ -186,25 +193,33 @@ const handlePre = () => {
 
       const data = new FormData();
       
-      // Add all form fields
+      // Always add required fields
+      data.append('name', formData.name || '');
+      data.append('slug', formData.slug || '');
+      
+      // Add other form fields
       Object.keys(formData).forEach(key => {
-        if (key === 'businessHours') {
-          data.append(key, JSON.stringify(formData[key]));
+        if (key === 'name' || key === 'slug') {
+          // Already added above
+          return;
+        } else if (key === 'businessHours' || key === 'socialLinks') {
+          // Skip these - they'll be handled separately
+          return;
         } else if (formData[key] && key !== 'logoUrl' && key !== 'bannerUrl') {
           data.append(key, formData[key]);
         }
       });
+      
+      // Add businessHours as JSON string
+      data.append('businessHours', JSON.stringify(formData.businessHours));
 
       // Add social links
       const validSocialLinks = socialLinks.filter(link => link.platform && link.url);
-      if (validSocialLinks.length > 0) {
-        data.append('socialLinks', JSON.stringify(
-          validSocialLinks.reduce((acc, link) => {
-            acc[link.platform.toLowerCase()] = link.url;
-            return acc;
-          }, {})
-        ));
-      }
+      const socialLinksObj = validSocialLinks.reduce((acc, link) => {
+        acc[link.platform.toLowerCase()] = link.url;
+        return acc;
+      }, {});
+      data.append('socialLinks', JSON.stringify(socialLinksObj));
 
       if (logoFile) {
         data.append('logoFile', logoFile);
@@ -213,7 +228,6 @@ const handlePre = () => {
       if (bannerFile) {
         data.append('bannerFile', bannerFile);
       }
-
       const response = await axiosInstance.post(API_PATHS.BUSINESSES.CREATE_BUSINESS, data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -765,11 +779,20 @@ const handlePre = () => {
           </div>
 
           {/* Navigation */}
-          <div className="flex justify-center">
+          <div className="flex gap-4">
+            {currentStep > 0 && (
+              <button
+                onClick={() => setCurrentStep(currentStep - 1)}
+                disabled={loading}
+                className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Back
+              </button>
+            )}
             <button
               onClick={handleNext}
               disabled={loading || !validateStep(currentStep)}
-              className="w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">

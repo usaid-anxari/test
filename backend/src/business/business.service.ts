@@ -537,4 +537,12 @@ export class BusinessService {
       take: 100 // Limit for performance
     });
   }
+
+  async getAllBusinesses(): Promise<Business[]> {
+    return await this.businessRepo.find({
+      where: { deletedAt: IsNull() },
+      select: ['id', 'name', 'slug', 'description', 'industry', 'logoUrl', 'city', 'country', 'isVerified', 'createdAt'],
+      order: { createdAt: 'DESC' }
+    });
+  }
 }

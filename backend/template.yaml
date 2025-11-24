@@ -34,6 +34,9 @@ Parameters:
   SecurityGroupId:
     Type: AWS::EC2::SecurityGroup::Id
     Description: Security Group ID for Lambda to access RDS
+  S3Bucket:
+    Type: String
+    Description: S3 Bucket Name for file storage
 
 Globals:
   Function:
@@ -115,8 +118,17 @@ Resources:
         AllowMethods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
         AllowOrigin: "'*'"
-
-  # IAM Role for Lambda (if needed separately)
+      DefinitionBody:
+        swagger: 2.0
+        'x-amazon-apigateway-binary-media-types':
+          - 'multipart/form-data'
+          - 'image/jpeg'
+          - 'image/png'
+          - 'application/octet-stream'
+        info:
+          version: '1.0'
+          title: !Sub truetestify-api-${Stage}
+        paths: {}
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -152,4 +164,3 @@ Outputs:
   LambdaFunctionName:
     Description: Lambda Function Name
     Value: !Ref TruetestifyApiFunction
-

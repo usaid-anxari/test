@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
+import { ValidationPipe } from '@nestjs/common';
 import { json } from 'express';
 
 async function bootstrap() {
@@ -14,13 +15,30 @@ async function bootstrap() {
   // Regular JSON middleware for all other routes
   app.use(json());
 
-  // Enable CORS - Allow all origins for widget functionality
+  // Enable CORS - Restrict origins for production
+  // const allowedOrigins = [
+  //   'https://www.truetestify.com',
+  //   'https://truetestify.com',
+  //   'http://localhost:3000',
+  //   'http://localhost:5173'
+  // ];
+  
   app.enableCors({
     origin: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: false,
   });
+
+  // Global validation pipe
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: false, // Allow FormData fields
+    transform: true,
+    transformOptions: {
+      enableImplicitConversion: true,
+    },
+  }));
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Truetestify API')

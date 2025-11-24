@@ -36,26 +36,26 @@ import { ValidationModule } from './validation/validation.module';
         
         // Lambda-optimized connection pool (smaller pool, faster timeouts)
         const lambdaPoolConfig = {
-          max: 2, // Smaller pool for Lambda (each instance gets its own)
+          max: 5,
           min: 1,
-          acquire: 10000,
-          idle: 5000,
-          connectionTimeoutMillis: 5000,
-          idleTimeoutMillis: 10000,
-          statement_timeout: 10000,
-          query_timeout: 10000,
+          acquire: 30000,
+          idle: 10000,
+          connectionTimeoutMillis: 30000,
+          idleTimeoutMillis: 30000,
+          statement_timeout: 30000,
+          query_timeout: 30000,
         };
 
         // Traditional server pool config (local development)
         const serverPoolConfig = {
-          max: 10,
-          min: 2,
-          acquire: 10000,
-          idle: 10000,
-          connectionTimeoutMillis: 5000,
-          idleTimeoutMillis: 10000,
-          statement_timeout: 10000,
-          query_timeout: 10000,
+          max: 20,
+          min: 5,
+          acquire: 30000,
+          idle: 30000,
+          connectionTimeoutMillis: 30000,
+          idleTimeoutMillis: 30000,
+          statement_timeout: 30000,
+          query_timeout: 30000,
         };
 
         // SSL configuration for RDS (at root level, not in extra)

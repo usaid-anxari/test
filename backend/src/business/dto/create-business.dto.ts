@@ -1,10 +1,12 @@
-import { IsString, IsOptional, IsEmail, IsUrl, IsObject, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsUrl, IsObject, IsNumber, IsNotEmpty } from 'class-validator';
 
 export class CreateBusinessDto {
-  @IsString()
+  @IsString({ message: 'Slug must be a string' })
+  @IsNotEmpty({ message: 'Slug is required' })
   slug: string;
 
-  @IsString()
+  @IsString({ message: 'Name must be a string' })
+  @IsNotEmpty({ message: 'Business name is required' })
   name: string;
 
   @IsOptional()
@@ -68,12 +70,18 @@ export class CreateBusinessDto {
   bannerUrl?: string;
 
   @IsOptional()
-  @IsObject()
   businessHours?: any;
 
   @IsOptional()
-  @IsObject()
   socialLinks?: any;
+
+  @IsOptional()
+  @IsString()
+  logoFile?: any;
+
+  @IsOptional()
+  @IsString()
+  bannerFile?: any;
 
   @IsOptional()
   @IsObject()

@@ -92,25 +92,35 @@ export class ReviewsService {
     return savedReview;
   }
 
-  // Upload file (stream) to S3, create media asset and transcode job
+  // Upload file (buffer) to S3, create media asset and transcode job
   async uploadFileAndAttach(
     biz: Business,
     review: Review,
-    fileStream: NodeJS.ReadableStream,
+    fileBuffer: Buffer,
     fileMeta: { originalname: string; mimetype?: string; size?: number },
   ) {
+    console.log(`🔥🔥🔥 METHOD ENTRY: uploadFileAndAttach called for review ${review.id}`);
+    console.log(`🔥🔥🔥 Buffer size: ${fileBuffer.length}, expected: ${fileMeta.size}`);
+    
     const ext = path.extname(fileMeta.originalname) || '';
     const safeName = `${Date.now()}-${uuidv4()}${ext}`;
     const s3Key = `businesses/${biz.id}/reviews/${review.id}/${safeName}`;
 
-    // upload
-    const res = await this.s3.uploadStream(
-      s3Key,
-      fileStream as any,
-      fileMeta.size,
-      fileMeta.mimetype,
-    );
-    this.logger.log(`Uploaded file to s3 key=${s3Key}`);
+    console.log(`🔥🔥🔥 About to call S3Service.uploadBuffer with key: ${s3Key}`);
+    
+    let uploadResult;
+    try {
+      uploadResult = await this.s3.uploadBuffer(
+        s3Key,
+        fileBuffer,
+        fileMeta.mimetype,
+      );
+      console.log(`🔥🔥🔥 S3 upload SUCCESS: ${JSON.stringify(uploadResult)}`);
+    } catch (error) {
+      console.log(`🔥🔥🔥 S3 upload FAILED: ${error.message}`);
+      console.log(`🔥🔥🔥 S3 error stack: ${error.stack}`);
+      throw error;
+    }
 
     // create media asset
     const asset = this.mediaRepo.create({
@@ -125,6 +135,7 @@ export class ReviewsService {
       },
     });
     const savedAsset = await this.mediaRepo.save(asset);
+    console.log(`🔥🔥🔥 Media asset saved with ID: ${savedAsset.id}`);
 
     // enqueue transcode job for videos (or audio if needed)
     if (review.type === 'video') {
@@ -136,8 +147,10 @@ export class ReviewsService {
         status: 'queued',
       });
       await this.jobsRepo.save(job);
+      console.log(`🔥🔥🔥 Transcode job created for video`);
     }
 
+    console.log(`🔥🔥🔥 METHOD EXIT: uploadFileAndAttach returning asset ${savedAsset.id}`);
     return savedAsset;
   }
 

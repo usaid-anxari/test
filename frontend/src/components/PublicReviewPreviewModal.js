@@ -11,7 +11,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { getS3Url } from "../utils/s3Utils";
 
-const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDelete, isReadOnly,allowBtn = false }) => {
+const PublicReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDelete, isReadOnly,allowBtn = false }) => {
   const [audioDuration, setAudioDuration] = useState('0:00');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -106,21 +106,6 @@ const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDe
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const getStatusBadge = () => {
-    switch (review.status?.toLowerCase()) {
-      case 'approved': 
-        return <div className="bg-green-500 rounded-full p-3 shadow-lg"><CheckCircleIcon className="w-8 h-8 text-white" /></div>;
-      case 'pending': 
-        return <div className="bg-orange-500 rounded-full p-3 shadow-lg"><ClockIcon className="w-8 h-8 text-white" /></div>;
-      case 'rejected': 
-        return <div className="bg-red-500 rounded-full p-3 shadow-lg"><XCircleIcon className="w-8 h-8 text-white" /></div>;
-      case 'hidden':
-        return <div className="bg-gray-500 rounded-full p-3 shadow-lg"><XCircleIcon className="w-8 h-8 text-white" /></div>;
-      default: 
-        return <div className="bg-gray-400 rounded-full p-3 shadow-lg"><ClockIcon className="w-8 h-8 text-white" /></div>;
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -169,10 +154,6 @@ const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDe
                 </span>
               </div>
               
-              <div className="absolute top-6 right-6 z-10">
-                {getStatusBadge()}
-              </div>
-              
               <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4 pointer-events-auto">
                 <div className="w-full bg-white/20 backdrop-blur-sm rounded-full h-1.5 cursor-pointer" onClick={handleSeek}>
                   <div className="bg-white rounded-full h-1.5 transition-all" style={{ width: `${(currentTime / duration) * 100}%` }} />
@@ -191,33 +172,10 @@ const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDe
                         ))}
                       </div>
                       <span className="text-white/80 text-sm">•</span>
-                      <span className="text-white/80 text-sm">{new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span className="text-white/80 text-sm">{new Date(review.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </div>
                   </div>
                 </div>
-                
-                {allowBtn && !isReadOnly && (
-                  <div className="flex gap-3">
-                    {review.status === 'pending' && (
-                      <>
-                        <button onClick={onApprove} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white transition-all">✓ Approve</button>
-                        <button onClick={onReject} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-600 transition-all">✕ Reject</button>
-                      </>
-                    )}
-                    {review.status === 'approved' && (
-                      <>
-                        <button onClick={() => onApprove()} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-600 transition-all">Hide</button>
-                        <button onClick={onDelete} className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
-                      </>
-                    )}
-                    {review.status === 'hidden' && (
-                      <>
-                        <button onClick={onApprove} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white transition-all">Unhide</button>
-                        <button onClick={onDelete} className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
             </>
           )}
@@ -291,10 +249,6 @@ const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDe
                 </span>
               </div>
               
-              <div className="absolute top-6 right-6 z-10">
-                {getStatusBadge()}
-              </div>
-              
               <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
@@ -309,33 +263,10 @@ const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDe
                         ))}
                       </div>
                       <span className="text-white/80 text-sm">•</span>
-                      <span className="text-white/80 text-sm">{new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span className="text-white/80 text-sm">{new Date(review.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </div>
                   </div>
                 </div>
-                
-                {allowBtn && !isReadOnly && (
-                  <div className="flex gap-3">
-                    {review.status === 'pending' && (
-                      <>
-                        <button onClick={onApprove} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white transition-all">✓ Approve</button>
-                        <button onClick={onReject} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-600 transition-all">✕ Reject</button>
-                      </>
-                    )}
-                    {review.status === 'approved' && (
-                      <>
-                        <button onClick={() => onApprove()} className="flex-1 bg-red-600/90 backdrop-blur-sm text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-600 transition-all">Hide</button>
-                        <button onClick={onDelete} className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
-                      </>
-                    )}
-                    {review.status === 'hidden' && (
-                      <>
-                        <button onClick={onApprove} className="flex-1 bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white transition-all">Unhide</button>
-                        <button onClick={onDelete} className="flex-1 bg-white/10 backdrop-blur-sm border border-white/30 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-white/20 transition-all">Delete</button>
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
             </>
           )}
@@ -368,14 +299,11 @@ const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDe
                     {review.title}
                   </span>
                 </div>
-                <div>
-                  {getStatusBadge()}
-                </div>
               </div>
               
               <div className="p-8 space-y-6">
                 <div className="text-center space-y-2">
-                  <div className="text-sm text-gray-500">{new Date(review.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                  <div className="text-sm text-gray-500">{new Date(review.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                   <div className="flex justify-center">
                     {[...Array(5)].map((_, i) => (
                       <span key={i} className={`text-2xl ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`}>★</span>
@@ -393,29 +321,6 @@ const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDe
                 <div className="bg-gray-50 rounded-xl p-6">
                   <p className="text-gray-800 text-base leading-relaxed">{review.bodyText || review.title}</p>
                 </div>
-                
-                {allowBtn && !isReadOnly && (
-                  <div className="flex gap-3 pt-4">
-                    {review.status === 'pending' && (
-                      <>
-                        <button onClick={onApprove} className="flex-1 bg-white text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold border border-gray-200 hover:bg-gray-50 transition-all">✓ Approve</button>
-                        <button onClick={onReject} className="flex-1 bg-red-600 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-700 transition-all">✕ Reject</button>
-                      </>
-                    )}
-                    {review.status === 'approved' && (
-                      <>
-                        <button onClick={() => onApprove()} className="flex-1 bg-red-600 text-white py-3 px-6 rounded-xl text-sm font-semibold hover:bg-red-700 transition-all">Hide</button>
-                        <button onClick={onDelete} className="flex-1 bg-white border border-gray-200 text-gray-700 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all">Delete</button>
-                      </>
-                    )}
-                    {review.status === 'hidden' && (
-                      <>
-                        <button onClick={onApprove} className="flex-1 bg-white text-gray-900 py-3 px-6 rounded-xl text-sm font-semibold border border-gray-200 hover:bg-gray-50 transition-all">Unhide</button>
-                        <button onClick={onDelete} className="flex-1 bg-white border border-gray-200 text-gray-700 py-3 px-6 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all">Delete</button>
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -426,4 +331,4 @@ const ReviewPreviewModal = ({ review, isOpen, onClose, onApprove, onReject, onDe
   );
 };
 
-export default ReviewPreviewModal;
+export default PublicReviewPreviewModal;

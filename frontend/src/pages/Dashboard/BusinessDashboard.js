@@ -10,9 +10,12 @@ import ReviewCard from "../../components/ReviewCard";
 import ContactInfoCard from "../../components/ContactInfoCard";
 import HeaderSocialIcons from "../../components/HeaderSocialIcons";
 import StarRating from "../../components/StarRating";
+import { getS3Url } from "../../utils/s3Utils";
 
 const BusinessDashboard = () => {
   const { isReadOnly } = useTrialStatus();
+  
+  // Using centralized S3 URL helper
   const [business, setBusiness] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [allReviews, setAllReviews] = useState([]); // This will hold ONLY approved reviews
@@ -36,6 +39,8 @@ const BusinessDashboard = () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(API_PATHS.BUSINESSES.GET_PRIVATE_PROFILE);
+      console.log(response);
+      
       setBusiness(response.data.business || null);
       
       const allReviewsData = response.data.reviews || [];
@@ -199,7 +204,7 @@ const BusinessDashboard = () => {
     setLogoUploading(true);
     try {
       const form = new FormData();
-      form.append('logo', file);
+      form.append('logoFile', file);
       
       const response = await axiosInstance.put(API_PATHS.BUSINESSES.UPDATE_PRIVATE_PROFILE, form, {
         headers: { "Content-Type": "multipart/form-data" }
@@ -222,7 +227,7 @@ const BusinessDashboard = () => {
     setBannerUploading(true);
     try {
       const form = new FormData();
-      form.append('banner', file);
+      form.append('bannerFile', file);
       
       const response = await axiosInstance.put(API_PATHS.BUSINESSES.UPDATE_PRIVATE_PROFILE, form, {
         headers: { "Content-Type": "multipart/form-data" }
@@ -266,7 +271,7 @@ const BusinessDashboard = () => {
             <div 
                 className="h-48 md:h-64 bg-gray-300 relative group cursor-pointer"
                 style={{
-                backgroundImage: business?.bannerUrl ? `url(${business.bannerUrl})` : 'linear-gradient(to right, #6366f1, #a855f7)',
+                backgroundImage: business?.bannerUrl ? `url(${getS3Url(business.bannerUrl)})` : 'linear-gradient(to right, #6366f1, #a855f7)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center'
                 }}
@@ -318,7 +323,7 @@ const BusinessDashboard = () => {
                       <Skeleton circle width={80} height={80} />
                     ) : business?.logoUrl ? (
                       <img
-                        src={business.logoUrl}
+                        src={getS3Url(business.logoUrl)}
                         alt={business.name}
                         className="w-20 h-20 rounded-full object-cover border-4 border-white"
                       />

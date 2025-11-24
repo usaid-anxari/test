@@ -6,6 +6,7 @@ import {
   XCircleIcon
 } from "@heroicons/react/20/solid";
 import { motion } from "framer-motion";
+import { getS3Url } from "../utils/s3Utils";
 
 const ReviewCard = ({ review, onViewReview, onUpdateStatus, onDeleteReview, onRejectReview, isReadOnly,allowBtn =false, badge }) => {
   const [audioDuration, setAudioDuration] = useState('0:00');
@@ -13,7 +14,7 @@ const ReviewCard = ({ review, onViewReview, onUpdateStatus, onDeleteReview, onRe
   
   useEffect(() => {
     if (review.type === 'audio' && review.mediaAssets?.[0]?.s3Key) {
-      const audio = new Audio(`${process.env.REACT_APP_S3_BASE_URL}/${review.mediaAssets[0].s3Key}`);
+      const audio = new Audio(getS3Url(review.mediaAssets[0].s3Key));
       audio.addEventListener('loadedmetadata', () => {
         const minutes = Math.floor(audio.duration / 60);
         const seconds = Math.floor(audio.duration % 60);
@@ -49,7 +50,7 @@ const ReviewCard = ({ review, onViewReview, onUpdateStatus, onDeleteReview, onRe
         {review.mediaAssets && review.mediaAssets[0] && (
           <video 
             className="absolute inset-0 w-full h-full object-cover"
-            src={`${process.env.REACT_APP_S3_BASE_URL}/${review.mediaAssets[0].s3Key}`}
+            src={getS3Url(review.mediaAssets[0].s3Key)}
             preload="metadata"
           />
         )}

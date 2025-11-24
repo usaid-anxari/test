@@ -321,24 +321,20 @@ useEffect(() => {
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <img
-                src={
-                  user?.picture ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    user?.name || user?.email || "User"
-                  )}&background=04A4FF&color=fff&size=128`
-                }
-                alt={user?.name || "User"}
-                className="w-16 h-16 rounded-full object-cover"
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    user?.name || user?.email || "User"
-                  )}&background=04A4FF&color=fff&size=128`;
-                }}
-              />
+              {user?.picture ? (
+                <img
+                  src={user.picture}
+                  alt={user?.name || "User"}
+                  className="w-16 h-16 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                  <span className="text-white text-xl font-bold">
+                    {(user?.name || user?.email || "U")[0].toUpperCase()}
+                  </span>
+                </div>
+              )}
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   {user?.name || "User"}

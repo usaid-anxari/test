@@ -403,7 +403,14 @@ const ContactInfoCard = ({
         ) : (
           <div className="space-y-2">
             {(() => {
-              const hours = business?.businessHours ? JSON.parse(business.businessHours) : {};
+              let hours = {};
+              if (business?.businessHours) {
+                try {
+                  hours = typeof business.businessHours === 'string' ? JSON.parse(business.businessHours) : business.businessHours;
+                } catch {
+                  hours = {};
+                }
+              }
               const hasHours = Object.values(hours).some(hour => hour);
               return hasHours ? (
                 Object.entries(hours).map(([day, time]) => (

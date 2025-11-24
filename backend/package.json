@@ -60,6 +60,7 @@
     "util": "^0.12.5"
   },
   "devDependencies": {
+    "serverless-domain-manager": "^8.0.0",
     "serverless-esbuild": "^1.55.2"
   }
 }
